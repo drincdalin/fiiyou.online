@@ -63,12 +63,27 @@ begin
   perform t.affects_none(format($q$update profiles set bio = 'hacked' where id = %L$q$, bob), 'cannot edit other profile');
   perform t.fails(format($q$insert into profiles (id, username, display_name) values (gen_random_uuid(),'evil','Evil')$q$), 'cannot insert profile directly');
 
+  update profiles set theme = '{"radius":"24","step":"8","layout":"side-right","shadow":"hard","frame_color":"#000000","name_case":"normal"}' where id = alice;
+  perform t.ok((select theme->>'step' from profiles where id = alice) = '8', 'theme v3 keys saved');
+  perform t.fails($q$update profiles set theme = '{"step":"7"}' where id = '00000000-0000-0000-0000-00000000000a'$q$, 'bad step rejected', 'check constraint');
+  update profiles set music = '{"url":"https://youtu.be/abcdefghijk","title":"t","artist":"a"}' where id = alice;
+  perform t.ok((select music->>'title' from profiles where id = alice) = 't', 'profile music saved');
+  perform t.fails($q$update profiles set music = '{"url":"ftp://x"}' where id = '00000000-0000-0000-0000-00000000000a'$q$, 'bad music url rejected', 'check constraint');
+  perform t.fails($q$update profiles set music = '{"evil":"1"}' where id = '00000000-0000-0000-0000-00000000000a'$q$, 'unknown music key rejected', 'check constraint');
+  update profiles set music = '{"audio":"00000000-0000-0000-0000-00000000000a/00000000-0000-0000-0000-0000000000aa.mp3","title":"t"}' where id = alice;
+  perform t.ok((select music ? 'audio' from profiles where id = alice), 'profile audio path saved');
+  perform t.fails($q$update profiles set music = '{"audio":"../x.mp3"}' where id = '00000000-0000-0000-0000-00000000000a'$q$, 'bad audio path rejected', 'check constraint');
   -- ---- cards ----
+  insert into profile_cards (profile_id, type, title, content) values (alice, 'music', 'Music', '{"url":""}');
+  perform t.ok(true, 'music card with empty url accepted');
+  insert into profile_cards (profile_id, type, content, x, y, w, h, rotation) values (alice, 'sticker', '{"images":[]}', -50, 10, 120, 90, 120);
+  perform t.ok(true, 'sticker with negative x and 120deg accepted');
+  perform t.fails($q$insert into profile_cards (profile_id, type, content) values ('00000000-0000-0000-0000-00000000000a','music','{"url":"ftp://x"}')$q$, 'non-http music url rejected', 'check constraint');
   perform t.fails($q$insert into profile_cards (profile_id, type, content) values ('00000000-0000-0000-0000-00000000000a','links','{"links":[{"url":"javascript:alert(1)","label":"x"}]}')$q$, 'javascript: link rejected', 'check constraint');
   insert into profile_cards (profile_id, type, title, content, style, rotation)
     values (alice, 'links', 'Links', '{"links":[{"url":"https://optimeal.site","label":"opt"}]}', '{"border_style":"dashed","border_width":3,"shadow":true}', -7.5);
   perform t.fails($q$insert into profile_cards (profile_id, type, style) values ('00000000-0000-0000-0000-00000000000a','text','{"border_width":99}')$q$, 'border_width out of range rejected', 'check constraint');
-  perform t.fails($q$insert into profile_cards (profile_id, type, rotation) values ('00000000-0000-0000-0000-00000000000a','text',90)$q$, 'rotation out of range rejected', 'check constraint');
+  perform t.fails($q$insert into profile_cards (profile_id, type, rotation) values ('00000000-0000-0000-0000-00000000000a','text',200)$q$, 'rotation out of range rejected', 'check constraint');
   select id into cid from profile_cards where profile_id = alice and type = 'about';
   perform save_card_layout(jsonb_build_array(jsonb_build_object('id', cid, 'x', 111, 'y', 222, 'rotation', 3)));
   perform t.ok((select x from profile_cards where id = cid) = 111, 'save_card_layout moves card');
@@ -218,7 +233,7 @@ begin
 
   -- ---- export / delete ----
   perform t.as_user(alice);
-  perform t.ok(jsonb_array_length(export_my_data()->'cards') = 5, 'export_my_data includes cards');
+  perform t.ok(jsonb_array_length(export_my_data()->'cards') = 7, 'export_my_data includes cards');
   perform delete_my_account();
   perform t.as_admin();
   perform t.ok((select count(*) from profiles where id = alice) = 0, 'delete_my_account removes profile');

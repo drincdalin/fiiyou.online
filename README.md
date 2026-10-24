@@ -3,7 +3,7 @@
 Supabase (Postgres + Auth + Storage) with all logic in SQL/RLS, plus a thin JS API layer for the React frontend.
 
 ## Run it (steps)
-1. Supabase project -> SQL editor: run `supabase/migrations/0001` … `0005` in order, then `supabase/seed.sql`. (Already ran 0001-0004? Just run 0005.)
+1. Supabase project -> SQL editor: run `supabase/migrations/0001` … `0006` in order, then `supabase/seed.sql`. (Already ran 0001-0004? Just run 0005.)
 2. Set lat/lng on `localities` rows. Auth settings: decide on email confirmation.
 3. `cp .env.example .env`, fill URL + anon key.
 4. Put your font at `public/fonts/Endless.ttf` (rename the file, or edit the `@font-face` line in `src/ui/styles.css`). Check it has ă â î ș ț.

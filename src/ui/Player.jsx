@@ -2,7 +2,23 @@ import { useEffect, useRef, useState } from 'react';
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 // src must be a direct https audio URL. Nothing loads until the visitor presses play (privacy + bandwidth).
+const ytId = (u) => { try { const x = new URL(u); const id = x.hostname === 'youtu.be' ? x.pathname.slice(1)
+  : /(^|\.)youtube\.com$/.test(x.hostname) ? x.searchParams.get('v') : null; return /^[\w-]{11}$/.test(id || '') ? id : null; } catch { return null; } };
+
 export default function Player({ src, title, artist, cover }) {
+  const yt = ytId(src); const [open, setOpen] = useState(false);
+  if (yt) return (  // YouTube: nothing loads (no tracking) until the visitor clicks play
+    <div className="player">
+      {cover && <img className="cover" src={cover} alt="" />}
+      <div className="ptitle"><b>{title || 'Untitled'}</b><span>{artist}</span></div>
+      {open ? <iframe className="yt" title="player" src={`https://www.youtube-nocookie.com/embed/${yt}?autoplay=1&rel=0`}
+        allow="autoplay; encrypted-media" referrerPolicy="strict-origin-when-cross-origin" />
+        : <div className="ctrl"><button className="big" onClick={() => setOpen(true)} aria-label="Play">▶</button></div>}
+    </div>);
+  return <AudioPlayer {...{ src, title, artist, cover }} />;
+}
+
+function AudioPlayer({ src, title, artist, cover }) {
   const a = useRef(); const [playing, setPlaying] = useState(false);
   const [t, setT] = useState(0); const [dur, setDur] = useState(0); const [vol, setVol] = useState(0.7);
   useEffect(() => { if (a.current) a.current.volume = vol; }, [vol]);
