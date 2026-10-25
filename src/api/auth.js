@@ -24,7 +24,7 @@ export async function signOut() { return unwrap({ error: (await supabase.auth.si
 
 export async function getSession() { return unwrap(await supabase.auth.getSession()).session; }
 export function onAuthChange(cb) {
-  const { data } = supabase.auth.onAuthStateChange((_event, session) => cb(session));
+  const { data } = supabase.auth.onAuthStateChange((event, session) => cb(session, event));
   return () => data.subscription.unsubscribe();
 }
 
@@ -37,3 +37,10 @@ export async function deleteAccount() {
   unwrap(await supabase.rpc('delete_my_account'));
   await supabase.auth.signOut();
 }
+
+/** Sends a reset link; the page that opens handles the PASSWORD_RECOVERY event (see App.jsx). Never reveals whether the email exists. */
+export async function resetPassword(email) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${location.origin}${location.pathname}` });
+  if (error && error.status !== 400) throw error;
+}
+export async function updatePassword(password) { return unwrap(await supabase.auth.updateUser({ password })); }

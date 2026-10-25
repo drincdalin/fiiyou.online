@@ -38,7 +38,7 @@ declare
   alice uuid := '00000000-0000-0000-0000-00000000000a';
   bob   uuid := '00000000-0000-0000-0000-00000000000b';
   carol uuid := '00000000-0000-0000-0000-00000000000c';
-  fid uuid; n int; pid uuid; cid uuid;
+  fid uuid; n int; pid uuid; cid uuid; ipath text;
 begin
   -- ---- signup trigger ----
   insert into auth.users (id, raw_user_meta_data) values
@@ -54,7 +54,7 @@ begin
   perform t.as_user(alice);
   update profiles set theme = '{"bg_color":"#ff00aa","font":"pixel","cursor":"crosshair"}' where id = alice;
   perform t.ok((select theme->>'font' from profiles where id = alice) = 'pixel', 'valid theme saved');
-  update profiles set theme = '{"font":"endless","name_font":"endless","card_color":"#141414","radius":"8","overlay":"60"}' where id = alice;
+  update profiles set theme = '{"font":"ubuntu","name_font":"ubuntu","card_color":"#141414","radius":"8","overlay":"60"}' where id = alice;
   perform t.ok((select theme->>'radius' from profiles where id = alice) = '8', 'theme v2 keys saved');
   perform t.fails($q$update profiles set theme = '{"radius":"999"}' where id = '00000000-0000-0000-0000-00000000000a'$q$, 'bad radius rejected', 'check constraint');
   perform t.fails($q$update profiles set theme = '{"bg_color":"red"}' where id = '00000000-0000-0000-0000-00000000000a'$q$, 'named color rejected', 'check constraint');
@@ -73,6 +73,14 @@ begin
   update profiles set music = '{"audio":"00000000-0000-0000-0000-00000000000a/00000000-0000-0000-0000-0000000000aa.mp3","title":"t"}' where id = alice;
   perform t.ok((select music ? 'audio' from profiles where id = alice), 'profile audio path saved');
   perform t.fails($q$update profiles set music = '{"audio":"../x.mp3"}' where id = '00000000-0000-0000-0000-00000000000a'$q$, 'bad audio path rejected', 'check constraint');
+  update profiles set custom_css = '[{"s":"card","p":{"background-color":"#112233","border-radius":"16px","transform":"rotate(-3deg)","box-shadow":"glow","opacity":"0.9"}}]' where id = '00000000-0000-0000-0000-00000000000a';
+  perform t.ok((select jsonb_array_length(custom_css) from profiles where id = '00000000-0000-0000-0000-00000000000a') = 1, 'custom style rule saved');
+  perform t.fails($q$update profiles set custom_css = '[{"s":"card","p":{"background":"url(http://evil.test/x.png)"}}]' where id = '00000000-0000-0000-0000-00000000000a'$q$, 'raw background/url rejected', 'check constraint');
+  perform t.fails($q$update profiles set custom_css = '[{"s":"card","p":{"color":"red;position:fixed"}}]' where id = '00000000-0000-0000-0000-00000000000a'$q$, 'injected declaration rejected', 'check constraint');
+  perform t.fails($q$update profiles set custom_css = '[{"s":"body","p":{"color":"#ffffff"}}]' where id = '00000000-0000-0000-0000-00000000000a'$q$, 'non-whitelisted selector rejected', 'check constraint');
+  perform t.fails($q$update profiles set custom_css = '[{"s":"card","p":{"transform":"rotate(90deg)"}}]' where id = '00000000-0000-0000-0000-00000000000a'$q$, 'out-of-range value rejected', 'check constraint');
+  perform t.fails($q$update profiles set custom_css = '[{"s":"card","p":{"color":"#ffffff"},"x":1}]' where id = '00000000-0000-0000-0000-00000000000a'$q$, 'extra rule key rejected', 'check constraint');
+  perform t.fails($q$update profiles set custom_css = '[{"s":"card"}]' where id = '00000000-0000-0000-0000-00000000000a'$q$, 'rule without props rejected', 'check constraint');
   -- ---- cards ----
   insert into profile_cards (profile_id, type, title, content) values (alice, 'music', 'Music', '{"url":""}');
   perform t.ok(true, 'music card with empty url accepted');
@@ -238,6 +246,50 @@ begin
   perform t.as_user(bob);
   perform t.ok((select count(*) from profile_views) = 0, 'profile_views unreadable');
   perform t.as_admin();
+  -- ---- v11: osm places + friends chat ----
+  perform t.as_admin(); perform t.as_user(bob);
+  insert into places (name, lat, lng, created_by, osm_ref) values ('OSM spot', 1, 1, bob, 'node/42');
+  perform t.fails(format($q$insert into places (name, lat, lng, created_by, osm_ref) values ('Dup', 1, 1, %L, 'node/42')$q$, bob), 'duplicate osm_ref rejected', 'duplicate key');
+  perform t.fails(format($q$insert into places (name, lat, lng, created_by, osm_ref) values ('Bad', 1, 1, %L, 'nope')$q$, bob), 'malformed osm_ref rejected', 'check constraint');
+  perform send_friend_request(carol);
+  perform t.as_admin(); perform t.as_user(carol);
+  perform respond_friend_request((select id from friendships where requester_id = bob and addressee_id = carol), true);
+  insert into messages (sender_id, recipient_id, body) values (carol, bob, 'hey bob');
+  perform t.as_admin(); perform t.as_user(bob);
+  perform t.ok((select unread from conversations() limit 1) = 1, 'conversation shows 1 unread');
+  perform mark_read(carol);
+  perform t.ok(unread_count() = 0, 'mark_read clears unread');
+  perform t.as_admin();
+  -- ---- v14: admin ----
+  perform t.as_admin();
+  update auth.users set email = 'Boss@Example.com', email_confirmed_at = null where id = carol;
+  insert into admin_emails (email) values ('boss@example.com');
+  perform t.as_user(carol);
+  perform t.ok(not is_admin(), 'unconfirmed email is not admin');
+  perform t.as_admin(); update auth.users set email_confirmed_at = now() where id = carol;
+  perform t.as_user(bob);
+  perform t.ok(not is_admin(), 'regular member is not admin');
+  perform t.fails('select admin_stats()', 'non-admin blocked from stats', 'forbidden');
+  perform t.fails(format($q$select admin_set_verified(%L, true)$q$, bob), 'non-admin cannot verify', 'forbidden');
+  perform t.fails(format($q$select admin_delete_user(%L)$q$, carol), 'non-admin cannot delete users', 'forbidden');
+  perform t.ok((select count(*) from admin_emails) = 0, 'admin list invisible to members');
+  perform t.fails('select log_admin(''x'', ''y'')', 'members cannot forge audit log entries', 'forbidden');
+  insert into reports (reporter_id, target_type, target_id, reason) select bob, 'post', id, 'spam' from posts where body = 'at the spot';
+  perform t.as_admin(); update posts set image_path = bob::text || '/33333333-3333-3333-3333-333333333333.webp' where body = 'at the spot';
+  perform t.as_user(carol);
+  perform t.ok(is_admin(), 'confirmed matching email (case-insensitive) is admin');
+  perform t.ok((admin_stats()->>'open_reports')::int >= 1, 'admin_stats works');
+  perform t.ok((select preview->>'body' from admin_reports('open') where target_type = 'post' limit 1) = 'at the spot', 'report preview shows the post');
+  perform admin_set_verified(bob, true);
+  perform t.ok((select is_official from profiles where id = bob), 'admin can verify a profile');
+  select admin_delete_post(id) into ipath from posts where body = 'at the spot';
+  perform t.ok(ipath like '%3333%', 'admin_delete_post returns the image path for storage clean-up');
+  perform t.ok(not exists (select 1 from posts where body = 'at the spot'), 'post removed');
+  perform admin_set_report((select id from reports limit 1), 'reviewed');
+  perform t.fails(format($q$select admin_delete_user(%L)$q$, carol), 'admin cannot delete themselves', 'cannot_delete_self');
+  perform t.ok((select count(*) from admin_log(10)) >= 3, 'actions are logged');
+  perform t.ok((select count(*) from admin_referenced_paths()) >= 1, 'referenced paths listed');
+  perform t.as_admin();
   -- ---- anon sees nothing ----
   execute 'set local role anon';
   perform t.fails('select count(*) from public.profiles', 'anon cannot read profiles');
@@ -260,6 +312,7 @@ begin
   -- ---- export / delete ----
   perform t.as_user(alice);
   perform t.ok(jsonb_array_length(export_my_data()->'cards') = 7, 'export_my_data includes cards');
+  perform t.ok(export_my_data() ?& array['messages','photos','places_created','post_likes','reports_filed'] and not ((export_my_data()->'profile') ? 'is_official'), 'export covers everything, hides internal flags');
   perform delete_my_account();
   perform t.as_admin();
   perform t.ok((select count(*) from profiles where id = alice) = 0, 'delete_my_account removes profile');

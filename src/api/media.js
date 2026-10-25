@@ -79,3 +79,25 @@ export async function removeAllMyImages() {
     if (files.length) unwrap(await supabase.storage.from(b).remove(files.map((f) => `${id}/${f.name}`)));
   }
 }
+
+/** Safety net: removes my files that nothing references any more (older than `graceMs`, so drafts are safe).
+ *  Deleting through the Storage API is the only way to really free space; SQL deletes would orphan files. */
+export async function sweepOrphans(graceMs = 2 * 3600e3) {
+  const id = await myId();
+  const [prof, cards, photos, posts] = await Promise.all([
+    supabase.from('profiles').select('avatar_path, theme, music').eq('id', id).single(),
+    supabase.from('profile_cards').select('content').eq('profile_id', id),
+    supabase.from('photos').select('path').eq('owner_id', id),
+    supabase.from('posts').select('image_path').eq('author_id', id),
+  ].map((p) => p.then(unwrap)));
+  const media = new Set([prof.avatar_path, prof.theme?.bg_image, prof.music?.cover, ...cards.flatMap((c) => c.content?.images || []),
+    ...photos.map((p) => p.path), ...posts.map((p) => p.image_path)].filter(Boolean));
+  const audio = new Set([prof.music?.audio].filter(Boolean));
+  let removed = 0;
+  for (const [bucket, keep] of [[BUCKET, media], ['audio', audio]]) {
+    const files = unwrap(await supabase.storage.from(bucket).list(id, { limit: 1000 }));
+    const dead = files.filter((f) => f.name !== '.emptyFolderPlaceholder' && f.created_at && Date.now() - new Date(f.created_at) > graceMs && !keep.has(`${id}/${f.name}`)).map((f) => `${id}/${f.name}`);
+    if (dead.length) { unwrap(await supabase.storage.from(bucket).remove(dead)); removed += dead.length; }
+  }
+  return removed;
+}

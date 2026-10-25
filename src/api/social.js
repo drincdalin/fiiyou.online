@@ -22,8 +22,20 @@ export async function setPhotoLike(photoId, on) {
 
 // ---------- places ----------
 export const listPlaces = async () => unwrap(await supabase.rpc('places_overview'));
-export async function createPlace({ name, description, lat, lng, localityId }) {
-  return unwrap(await supabase.from('places').insert({ name, description: description || null, lat, lng, locality_id: localityId || null, created_by: await uid() }).select().single());
+export async function createPlace({ name, description, lat, lng, localityId, osmRef = null }) {
+  const r = await supabase.from('places').insert({ name: name.slice(0, 80), description: description || null, lat, lng, locality_id: localityId || null, osm_ref: osmRef, created_by: await uid() }).select().single();
+  if (r.error?.code === '23505' && osmRef) return (await listPlaces()).find((p) => p.osm_ref === osmRef);   // someone added it first
+  return unwrap(r);
+}
+
+/** Search real-world places (OpenStreetMap Nominatim). Call on submit only: the usage policy allows ~1 request/second
+ *  and forbids search-as-you-type. The query and the visitor's IP go to OpenStreetMap. */
+export async function searchPlaces(q, bounds) {
+  const p = new URLSearchParams({ q, format: 'jsonv2', limit: '6', 'accept-language': 'ro,en' });
+  if (bounds) p.set('viewbox', `${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()},${bounds.getSouth()}`);
+  const r = await fetch(`https://nominatim.openstreetmap.org/search?${p}`);
+  if (!r.ok) throw new Error('Place search is unavailable right now.');
+  return (await r.json()).map((x) => ({ ref: `${x.osm_type}/${x.osm_id}`, name: (x.name || x.display_name.split(',')[0]).slice(0, 80), label: x.display_name, lat: +x.lat, lng: +x.lon }));
 }
 export const deletePlace = async (id) => unwrap(await supabase.from('places').delete().eq('id', id));
 
@@ -40,9 +52,12 @@ export async function sendMessage(peerId, body) {
 }
 export const markRead = async (peerId) => unwrap(await supabase.rpc('mark_read', { p_peer: peerId }));
 export const unreadCount = async () => Number(unwrap(await supabase.rpc('unread_count')));
-/** Live incoming messages (needs the realtime publication; the UI also polls as a fallback). */
+/** Live incoming messages. Each subscription gets its own channel name (a shared name made the second
+ *  subscriber throw and blank the page). Never throws; the UI also polls as a fallback. */
 export function onMessage(myId, cb) {
-  const ch = supabase.channel('dm-' + myId).on('postgres_changes',
-    { event: 'INSERT', schema: 'public', table: 'messages', filter: `recipient_id=eq.${myId}` }, cb).subscribe();
-  return () => supabase.removeChannel(ch);
+  try {
+    const ch = supabase.channel(`dm-${myId}-${Math.random().toString(36).slice(2)}`).on('postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'messages', filter: `recipient_id=eq.${myId}` }, cb).subscribe();
+    return () => { try { supabase.removeChannel(ch); } catch { /* ignore */ } };
+  } catch { return () => {}; }
 }

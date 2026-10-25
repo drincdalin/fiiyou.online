@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { profiles, cards as cardsApi, media, discover, friends, social } from '../index.js';
 import { THEME_DEFAULTS, OPTIONS, COLOR_KEYS, GROUPS, radii } from './theme.js';
+import { SELECTORS, PROPS } from './customCss.js';
+import { PRESETS } from './themes.js';
 
 const DEFAULT_CONTENT = { about: { body: '' }, text: { body: '' }, gallery: { images: [] }, links: { links: [] }, interests: { interests: [] }, guestbook: {}, top_friends: {} };
 const TABS = { Look: ['Shape', 'Surface', 'Type'], Layout: ['Layout', 'Background'] };
@@ -23,13 +25,24 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
     const a = f.indexOf(i), b = a + dir; if (b < 0 || b >= f.length) return d; [c[f[a]], c[f[b]]] = [c[f[b]], c[f[a]]]; return { ...d, cards: c }; });
   const run = async (fn) => { setBusy(true); setErr(''); try { await fn(); } catch (e) { setErr(e.message || 'Something went wrong'); } setBusy(false); };
   const stickers = draft.cards.filter((c) => c.type === 'sticker'); const s = stickers.find((c) => c.id === sel);
-  const cancel = () => { const b = draft.theme.bg_image; if (b && b !== draft.origBg) media.deleteImage(b).catch(() => {}); onClose(); };
+  const cancel = () => { const b = draft.theme.bg_image; if (b && b !== draft.origBg) media.deleteImage(b).catch(() => {});
+    { const o = draft.origMusic || {}, n = draft.fields.music || {}; if (n.cover && n.cover !== o.cover) media.deleteImage(n.cover).catch(() => {}); if (n.audio && n.audio !== o.audio) media.deleteAudio(n.audio).catch(() => {}); } onClose(); };
+  const setRule = (i, patch) => setDraft((d) => ({ ...d, css: d.css.map((r, j) => (j === i ? { ...r, ...patch } : r)) }));
+  const setProp = (i, k, v) => setDraft((d) => ({ ...d, css: d.css.map((r, j) => (j === i ? { ...r, p: { ...r.p, [k]: v } } : r)) }));
+  const dropProp = (i, k) => setDraft((d) => ({ ...d, css: d.css.map((r, j) => { if (j !== i) return r; const p = { ...r.p }; delete p[k]; return { ...r, p }; }) }));
+  const valueInput = (i, k, v) => { const sp = PROPS[k];
+    if (sp.type === 'color') return <input type="color" value={v.slice(0, 7)} onChange={(e) => setProp(i, k, e.target.value)} />;
+    if (sp.type === 'enum') return <select value={v} onChange={(e) => setProp(i, k, e.target.value)}>{sp.opts.map((o) => <option key={o}>{o}</option>)}</select>;
+    const cfg = sp.type === 'px' ? { min: sp.min, max: sp.max, step: 1, val: parseInt(v), out: (n) => `${n}px` } : sp.type === 'rotate' ? { min: -20, max: 20, step: 1, val: parseInt(v.slice(7)), out: (n) => `rotate(${n}deg)` } : { min: 0.1, max: 1, step: 0.1, val: Number(v), out: (n) => (n >= 1 ? '1' : n.toFixed(1)) };
+    return <span className="rng"><input type="range" min={cfg.min} max={cfg.max} step={cfg.step} value={cfg.val} onChange={(e) => setProp(i, k, cfg.out(Number(e.target.value)))} /><small>{v}</small></span>; };
   const topZ = Math.max(0, ...stickers.map((c) => c.z));
 
   const save = () => run(async () => {
-    await profiles.updateMyProfile({ ...draft.fields, theme: draft.theme });
+    await profiles.updateMyProfile({ ...draft.fields, theme: draft.theme, custom_css: draft.css });
     await friends.setTopFriends(draft.top);
     if (draft.origBg && draft.origBg !== draft.theme.bg_image) media.deleteImage(draft.origBg).catch(() => {});
+    { const o = draft.origMusic || {}, n = draft.fields.music || {};   // files replaced or removed while editing are deleted now
+      if (o.cover && o.cover !== n.cover) media.deleteImage(o.cover).catch(() => {}); if (o.audio && o.audio !== n.audio) media.deleteAudio(o.audio).catch(() => {}); }
     const flow = draft.cards.filter((c) => c.type !== 'sticker');
     const res = await Promise.allSettled(draft.cards.map((c) => c.type === 'sticker'
       ? cardsApi.updateCard(c.id, { x: c.x, y: c.y, w: c.w, h: c.h, z: c.z, rotation: c.rotation, visible: c.visible })
@@ -52,10 +65,13 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
   return (
     <aside className="customizer" onPointerDown={(e) => e.stopPropagation()}>
       <header><h3>Customize</h3><span className="acts"><button className="ghost sm" onClick={() => setCollapsed(true)}>Hide</button><button className="ghost sm" onClick={cancel} aria-label="Close">✕</button></span></header>
-      <div className="seg">{['Look', 'Layout', 'Cards', 'Photos', 'Stickers', 'Profile'].map((t) => <button key={t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>{t}</button>)}</div>
+      <div className="seg">{['Look', 'Layout', 'Cards', 'Photos', 'Stickers', 'Style', 'Profile'].map((t) => <button key={t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>{t}</button>)}</div>
       {err && <p className="err">{err}</p>}
       <div className="cbody">
-        {tab === 'Look' && <><h4>Colors</h4><div className="grid2">{COLOR_KEYS.map((k) => <label key={k}>{label(k)}<input type="color" value={th[k]} onChange={(e) => setTheme(k, e.target.value)} /></label>)}</div></>}
+        {tab === 'Look' && <><h4>Themes</h4><p className="hint">One tap sets colors, shape and fonts. You can still change anything after.</p>
+          <div className="presets">{PRESETS.map((p) => <button key={p.id} className="preset" title={p.name} onClick={() => setDraft((d) => ({ ...d, theme: { ...p.theme, ...(d.theme.bg_image ? { bg_image: d.theme.bg_image } : {}) } }))}>
+            <span className="sw" style={{ background: p.theme.bg_color }}><span style={{ background: p.theme.accent_color }} /><span style={{ background: p.theme.card_color }} /><span style={{ background: p.theme.text_color }} /></span><small>{p.name}</small></button>)}</div>
+          <h4>Colors</h4><div className="grid2">{COLOR_KEYS.map((k) => <label key={k}>{label(k)}<input type="color" value={th[k]} onChange={(e) => setTheme(k, e.target.value)} /></label>)}</div></>}
         {TABS[tab]?.map((g) => { const keys = GROUPS.find((x) => x[0] === g)[1]; return (<div key={g}><h4>{g}</h4>
           {g === 'Shape' && <p className="radii">Corners {r1} → {r2} → {r3}px <small>frame → cards → inner</small></p>}
           <div className="grid2">{keys.map(pick)}</div></div>); })}
@@ -69,9 +85,9 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
               <div className="cardhead"><input value={c.title || ''} maxLength={60} onChange={(e) => setCard(c.id, { title: e.target.value })} />
                 <button className="ghost sm" onClick={() => move(i, -1)} aria-label="Up">↑</button><button className="ghost sm" onClick={() => move(i, 1)} aria-label="Down">↓</button>
                 <button className="ghost sm" onClick={() => setCard(c.id, { visible: !c.visible })} aria-label="Toggle">{c.visible ? 'Hide' : 'Show'}</button>
-                <button className="ghost sm" onClick={() => run(async () => { await cardsApi.deleteCard(c.id); drop(c.id); })} aria-label="Delete">✕</button></div>
+                <button className="ghost sm" onClick={() => run(async () => { await cardsApi.deleteCard(c); drop(c.id); })} aria-label="Delete">✕</button></div>
               <small>{c.type.replace('_', ' ')}{!c.visible && ' · hidden'}</small>
-              {(c.type === 'about' || c.type === 'text') && <textarea rows="4" maxLength={3000} value={c.content.body || ''} onChange={(e) => setCard(c.id, { content: { ...c.content, body: e.target.value } })} />}
+              {(c.type === 'about' || c.type === 'text') && <><textarea rows="4" maxLength={3000} value={c.content.body || ''} onChange={(e) => setCard(c.id, { content: { ...c.content, body: e.target.value } })} /><small className="hint">**bold**, *italic*, [link text](https://…)</small></>}
               {c.type === 'links' && <textarea rows="3" placeholder="label | https://…  (one per line)" value={(c.content.links || []).map((l) => `${l.label} | ${l.url}`).join('\n')}
                 onChange={(e) => setCard(c.id, { content: { links: e.target.value.split('\n').filter(Boolean).slice(0, 20).map((ln) => { const [lb, url] = ln.split('|').map((x) => x.trim()); return { label: lb || url, url: url || lb }; }) } })} />}
               {c.type === 'interests' && <input placeholder="comma, separated" value={(c.content.interests || []).join(', ')} onChange={(e) => setCard(c.id, { content: { interests: e.target.value.split(',').map((x) => x.trim()).filter(Boolean).slice(0, 30) } })} />}
@@ -89,6 +105,15 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
               <button className="ghost sm" onClick={() => confirm('Delete this photo?') && run(async () => { await social.deletePhoto(p); await reload(); })}>✕</button></div></div>))}</div>
           {!photos.length && <p className="hint">No photos yet.</p>}</>}
 
+        {tab === 'Style' && <>
+          <p className="hint">Fine-tune any part of your page. Only safe values exist here: no scripts, no outside images, nothing that can break the page.</p>
+          {draft.css.map((r, i) => (<div className="cardrow" key={i}>
+            <div className="cardhead"><select value={r.s} onChange={(e) => setRule(i, { s: e.target.value })} aria-label="Element">{Object.entries(SELECTORS).map(([k, [l]]) => <option key={k} value={k}>{l}</option>)}</select>
+              <button className="ghost sm" onClick={() => setDraft((d) => ({ ...d, css: d.css.filter((_, j) => j !== i) }))} aria-label="Delete rule">✕</button></div>
+            {Object.entries(r.p).map(([k, v]) => <div className="proprow" key={k}><label>{PROPS[k].label}</label>{valueInput(i, k, v)}<button className="ghost sm" onClick={() => dropProp(i, k)} aria-label="Remove">✕</button></div>)}
+            {Object.keys(r.p).length < 12 && <select value="" onChange={(e) => e.target.value && setProp(i, e.target.value, PROPS[e.target.value].def)}><option value="">+ Add a property…</option>{Object.keys(PROPS).filter((k) => !(k in r.p)).map((k) => <option key={k} value={k}>{PROPS[k].label}</option>)}</select>}</div>))}
+          {draft.css.length < 40 && <button className="ghost" onClick={() => setDraft((d) => ({ ...d, css: [...d.css, { s: 'card', p: {} }] }))}>+ Add a style rule</button>}</>}
+
         {tab === 'Stickers' && <>
           <label className="file">Add a sticker<input type="file" accept="image/*" onChange={(e) => e.target.files[0] && addSticker(e.target.files[0])} /></label>
           <p className="hint">{stickers.length ? 'Drag a sticker on the page to move it. Drag its corner dot to resize.' : 'Stickers are small images you can place anywhere on your profile.'}</p>
@@ -96,12 +121,12 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
           {s ? (<div className="cardrow"><label>Rotate {s.rotation}°<input type="range" min="-180" max="180" value={s.rotation} onChange={(e) => setCard(s.id, { rotation: +e.target.value })} /></label>
             <label>Size {s.w}px<input type="range" min="40" max="600" value={s.w} onChange={(e) => setCard(s.id, { w: +e.target.value, h: Math.round(+e.target.value * s.h / s.w) })} /></label>
             <div className="cardhead"><button className="ghost sm" onClick={() => setCard(s.id, { z: topZ + 1 })}>Front</button><button className="ghost sm" onClick={() => setCard(s.id, { z: 0 })}>Back</button>
-              <button className="ghost sm" onClick={() => run(async () => { await cardsApi.deleteCard(s.id); drop(s.id); setSel(null); })}>Delete</button></div></div>)
+              <button className="ghost sm" onClick={() => run(async () => { await cardsApi.deleteCard(s); drop(s.id); setSel(null); })}>Delete</button></div></div>)
             : stickers.length > 0 && <p className="hint">Select a sticker on the page to edit it.</p>}</>}
 
         {tab === 'Profile' && <>
           <label>Display name<input value={draft.fields.display_name} maxLength={50} onChange={(e) => setField('display_name', e.target.value)} /></label>
-          <label>Headline<input value={draft.fields.headline || ''} maxLength={80} onChange={(e) => setField('headline', e.target.value)} /></label>
+          <label>Mood / headline<input value={draft.fields.headline || ''} maxLength={80} onChange={(e) => setField('headline', e.target.value)} /></label>
           <label>Locality<select value={draft.fields.locality_id ?? ''} onChange={(e) => setField('locality_id', e.target.value ? +e.target.value : null)}><option value="">—</option>{locs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
           <label>Who can write on my wall<select value={draft.fields.wall_policy} onChange={(e) => setField('wall_policy', e.target.value)}>{['everyone', 'friends', 'nobody'].map((o) => <option key={o}>{o}</option>)}</select></label>
           <label className="row"><input type="checkbox" checked={draft.fields.show_on_map} onChange={(e) => setField('show_on_map', e.target.checked)} />Show me on my friends' map</label>
@@ -112,7 +137,7 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
             <button className="ghost sm" onClick={() => setDraft((d) => ({ ...d, top: d.top.filter((x) => x !== id) }))} aria-label="Remove">✕</button></div>); })}
           {draft.top.length < 8 && fl.some((f) => !draft.top.includes(f.id)) && <select value="" onChange={(e) => e.target.value && setDraft((d) => ({ ...d, top: [...d.top, e.target.value] }))}><option value="">+ Add a friend…</option>{fl.filter((f) => !draft.top.includes(f.id)).map((f) => <option key={f.id} value={f.id}>{f.display_name}</option>)}</select>}
           <h4>Music</h4>
-          <label className="file">Upload audio (mp3, m4a, ogg · max 8 MB)<input type="file" accept="audio/*" onChange={(e) => e.target.files[0] && run(async () => { const old = m.audio; setMusic({ audio: await media.uploadAudio(e.target.files[0]), url: '' }); if (old) media.deleteAudio(old).catch(() => {}); })} /></label>
+          <label className="file">Upload audio (mp3, m4a, ogg · max 8 MB)<input type="file" accept="audio/*" onChange={(e) => e.target.files[0] && run(async () => { setMusic({ audio: await media.uploadAudio(e.target.files[0]), url: '' }); })} /></label>
           {m.audio && <button className="ghost sm" onClick={() => setMusic({ audio: '' })}>Remove uploaded audio</button>}
           <p className="hint">Audio plays on its own, with no video. Only upload music you have the right to share.</p>
           <input placeholder="…or a YouTube / direct .mp3 link (YouTube shows its video)" value={m.url || ''} onChange={(e) => setMusic({ url: e.target.value.trim(), audio: '' })} />

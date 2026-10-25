@@ -8,4 +8,5 @@ export * as social from './api/social.js';
 export * as discover from './api/discover.js';
 export * as media from './api/media.js';
 export * as safety from './api/safety.js';
+export * as admin from './api/admin.js';
 export { supabase, errorCode } from './lib/client.js';

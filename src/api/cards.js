@@ -20,11 +20,18 @@ export async function updateCard(id, patch) {
   return unwrap(await supabase.from('profile_cards').update(clean).eq('id', id).select().single());
 }
 
-export async function deleteCard(id) {
+export async function deleteCard(cardOrId) {
+  const id = typeof cardOrId === 'string' ? cardOrId : cardOrId.id; const files = typeof cardOrId === 'object' ? cardOrId.content?.images || [] : [];
   unwrap(await supabase.from('profile_cards').delete().eq('id', id));
+  if (files.length) supabase.storage.from('media').remove(files).catch(() => {});   // free the storage too
 }
 
 /** layout = [{id, x, y, w, h, z, rotation}] — call on drag/resize end (debounce it). */
 export async function saveLayout(layout) {
   unwrap(await supabase.rpc('save_card_layout', { p_layout: layout }));
+}
+
+export async function listMine() {
+  const { data: { user } } = await supabase.auth.getUser();
+  return unwrap(await supabase.from('profile_cards').select('*').eq('profile_id', user.id).order('y'));
 }

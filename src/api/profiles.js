@@ -1,7 +1,7 @@
 import { supabase, unwrap } from '../lib/client.js';
 import { uploadImage, deleteImage } from './media.js';
 
-const EDITABLE = ['display_name', 'headline', 'bio', 'locality_id', 'show_on_map', 'wall_policy', 'theme', 'music'];
+const EDITABLE = ['display_name', 'headline', 'bio', 'locality_id', 'show_on_map', 'wall_policy', 'theme', 'music', 'custom_css'];
 
 export async function getMyProfile() {
   const { data: { user } } = await supabase.auth.getUser();
@@ -74,3 +74,5 @@ export async function setBackgroundImage(file) {
   if (me.theme?.bg_image) await deleteImage(me.theme.bg_image).catch(() => {});
   return updated;
 }
+
+export async function myViews(id) { return Number(unwrap(await supabase.rpc('profile_view_count', { p_profile: id }))); }
