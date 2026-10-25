@@ -3,10 +3,11 @@
   "private": true,
   "type": "module",
   "version": "0.1.0",
-  "description": "fiiyou \u2014 local, customizable social network",
+  "description": "fiiyou — local, customizable social network",
   "main": "src/index.js",
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
+    "leaflet": "^1.9.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
@@ -17,7 +18,7 @@
     "test:db": "sudo -u postgres bash supabase/tests/run.sh"
   },
   "devDependencies": {
-    "vite": "^5.4.0",
-    "@vitejs/plugin-react": "^4.3.0"
+    "@vitejs/plugin-react": "^4.3.0",
+    "vite": "^5.4.0"
   }
 }

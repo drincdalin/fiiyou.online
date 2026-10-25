@@ -1,42 +1,43 @@
 import { supabase, unwrap } from '../lib/client.js';
-import { uploadImage } from './media.js';
+import { uploadImage, deleteImage } from './media.js';
+const uid = async () => (await supabase.auth.getUser()).data.user.id;
 
-/** kind: 'status' | 'event' | 'ask'   visibility: 'public' | 'friends'   (event needs eventAt) */
-export async function createPost({ body, kind = 'status', localityId = null, visibility = 'public', eventAt = null, eventPlace = null, imageFile = null }) {
-  const { data: { user } } = await supabase.auth.getUser();
-  const image_path = imageFile ? await uploadImage(imageFile) : null;
-  return unwrap(await supabase.from('posts').insert({
-    author_id: user.id, body, kind, visibility, image_path,
-    locality_id: localityId, event_at: eventAt, event_place: eventPlace,
-  }).select().single());
+/** Newest-first (or soonest-first with upcoming:true). Page with `before` = last item's created_at. */
+export async function feed({ localityId = null, onlyFriends = false, before = null, limit = 20, kind = null, placeId = null, upcoming = false, noEvents = false } = {}) {
+  return unwrap(await supabase.rpc('local_feed', { p_locality: localityId, p_only_friends: onlyFriends, p_before: before, p_limit: limit,
+    p_kind: kind, p_place: placeId, p_upcoming: upcoming, p_no_events: noEvents }));
 }
 
-export async function deletePost(id) { unwrap(await supabase.from('posts').delete().eq('id', id)); }
-
-/** Strictly newest-first. Paginate by passing the last item's created_at as `before`. */
-export async function localFeed({ localityId = null, onlyFriends = false, before = null, limit = 20, kind = null } = {}) {
-  return unwrap(await supabase.rpc('local_feed', {
-    p_locality: localityId, p_only_friends: onlyFriends, p_before: before, p_limit: limit, p_kind: kind,
-  }));
+/** kind: status | ask | event (event needs eventAt; title is for events). Image is compressed before upload. */
+export async function createPost({ body, kind = 'status', title = null, localityId = null, placeId = null, visibility = 'public', eventAt = null, eventPlace = null, imageFile = null }) {
+  const author_id = await uid();
+  const image_path = imageFile ? await uploadImage(imageFile, kind === 'event' ? 'event' : 'post') : null;
+  const r = await supabase.from('posts').insert({ author_id, body, kind, title, locality_id: localityId, place_id: placeId, visibility,
+    event_at: eventAt, event_place: eventPlace, image_path }).select().single();
+  if (r.error && image_path) deleteImage(image_path).catch(() => {});
+  return unwrap(r);
 }
 
-/** Upcoming local events, soonest first (events stay listed for 3h after they start). */
-export async function upcomingEvents({ localityId = null, limit = 20 } = {}) {
-  let q = supabase.from('posts')
-    .select('id, body, event_at, event_place, locality_id, author:profiles!posts_author_id_fkey(id, username, display_name, avatar_path)')
-    .eq('kind', 'event').gte('event_at', new Date(Date.now() - 3 * 3600e3).toISOString())
-    .order('event_at').limit(limit);
-  if (localityId) q = q.eq('locality_id', localityId);
-  return unwrap(await q);
+export async function updatePost(id, { body, title }, { removeImage = false, oldImage = null } = {}) {
+  const patch = { body }; if (title !== undefined) patch.title = title; if (removeImage) patch.image_path = null;
+  const r = unwrap(await supabase.from('posts').update(patch).eq('id', id).select().single());
+  if (removeImage && oldImage) deleteImage(oldImage).catch(() => {});
+  return r;
 }
-
+export async function deletePost(id, imagePath) {
+  unwrap(await supabase.from('posts').delete().eq('id', id));
+  if (imagePath) deleteImage(imagePath).catch(() => {});
+}
+export async function setLike(postId, on) {
+  const user_id = await uid();
+  if (on) unwrap(await supabase.from('post_likes').insert({ post_id: postId, user_id }));
+  else unwrap(await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', user_id));
+}
 export async function listComments(postId) {
   return unwrap(await supabase.from('post_comments')
-    .select('id, body, created_at, author:profiles!post_comments_author_id_fkey(id, username, display_name, avatar_path)')
-    .eq('post_id', postId).order('created_at'));
+    .select('id, body, created_at, author:profiles!post_comments_author_id_fkey(id, username, display_name, avatar_path)').eq('post_id', postId).order('created_at'));
 }
 export async function addComment(postId, body) {
-  const { data: { user } } = await supabase.auth.getUser();
-  return unwrap(await supabase.from('post_comments').insert({ post_id: postId, author_id: user.id, body }).select().single());
+  return unwrap(await supabase.from('post_comments').insert({ post_id: postId, author_id: await uid(), body }).select().single());
 }
 export async function deleteComment(id) { unwrap(await supabase.from('post_comments').delete().eq('id', id)); }

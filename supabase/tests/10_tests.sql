@@ -212,6 +212,32 @@ begin
   perform t.ok((select count(*) from reports) = 0, 'reports are write-only for users');
   perform t.as_admin();
 
+  -- ---- v10: official flag, likes, photos, views, chat, places ----
+  perform t.as_user(carol);
+  perform t.fails(format($q$update profiles set is_official = true where id = %L$q$, carol), 'user cannot self-promote to official', 'permission denied');
+  perform t.as_admin();
+  update profiles set is_official = true where id = carol;
+  perform t.as_user(bob);
+  perform t.ok((select author_official from local_feed(1) where author_id = carol limit 1) is not false, 'official flag visible in feed');
+  insert into places (name, lat, lng, created_by) values ('Test spot', 46.5, 22.3, bob) returning id into cid;
+  insert into posts (author_id, body, place_id) values (bob, 'at the spot', cid);
+  insert into post_likes (post_id, user_id) select id, bob from posts where body = 'at the spot';
+  perform t.ok((select like_count from local_feed(null,false,null,10,null,cid)) = 1 and (select liked from local_feed(null,false,null,10,null,cid)), 'place feed + like count');
+  perform t.ok((select post_count from places_overview() where id = cid) = 1, 'places_overview counts posts');
+  insert into photos (owner_id, path, position) values (bob, bob::text || '/11111111-1111-1111-1111-111111111111.webp', 2), (bob, bob::text || '/22222222-2222-2222-2222-222222222222.webp', 1);
+  perform reorder_photos(array(select id from photos where owner_id = bob order by position desc));
+  perform t.ok((select path from photos_of(bob) limit 1) like '%1111%', 'reorder_photos applies');
+  perform t.as_admin();
+  perform t.as_user(carol);
+  perform record_profile_view(bob); perform record_profile_view(bob);
+  perform t.ok(profile_view_count(bob) = 1, 'view counted once per viewer per day');
+  perform record_profile_view(carol);
+  perform t.ok(profile_view_count(carol) = 0, 'own view not counted');
+  perform t.fails(format($q$insert into messages (sender_id, recipient_id, body) values (%L, %L, 'hi')$q$, carol, bob), 'chat blocked for non-friends');
+  perform t.as_admin();
+  perform t.as_user(bob);
+  perform t.ok((select count(*) from profile_views) = 0, 'profile_views unreadable');
+  perform t.as_admin();
   -- ---- anon sees nothing ----
   execute 'set local role anon';
   perform t.fails('select count(*) from public.profiles', 'anon cannot read profiles');

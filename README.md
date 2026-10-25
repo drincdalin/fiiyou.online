@@ -56,3 +56,9 @@ Errors from `rpc`/inserts carry stable codes via `errorCode(err)` (`rate_limit`,
 ## Tests
 `supabase/tests/run.sh` (run as the postgres user on a local Postgres) rebuilds a scratch DB with a mocked `auth`/`storage` schema, applies the migrations and runs 63 checks (RLS, friend flow, blocks, validators, rate limits, anon lockout, cascade delete).
 Caveat: that's vanilla Postgres 16, not a real Supabase stack — the `auth.users` trigger and the `storage.objects` policies are the parts most worth re-checking on the real thing. The JS layer is syntax-checked only, not run against a live project.
+
+## v10 notes
+- Real map uses OpenStreetMap tiles via Leaflet (credit shown on the map). Tiles are requested from OpenStreetMap's servers, so visitors' IPs reach them. Fine for a small local site; self-host tiles later if you outgrow it.
+- Official accounts: in Supabase run `update public.profiles set is_official = true where username = 'primaria_beius';` (users cannot set this themselves).
+- Images are re-encoded to WebP in the browser: avatar ~70 KB, sticker ~60 KB, photos/posts ~200 KB, events ~240 KB, background ~260 KB, max side 1280-1600 px.
+- Profile views count one per viewer per day; nobody (including you) can see who viewed.

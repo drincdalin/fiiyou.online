@@ -3,25 +3,25 @@ import { supabase, unwrap } from '../lib/client.js';
 const BUCKET = 'media';
 const MAX_BYTES = 1_500_000;        // keep under bucket limit (1572864)
 
-/**
- * Downscale + convert to webp in the browser so free-tier storage lasts.
- * GIFs are passed through untouched (to keep the animation) and must already be < MAX_BYTES.
- */
-export async function compressImage(file, { maxSize = 1600, quality = 0.82 } = {}) {
-  if (file.type === 'image/gif') {
-    if (file.size > MAX_BYTES) throw new Error('gif_too_large');
+// Per-use targets: longest side (px) and max size (KB). WebP, EXIF stripped, re-encoded until it fits.
+export const PRESETS = { avatar: { max: 512, kb: 70 }, sticker: { max: 480, kb: 60 }, cover: { max: 640, kb: 80 },
+  photo: { max: 1280, kb: 200 }, post: { max: 1280, kb: 200 }, event: { max: 1280, kb: 240 }, bg: { max: 1600, kb: 260 } };
+
+export async function compressImage(file, preset = 'photo') {
+  const { max, kb } = PRESETS[preset] ?? PRESETS.photo;
+  if (file.type === 'image/gif') {                       // keep animation; must already be small
+    if (file.size > 600_000) throw new Error('GIF is over 600 KB. Use a smaller GIF or a still image.');
     return file;
   }
-  const bmp = await createImageBitmap(file);
-  const scale = Math.min(1, maxSize / Math.max(bmp.width, bmp.height));
-  const canvas = new OffscreenCanvas(Math.round(bmp.width * scale), Math.round(bmp.height * scale));
-  canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
-  let q = quality, blob;
-  do {                                // step quality down until it fits
-    blob = await canvas.convertToBlob({ type: 'image/webp', quality: q });
-    q -= 0.12;
-  } while (blob.size > MAX_BYTES && q > 0.3);
-  if (blob.size > MAX_BYTES) throw new Error('image_too_large');
+  const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  let scale = Math.min(1, max / Math.max(bmp.width, bmp.height)), blob;
+  for (let round = 0; round < 6; round++) {
+    const c = new OffscreenCanvas(Math.max(1, Math.round(bmp.width * scale)), Math.max(1, Math.round(bmp.height * scale)));
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    for (let q = 0.82; q >= 0.4; q -= 0.14) { blob = await c.convertToBlob({ type: 'image/webp', quality: q }); if (blob.size <= kb * 1024) return blob; }
+    scale *= 0.85;                                       // still too big: shrink and retry
+  }
+  if (blob.size > 1_400_000) throw new Error('Image is too large.');
   return blob;
 }
 
@@ -32,8 +32,8 @@ async function myId() {
 }
 
 /** Uploads and returns the storage path (store THIS in avatar_path / card content / posts). */
-export async function uploadImage(file) {
-  const blob = await compressImage(file);
+export async function uploadImage(file, preset = 'photo') {
+  const blob = await compressImage(file, preset);
   const ext = blob.type === 'image/gif' ? 'gif' : 'webp';
   const path = `${await myId()}/${crypto.randomUUID()}.${ext}`;
   unwrap(await supabase.storage.from(BUCKET).upload(path, blob, {

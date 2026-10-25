@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { profiles, cards as cardsApi, media, discover } from '../index.js';
+import { profiles, cards as cardsApi, media, discover, friends, social } from '../index.js';
 import { THEME_DEFAULTS, OPTIONS, COLOR_KEYS, GROUPS, radii } from './theme.js';
 
 const DEFAULT_CONTENT = { about: { body: '' }, text: { body: '' }, gallery: { images: [] }, links: { links: [] }, interests: { interests: [] }, guestbook: {}, top_friends: {} };
@@ -7,7 +7,9 @@ const TABS = { Look: ['Shape', 'Surface', 'Type'], Layout: ['Layout', 'Backgroun
 const label = (k) => k.replace(/_/g, ' ');
 const cl = (v, a, b) => Math.min(b, Math.max(a, v));
 
-export default function Customizer({ draft, setDraft, onClose, reload, sel, setSel, notify }) {
+export default function Customizer({ draft, setDraft, onClose, reload, sel, setSel, notify, photos, img, collapsed, setCollapsed }) {
+  const [fl, setFl] = useState([]); const [dragI, setDragI] = useState(null);
+  useEffect(() => { friends.listFriends().then(setFl).catch(() => {}); }, []);
   const [tab, setTab] = useState('Look'); const [busy, setBusy] = useState(false); const [err, setErr] = useState(''); const [locs, setLocs] = useState([]);
   useEffect(() => { discover.listLocalities().then(setLocs); }, []);
   useEffect(() => { if (sel) setTab('Stickers'); }, [sel]);
@@ -21,10 +23,13 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
     const a = f.indexOf(i), b = a + dir; if (b < 0 || b >= f.length) return d; [c[f[a]], c[f[b]]] = [c[f[b]], c[f[a]]]; return { ...d, cards: c }; });
   const run = async (fn) => { setBusy(true); setErr(''); try { await fn(); } catch (e) { setErr(e.message || 'Something went wrong'); } setBusy(false); };
   const stickers = draft.cards.filter((c) => c.type === 'sticker'); const s = stickers.find((c) => c.id === sel);
+  const cancel = () => { const b = draft.theme.bg_image; if (b && b !== draft.origBg) media.deleteImage(b).catch(() => {}); onClose(); };
   const topZ = Math.max(0, ...stickers.map((c) => c.z));
 
   const save = () => run(async () => {
     await profiles.updateMyProfile({ ...draft.fields, theme: draft.theme });
+    await friends.setTopFriends(draft.top);
+    if (draft.origBg && draft.origBg !== draft.theme.bg_image) media.deleteImage(draft.origBg).catch(() => {});
     const flow = draft.cards.filter((c) => c.type !== 'sticker');
     const res = await Promise.allSettled(draft.cards.map((c) => c.type === 'sticker'
       ? cardsApi.updateCard(c.id, { x: c.x, y: c.y, w: c.w, h: c.h, z: c.z, rotation: c.rotation, visible: c.visible })
@@ -35,16 +40,19 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
   });
   const addCard = (type) => run(async () => { const c = await cardsApi.createCard({ type, title: type.replace('_', ' '), content: DEFAULT_CONTENT[type], y: draft.cards.length * 10 }); setDraft((d) => ({ ...d, cards: [...d.cards, c] })); });
   const addSticker = (file) => run(async () => {
-    const bmp = await createImageBitmap(file); const h = cl(Math.round(140 * bmp.height / bmp.width), 40, 2000); const path = await media.uploadImage(file);
+    const bmp = await createImageBitmap(file); const h = cl(Math.round(140 * bmp.height / bmp.width), 40, 2000); const path = await media.uploadImage(file, 'sticker');
     const c = await cardsApi.createCard({ type: 'sticker', content: { images: [path] }, x: 40, y: 40, w: 140, h, z: topZ + 1 }); setDraft((d) => ({ ...d, cards: [...d.cards, c] })); setSel(c.id); });
   const upload = (fn) => (e) => e.target.files[0] && run(async () => { await fn(e.target.files[0]); await reload(); notify('Image updated'); });
   const pick = (k) => <label key={k}>{label(k)}<select value={th[k]} onChange={(e) => setTheme(k, e.target.value)}>{OPTIONS[k].map((o) => <option key={o}>{o}</option>)}</select></label>;
   const m = draft.fields.music || {};
 
+  const movePhoto = (i, to) => { if (to < 0 || to >= photos.length) return; const ids = photos.map((p) => p.id); const [m] = ids.splice(i, 1); ids.splice(to, 0, m); run(async () => { await social.reorderPhotos(ids); await reload(); }); };
+  const moveTop = (i, dir) => setDraft((d) => { const t = [...d.top]; const j = i + dir; if (j < 0 || j >= t.length) return d; [t[i], t[j]] = [t[j], t[i]]; return { ...d, top: t }; });
+  if (collapsed) return (<aside className="customizer collapsed" onPointerDown={(e) => e.stopPropagation()}><button className="ghost sm" onClick={() => setCollapsed(false)}>‹ Edit</button><button className="primary sm" disabled={busy} onClick={save}>Save</button></aside>);
   return (
     <aside className="customizer" onPointerDown={(e) => e.stopPropagation()}>
-      <header><h3>Customize</h3><button className="ghost sm" onClick={onClose} aria-label="Close">✕</button></header>
-      <div className="seg">{['Look', 'Layout', 'Cards', 'Stickers', 'Profile'].map((t) => <button key={t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>{t}</button>)}</div>
+      <header><h3>Customize</h3><span className="acts"><button className="ghost sm" onClick={() => setCollapsed(true)}>Hide</button><button className="ghost sm" onClick={cancel} aria-label="Close">✕</button></span></header>
+      <div className="seg">{['Look', 'Layout', 'Cards', 'Photos', 'Stickers', 'Profile'].map((t) => <button key={t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>{t}</button>)}</div>
       {err && <p className="err">{err}</p>}
       <div className="cbody">
         {tab === 'Look' && <><h4>Colors</h4><div className="grid2">{COLOR_KEYS.map((k) => <label key={k}>{label(k)}<input type="color" value={th[k]} onChange={(e) => setTheme(k, e.target.value)} /></label>)}</div></>}
@@ -52,7 +60,8 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
           {g === 'Shape' && <p className="radii">Corners {r1} → {r2} → {r3}px <small>frame → cards → inner</small></p>}
           <div className="grid2">{keys.map(pick)}</div></div>); })}
         {tab === 'Layout' && <><h4>Images</h4><label className="file">Avatar<input type="file" accept="image/*" onChange={upload(profiles.setAvatar)} /></label>
-          <label className="file">Background<input type="file" accept="image/*" onChange={upload(profiles.setBackgroundImage)} /></label></>}
+          <label className="file">Background image (auto-compressed)<input type="file" accept="image/*" onChange={(e) => e.target.files[0] && run(async () => { const old = draft.theme.bg_image; const p = await media.uploadImage(e.target.files[0], 'bg'); if (old && old !== draft.origBg) media.deleteImage(old).catch(() => {}); setTheme('bg_image', p); })} /></label>
+          {draft.theme.bg_image && <button className="ghost sm" onClick={() => setDraft((d) => { const t = { ...d.theme }; delete t.bg_image; return { ...d, theme: t }; })}>Remove background</button>}</>}
 
         {tab === 'Cards' && <>
           {draft.cards.map((c, i) => (c.type === 'sticker' || c.type === 'music') ? null : (
@@ -66,13 +75,24 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
               {c.type === 'links' && <textarea rows="3" placeholder="label | https://…  (one per line)" value={(c.content.links || []).map((l) => `${l.label} | ${l.url}`).join('\n')}
                 onChange={(e) => setCard(c.id, { content: { links: e.target.value.split('\n').filter(Boolean).slice(0, 20).map((ln) => { const [lb, url] = ln.split('|').map((x) => x.trim()); return { label: lb || url, url: url || lb }; }) } })} />}
               {c.type === 'interests' && <input placeholder="comma, separated" value={(c.content.interests || []).join(', ')} onChange={(e) => setCard(c.id, { content: { interests: e.target.value.split(',').map((x) => x.trim()).filter(Boolean).slice(0, 30) } })} />}
-              {c.type === 'gallery' && <label className="file">Add image<input type="file" accept="image/*" onChange={(e) => e.target.files[0] && run(async () => { const p = await media.uploadImage(e.target.files[0]); setCard(c.id, { content: { images: [...(c.content.images || []), p].slice(0, 12) } }); })} /></label>}
+              {c.type === 'gallery' && <p className="hint">Manage photos in the Photos tab.</p>}
             </div>))}
           <select value="" onChange={(e) => e.target.value && addCard(e.target.value)}><option value="">+ Add a card…</option>{Object.keys(DEFAULT_CONTENT).map((t) => <option key={t} value={t}>{t.replace('_', ' ')}</option>)}</select></>}
+
+        {tab === 'Photos' && <>
+          <label className="file">Add photos (auto-compressed)<input type="file" accept="image/*" multiple onChange={(e) => { const fs = [...e.target.files]; e.target.value = ''; run(async () => { for (const f of fs) await social.addPhoto(f); await reload(); notify('Photos added'); }); }} /></label>
+          <p className="hint">Drag to reorder, or use the arrows. Captions appear in the pop-up. Changes here save immediately.</p>
+          <div className="pgrid">{photos.map((p, i) => (<div key={p.id} className="pcell" draggable onDragStart={() => setDragI(i)} onDragOver={(e) => e.preventDefault()} onDrop={() => { if (dragI != null) movePhoto(dragI, i); setDragI(null); }}>
+            {img[p.path] && <img src={img[p.path]} alt="" />}
+            <input defaultValue={p.caption || ''} placeholder="Caption" maxLength={300} onBlur={(e) => e.target.value !== (p.caption || '') && run(async () => { await social.setCaption(p.id, e.target.value); await reload(); })} />
+            <div className="cardhead"><small>♥ {p.like_count}</small><button className="ghost sm" onClick={() => movePhoto(i, i - 1)} aria-label="Earlier">‹</button><button className="ghost sm" onClick={() => movePhoto(i, i + 1)} aria-label="Later">›</button>
+              <button className="ghost sm" onClick={() => confirm('Delete this photo?') && run(async () => { await social.deletePhoto(p); await reload(); })}>✕</button></div></div>))}</div>
+          {!photos.length && <p className="hint">No photos yet.</p>}</>}
 
         {tab === 'Stickers' && <>
           <label className="file">Add a sticker<input type="file" accept="image/*" onChange={(e) => e.target.files[0] && addSticker(e.target.files[0])} /></label>
           <p className="hint">{stickers.length ? 'Drag a sticker on the page to move it. Drag its corner dot to resize.' : 'Stickers are small images you can place anywhere on your profile.'}</p>
+          {stickers.length > 0 && <div className="thumbs">{stickers.map((c) => <button key={c.id} className={c.id === sel ? 'on' : ''} onClick={() => setSel(c.id)} aria-label="Select sticker">{img[c.content.images?.[0]] && <img src={img[c.content.images[0]]} alt="" />}</button>)}</div>}
           {s ? (<div className="cardrow"><label>Rotate {s.rotation}°<input type="range" min="-180" max="180" value={s.rotation} onChange={(e) => setCard(s.id, { rotation: +e.target.value })} /></label>
             <label>Size {s.w}px<input type="range" min="40" max="600" value={s.w} onChange={(e) => setCard(s.id, { w: +e.target.value, h: Math.round(+e.target.value * s.h / s.w) })} /></label>
             <div className="cardhead"><button className="ghost sm" onClick={() => setCard(s.id, { z: topZ + 1 })}>Front</button><button className="ghost sm" onClick={() => setCard(s.id, { z: 0 })}>Back</button>
@@ -85,6 +105,12 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
           <label>Locality<select value={draft.fields.locality_id ?? ''} onChange={(e) => setField('locality_id', e.target.value ? +e.target.value : null)}><option value="">—</option>{locs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
           <label>Who can write on my wall<select value={draft.fields.wall_policy} onChange={(e) => setField('wall_policy', e.target.value)}>{['everyone', 'friends', 'nobody'].map((o) => <option key={o}>{o}</option>)}</select></label>
           <label className="row"><input type="checkbox" checked={draft.fields.show_on_map} onChange={(e) => setField('show_on_map', e.target.checked)} />Show me on my friends' map</label>
+          <h4>Top friends</h4>
+          {!fl.length && <p className="hint">Add some friends first, then pick your top 8 here.</p>}
+          {draft.top.map((id, i) => { const f = fl.find((x) => x.id === id); return f && (<div className="cardhead" key={id}><span style={{ flex: 1 }}>{i + 1}. {f.display_name}</span>
+            <button className="ghost sm" onClick={() => moveTop(i, -1)} aria-label="Up">↑</button><button className="ghost sm" onClick={() => moveTop(i, 1)} aria-label="Down">↓</button>
+            <button className="ghost sm" onClick={() => setDraft((d) => ({ ...d, top: d.top.filter((x) => x !== id) }))} aria-label="Remove">✕</button></div>); })}
+          {draft.top.length < 8 && fl.some((f) => !draft.top.includes(f.id)) && <select value="" onChange={(e) => e.target.value && setDraft((d) => ({ ...d, top: [...d.top, e.target.value] }))}><option value="">+ Add a friend…</option>{fl.filter((f) => !draft.top.includes(f.id)).map((f) => <option key={f.id} value={f.id}>{f.display_name}</option>)}</select>}
           <h4>Music</h4>
           <label className="file">Upload audio (mp3, m4a, ogg · max 8 MB)<input type="file" accept="audio/*" onChange={(e) => e.target.files[0] && run(async () => { const old = m.audio; setMusic({ audio: await media.uploadAudio(e.target.files[0]), url: '' }); if (old) media.deleteAudio(old).catch(() => {}); })} /></label>
           {m.audio && <button className="ghost sm" onClick={() => setMusic({ audio: '' })}>Remove uploaded audio</button>}
@@ -92,9 +118,9 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
           <input placeholder="…or a YouTube / direct .mp3 link (YouTube shows its video)" value={m.url || ''} onChange={(e) => setMusic({ url: e.target.value.trim(), audio: '' })} />
           <div className="grid2"><input placeholder="Title" maxLength={80} value={m.title || ''} onChange={(e) => setMusic({ title: e.target.value })} />
             <input placeholder="Artist" maxLength={80} value={m.artist || ''} onChange={(e) => setMusic({ artist: e.target.value })} /></div>
-          <label className="file">Cover image<input type="file" accept="image/*" onChange={(e) => e.target.files[0] && run(async () => setMusic({ cover: await media.uploadImage(e.target.files[0]) }))} /></label></>}
+          <label className="file">Cover image<input type="file" accept="image/*" onChange={(e) => e.target.files[0] && run(async () => setMusic({ cover: await media.uploadImage(e.target.files[0], 'cover') }))} /></label></>}
       </div>
-      <footer><button className="primary" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Save changes'}</button><button className="ghost" onClick={onClose}>Cancel</button></footer>
+      <footer><button className="primary" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Save changes'}</button><button className="ghost" onClick={cancel}>Cancel</button></footer>
     </aside>
   );
 }

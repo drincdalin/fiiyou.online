@@ -4,6 +4,7 @@ export * as cards from './api/cards.js';
 export * as friends from './api/friends.js';
 export * as wall from './api/wall.js';
 export * as posts from './api/posts.js';
+export * as social from './api/social.js';
 export * as discover from './api/discover.js';
 export * as media from './api/media.js';
 export * as safety from './api/safety.js';

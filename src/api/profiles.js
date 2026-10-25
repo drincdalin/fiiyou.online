@@ -14,13 +14,17 @@ export async function getFullProfile(username) {
   const profile = unwrap(await supabase.from('profiles')
     .select('*, locality:localities(id, name, slug)').eq('username', username.toLowerCase()).maybeSingle());
   if (!profile) return null;
-  const [cards, top, friendCount, relationship] = await Promise.all([
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user.id !== profile.id) await supabase.rpc('record_profile_view', { p_profile: profile.id });   // own views never count
+  const [cards, top, friendCount, relationship, photos, views] = await Promise.all([
     supabase.from('profile_cards').select('*').eq('profile_id', profile.id).eq('visible', true).order('y').order('z'),
     supabase.from('top_friends')
       .select('rank, friend:profiles!top_friends_friend_id_fkey(id, username, display_name, avatar_path)')
       .eq('profile_id', profile.id).order('rank'),
     supabase.rpc('friends_of', { p_profile: profile.id }),
     relationshipWith(profile.id),
+    supabase.rpc('photos_of', { p_profile: profile.id }),
+    supabase.rpc('profile_view_count', { p_profile: profile.id }),
   ]);
   return {
     profile,
@@ -28,6 +32,8 @@ export async function getFullProfile(username) {
     topFriends: unwrap(top).map(t => ({ rank: t.rank, ...t.friend })),
     friendCount: unwrap(friendCount).length,
     relationship,
+    photos: unwrap(photos),
+    views: Number(unwrap(views)),
   };
 }
 
@@ -54,7 +60,7 @@ export const updateTheme = (theme) => updateMyProfile({ theme });
 
 export async function setAvatar(file) {
   const me = await getMyProfile();
-  const path = await uploadImage(file);
+  const path = await uploadImage(file, 'avatar');
   const updated = unwrap(await supabase.from('profiles').update({ avatar_path: path }).eq('id', me.id).select().single());
   if (me.avatar_path) await deleteImage(me.avatar_path).catch(() => {});   // don't leak old files
   return updated;

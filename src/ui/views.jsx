@@ -1,0 +1,162 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { posts, social, friends, discover } from '../index.js';
+import { useImages, Avatar, ago } from './shared.jsx';
+import { PostCard, Composer, EventComposer, Lightbox } from './parts.jsx';
+
+const useFeed = (args, notify) => {
+  const [rows, setRows] = useState(null); const [more, setMore] = useState(false); const key = JSON.stringify(args);
+  const load = useCallback(async (append = false, cur = []) => {
+    try { const before = append && cur.length ? cur[cur.length - 1].created_at : null; const r = await posts.feed({ ...args, before, limit: 20 });
+      setRows(append ? [...cur, ...r] : r); setMore(r.length === 20 && !args.upcoming); } catch (e) { notify(e.message, 'err'); setRows([]); }
+  }, [key]);
+  useEffect(() => { setRows(null); load(false); }, [load]);
+  const img = useImages((rows || []).flatMap((p) => [p.image_path, p.author_avatar_path]));
+  const change = (np) => setRows((r) => r.map((x) => (x.id === np.id ? np : x))); const drop = (id) => setRows((r) => r.filter((x) => x.id !== id));
+  return { rows, more, load, img, change, drop };
+};
+const List = ({ f, me, go, notify, empty }) => !f.rows ? <div className="boot">Loading…</div> : (<>
+  {!f.rows.length && <p className="empty">{empty}</p>}
+  {f.rows.map((p) => <PostCard key={p.id} p={p} me={me} img={f.img} go={go} onChange={f.change} onDelete={f.drop} notify={notify} />)}
+  {f.more && <button className="ghost wide" onClick={() => f.load(true, f.rows)}>Load more</button>}</>);
+
+/* ---------------- Home ---------------- */
+export function HomeView({ me, go, notify }) {
+  const [tab, setTab] = useState('nearby'); const [loc, setLoc] = useState(''); const [locs, setLocs] = useState([]); const [places, setPlaces] = useState([]);
+  useEffect(() => { discover.listLocalities().then(setLocs); social.listPlaces().then(setPlaces).catch(() => {}); }, []);
+  const f = useFeed({ onlyFriends: tab === 'friends', localityId: loc ? +loc : null, noEvents: true }, notify);
+  return (<div className="plain view"><Composer me={me} places={places} onPosted={() => f.load(false)} notify={notify} />
+    <div className="tabs"><button className={tab === 'nearby' ? 'on' : ''} onClick={() => setTab('nearby')}>Everyone</button><button className={tab === 'friends' ? 'on' : ''} onClick={() => setTab('friends')}>Friends</button>
+      <select value={loc} onChange={(e) => setLoc(e.target.value)} aria-label="Place"><option value="">All localities</option>{locs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></div>
+    <List f={f} me={me} go={go} notify={notify} empty={tab === 'friends' ? 'Nothing from friends yet.' : 'No posts yet. Be the first.'} /></div>);
+}
+
+/* ---------------- Events ---------------- */
+export function EventsView({ me, go, notify }) {
+  const [tab, setTab] = useState('all'); const [adding, setAdding] = useState(false);
+  const f = useFeed({ kind: 'event', upcoming: true }, notify); const shown = f.rows && (tab === 'official' ? { ...f, rows: f.rows.filter((p) => p.author_official) } : f);
+  return (<div className="plain view"><div className="phead"><h2 className="ptitle">Events</h2><button className="primary sm" onClick={() => setAdding(!adding)}>{adding ? 'Close' : 'New event'}</button></div>
+    {adding && <EventComposer me={me} onPosted={() => { setAdding(false); f.load(false); }} notify={notify} />}
+    <div className="tabs"><button className={tab === 'all' ? 'on' : ''} onClick={() => setTab('all')}>Upcoming</button><button className={tab === 'official' ? 'on' : ''} onClick={() => setTab('official')}>Official</button></div>
+    {shown ? <List f={shown} me={me} go={go} notify={notify} empty={tab === 'official' ? 'No official announcements right now.' : 'No upcoming events.'} /> : <div className="boot">Loading…</div>}</div>);
+}
+
+/* ---------------- Map ---------------- */
+const TILE = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const hash = (s) => [...s].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
+
+function PlaceSheet({ place, me, go, notify, onClose, onChanged }) {
+  const [rows, setRows] = useState(null); const [lb, setLb] = useState(null);
+  const load = () => posts.feed({ placeId: place.id, limit: 30 }).then(setRows).catch((e) => { notify(e.message, 'err'); setRows([]); });
+  useEffect(() => { setRows(null); load(); }, [place.id]);
+  const img = useImages((rows || []).flatMap((p) => [p.image_path, p.author_avatar_path]));
+  const here = [...new Map((rows || []).filter((p) => p.author_is_friend).map((p) => [p.author_id, p])).values()];
+  const pics = (rows || []).filter((p) => p.image_path && img[p.image_path]);
+  const change = (np) => setRows((r) => r.map((x) => (x.id === np.id ? np : x))); const drop = (id) => setRows((r) => r.filter((x) => x.id !== id));
+  return (<aside className="sheet"><header><div><h3>{place.name}</h3>{place.description && <p className="muted">{place.description}</p>}</div><button className="ghost sm" onClick={onClose} aria-label="Close">✕</button></header>
+    {here.length > 0 && <div><h4>Friends who have been here</h4><div className="mlist">{here.map((p) => <button key={p.author_id} className="chip" onClick={() => go('profile', p.author_username)}><Avatar src={img[p.author_avatar_path]} size={26} />{p.author_display_name}</button>)}</div></div>}
+    {pics.length > 0 && <div className="pstrip">{pics.map((p, i) => <button key={p.id} onClick={() => setLb(i)}><img src={img[p.image_path]} alt="" /></button>)}</div>}
+    <Composer me={me} fixedPlace={place.id} onPosted={() => { load(); onChanged(); }} notify={notify} />
+    {rows ? (rows.length ? rows.map((p) => <PostCard key={p.id} p={p} me={me} img={img} go={go} onChange={change} onDelete={drop} notify={notify} />) : <p className="empty">Nobody has posted here yet.</p>) : <div className="boot">Loading…</div>}
+    {place.created_by === me.id && <button className="ghost sm" onClick={async () => { if (!confirm('Delete this place? Posts stay, but lose the place tag.')) return; try { await social.deletePlace(place.id); onChanged(); onClose(); notify('Place deleted'); } catch (e) { notify(e.message, 'err'); } }}>Delete place</button>}
+    {lb != null && <Lightbox items={pics.map((p) => ({ id: p.id, src: img[p.image_path], caption: p.body }))} index={lb} onClose={() => setLb(null)} onIndex={setLb} />}
+  </aside>);
+}
+
+export function MapView({ me, go, notify }) {
+  const box = useRef(), map = useRef(), group = useRef(), addRef = useRef(false), fitted = useRef(false);
+  const [places, setPlaces] = useState([]); const [fr, setFr] = useState([]); const [locs, setLocs] = useState([]); const [show, setShow] = useState({ places: true, friends: true });
+  const [sel, setSel] = useState(null); const [adding, setAdding] = useState(false); const [pin, setPin] = useState(null); const [form, setForm] = useState({ name: '', description: '', locality: '' });
+  const img = useImages(fr.map((f) => f.avatar_path));
+  const refresh = () => social.listPlaces().then((r) => { setPlaces(r); setSel((s) => s && r.find((x) => x.id === s.id)); }).catch((e) => notify(e.message, 'err'));
+  useEffect(() => {
+    const m = L.map(box.current).setView([45.9, 24.9], 7);
+    L.tileLayer(TILE, { maxZoom: 19, attribution: '© OpenStreetMap contributors' }).addTo(m);
+    group.current = L.layerGroup().addTo(m); map.current = m;
+    m.on('click', (e) => { if (addRef.current) setPin(e.latlng); });
+    refresh(); discover.friendsMap().then(setFr).catch(() => {}); discover.listLocalities().then(setLocs);
+    return () => m.remove();
+  }, []);
+  useEffect(() => { addRef.current = adding; box.current.classList.toggle('adding', adding); }, [adding]);
+  useEffect(() => { if (fitted.current) return; const pts = [...places.map((p) => [p.lat, p.lng]), ...locs.filter((l) => l.lat != null).map((l) => [l.lat, l.lng])];
+    if (pts.length) { map.current.fitBounds(pts, { padding: [40, 40], maxZoom: 15 }); fitted.current = true; } }, [places, locs]);
+  useEffect(() => { if (sel) map.current.panTo([sel.lat, sel.lng]); }, [sel?.id]);
+  useEffect(() => {
+    const g = group.current; g.clearLayers();
+    if (show.places) places.forEach((p) => L.marker([p.lat, p.lng], { title: p.name, icon: L.divIcon({ className: 'mk', iconSize: [34, 34], iconAnchor: [17, 17],
+      html: `<div class="mkp${p.friends_there ? ' hot' : ''}"><b>${Number(p.post_count)}</b></div>` }) }).on('click', () => setSel(p)).addTo(g));
+    if (show.friends) fr.forEach((f) => { const h = hash(f.id); const src = img[f.avatar_path];
+      L.marker([f.lat + ((h % 100) - 50) / 50 * 0.0025, f.lng + (((h >> 7) % 100) - 50) / 50 * 0.0035], { title: f.display_name,
+        icon: L.divIcon({ className: 'mk', iconSize: [30, 30], iconAnchor: [15, 15], html: src ? `<img class="mkf" src="${src}" alt="">` : '<div class="mkf"></div>' }) })
+        .on('click', () => go('profile', f.username)).addTo(g); });
+  }, [places, fr, show, img]);
+  const savePlace = async (e) => { e.preventDefault();
+    try { const p = await social.createPlace({ name: form.name, description: form.description, lat: pin.lat, lng: pin.lng, localityId: form.locality ? +form.locality : null });
+      setPin(null); setAdding(false); setForm({ name: '', description: '', locality: '' }); await refresh(); setSel({ ...p, post_count: 0, friends_there: 0 }); notify('Place added'); } catch (er) { notify(er.message || 'Could not add place', 'err'); } };
+  return (<div className={`mapview view${sel ? ' open' : ''}`}>
+    <div className="mapbar"><button className={show.places ? 'on' : ''} onClick={() => setShow({ ...show, places: !show.places })}>Places</button>
+      <button className={show.friends ? 'on' : ''} onClick={() => setShow({ ...show, friends: !show.friends })}>Friends</button>
+      <button className={adding ? 'primary sm' : 'ghost sm'} onClick={() => { setAdding(!adding); setPin(null); }}>{adding ? 'Tap the map to place it' : 'Add a place'}</button></div>
+    <div className="mapwrap"><div ref={box} className="leaflet-box" />
+      {!places.length && !adding && <p className="maphint">No places yet. Use "Add a place", then tap the map.</p>}</div>
+    {sel && <PlaceSheet place={sel} me={me} go={go} notify={notify} onClose={() => setSel(null)} onChanged={refresh} />}
+    {pin && <div className="modal" onClick={() => setPin(null)}><form className="panel mform" onClick={(e) => e.stopPropagation()} onSubmit={savePlace}><h3>New place</h3>
+      <input autoFocus required minLength={2} maxLength={80} placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+      <textarea rows="2" maxLength={300} placeholder="Short description (optional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+      <select value={form.locality} onChange={(e) => setForm({ ...form, locality: e.target.value })}><option value="">Locality (optional)</option>{locs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select>
+      <div className="acts"><button className="primary">Save place</button><button type="button" className="ghost" onClick={() => setPin(null)}>Cancel</button></div></form></div>}
+  </div>);
+}
+
+/* ---------------- Messages ---------------- */
+export function MessagesView({ me, peer, notify, refreshUnread }) {
+  const [convs, setConvs] = useState([]); const [fl, setFl] = useState([]); const [cur, setCur] = useState(peer || null); const [msgs, setMsgs] = useState(null); const [txt, setTxt] = useState(''); const end = useRef();
+  const loadConvs = () => social.conversations().then(setConvs).catch(() => {});
+  const loadThread = useCallback(async (id) => { try { setMsgs(await social.thread(id)); await social.markRead(id); loadConvs(); refreshUnread(); } catch (e) { notify(e.message, 'err'); } }, []);
+  useEffect(() => { loadConvs(); friends.listFriends().then(setFl); }, []);
+  useEffect(() => { setMsgs(null); if (cur) loadThread(cur); }, [cur]);
+  useEffect(() => { const off = social.onMessage(me.id, () => { loadConvs(); if (cur) loadThread(cur); });
+    const t = setInterval(() => { loadConvs(); if (cur) loadThread(cur); }, 12000); return () => { off(); clearInterval(t); }; }, [cur]);
+  useEffect(() => { end.current?.scrollIntoView({ block: 'end' }); }, [msgs?.length, cur]);
+  const img = useImages([...convs, ...fl].map((p) => p.avatar_path));
+  const who = convs.find((c) => c.id === cur) || fl.find((f) => f.id === cur);
+  const send = async (e) => { e.preventDefault(); const body = txt.trim(); if (!body) return; setTxt('');
+    try { const m = await social.sendMessage(cur, body); setMsgs((x) => [...(x || []), m]); loadConvs(); } catch (er) { setTxt(body); notify(er.message?.includes('rate_limit') ? 'Slow down a little.' : 'Could not send. Are you still friends?', 'err'); } };
+  const fresh = fl.filter((f) => !convs.some((c) => c.id === f.id));
+  return (<div className={`chat view${cur ? ' thread' : ''}`}>
+    <aside className="clist"><h3>Messages</h3>
+      {fresh.length > 0 && <select value="" onChange={(e) => e.target.value && setCur(e.target.value)}><option value="">New message…</option>{fresh.map((f) => <option key={f.id} value={f.id}>{f.display_name}</option>)}</select>}
+      {!convs.length && !fresh.length && <p className="empty">Add friends to start chatting.</p>}
+      {convs.map((c) => (<button key={c.id} className={`crow2${cur === c.id ? ' on' : ''}`} onClick={() => setCur(c.id)}><Avatar src={img[c.avatar_path]} size={40} />
+        <span><b>{c.display_name}</b><small>{c.last_mine ? 'You: ' : ''}{c.last_body}</small></span>{c.unread > 0 && <em className="dotb">{c.unread}</em>}</button>))}</aside>
+    <section className="cthread">{cur && who ? (<>
+      <header><button className="ghost sm back" onClick={() => setCur(null)}>‹</button><Avatar src={img[who.avatar_path]} size={34} /><b>{who.display_name}</b></header>
+      <div className="msgs">{msgs ? (msgs.length ? msgs.map((m) => <div key={m.id} className={`bub${m.sender_id === me.id ? ' mine' : ''}`}><p>{m.body}</p><small>{ago(m.created_at)}</small></div>) : <p className="empty">Say hi.</p>) : <div className="boot">…</div>}<div ref={end} /></div>
+      <form className="inline" onSubmit={send}><input value={txt} maxLength={1000} placeholder="Write a message…" onChange={(e) => setTxt(e.target.value)} autoFocus /><button className="primary" disabled={!txt.trim()}>Send</button></form></>)
+      : <p className="empty">Pick a conversation.</p>}</section></div>);
+}
+
+/* ---------------- People (discover + friends + requests) ---------------- */
+export function PeopleView({ me, go, notify }) {
+  const [tab, setTab] = useState('discover'); const [q, setQ] = useState(''); const [loc, setLoc] = useState(''); const [mode, setMode] = useState('random'); const [locs, setLocs] = useState([]);
+  const [people, setPeople] = useState([]); const [fl, setFl] = useState([]); const [inc, setInc] = useState([]); const [sent, setSent] = useState({});
+  const loadF = () => { friends.listFriends().then(setFl); friends.incomingRequests().then(setInc); };
+  useEffect(() => { discover.listLocalities().then(setLocs); loadF(); }, []);
+  useEffect(() => { (q.trim().length >= 2 ? discover.searchProfiles(q) : discover.discover({ localityId: loc ? +loc : null, mode })).then(setPeople).catch(() => {}); }, [q, loc, mode]);
+  const img = useImages([...people, ...fl, ...inc.map((r) => r.from)].map((p) => p.avatar_path));
+  const lname = (id) => locs.find((l) => l.id === id)?.name;
+  const act = (fn, msg) => fn().then(() => { notify(msg); loadF(); }).catch((e) => notify(e.message, 'err'));
+  const row = (p, extra, sub) => (<div className="row" key={p.id}><Avatar src={img[p.avatar_path]} size={44} /><button className="link" onClick={() => go('profile', p.username)}>{p.display_name}<small>{sub ?? `@${p.username}`}</small></button>{extra}</div>);
+  return (<div className="plain view"><div className="tabs">
+    {[['discover', 'Discover'], ['friends', `Friends`], ['requests', 'Requests']].map(([k, l]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l} {k === 'friends' && <span className="count">{fl.length}</span>}{k === 'requests' && inc.length > 0 && <span className="count hot">{inc.length}</span>}</button>)}</div>
+    {tab === 'discover' && <><div className="inline"><input placeholder="Search name or @username" value={q} onChange={(e) => setQ(e.target.value)} />
+      <select value={loc} onChange={(e) => setLoc(e.target.value)}><option value="">Anywhere</option>{locs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select>
+      <select value={mode} onChange={(e) => setMode(e.target.value)}><option value="random">Random</option><option value="new">Newest</option></select></div>
+      {!people.length && <p className="empty">No one to show.</p>}
+      {people.map((p) => row(p, sent[p.id] ? <small>Request sent</small> : <button className="primary sm" onClick={() => friends.sendRequest(p.id).then(() => { setSent({ ...sent, [p.id]: 1 }); notify('Request sent'); }).catch((e) => notify(e.message, 'err'))}>Add</button>,
+        [p.headline, lname(p.locality_id)].filter(Boolean).join(' · ') || `@${p.username}`))}</>}
+    {tab === 'friends' && (fl.length ? fl.map((f) => row(f, <span className="acts"><button className="primary sm" onClick={() => go('messages', null, f.id)}>Message</button><button className="ghost sm" onClick={() => confirm('Remove this friend?') && act(() => friends.removeFriend(f.id), 'Removed')}>Remove</button></span>)) : <p className="empty">No friends yet. Find people in Discover.</p>)}
+    {tab === 'requests' && (inc.length ? inc.map((r) => row(r.from, <span className="acts"><button className="primary sm" onClick={() => act(() => friends.acceptRequest(r.id), 'Friend added')}>Accept</button><button className="ghost sm" onClick={() => act(() => friends.declineRequest(r.id), 'Declined')}>Decline</button></span>)) : <p className="empty">No pending requests.</p>)}
+  </div>);
+}
