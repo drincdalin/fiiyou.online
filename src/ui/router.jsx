@@ -48,12 +48,25 @@ export function Link({ to, replace, onClick, ...props }) {
   );
 }
 
-/** Call once in main.jsx BEFORE createRoot(...).render(...) */
+/** Call once in main.jsx BEFORE createRoot(...).render(...)
+ *  COMPAT MODE (use while the app still routes with #/hash):
+ *  a clean link  /dennys  opens the app and is turned into  /#/u/dennys  internally.
+ *  A stuck  /dennys#/me  is repaired to  /#/me. */
 export function bootRouter() {
-  // 1. arrived through 404.html: restore the real path
+  const saved = sessionStorage.getItem('fiiyou:redirect');   // set by 404.html
+  if (saved) { sessionStorage.removeItem('fiiyou:redirect'); history.replaceState(null, '', saved); }
+  const seg = location.pathname.slice(BASE.length).split('/').filter(Boolean);
+  if (seg.length === 1 && !isReserved(seg[0])) {
+    const hash = location.hash.startsWith('#/') ? location.hash : `#/u/${seg[0]}`;
+    history.replaceState(null, '', `${BASE}/${hash}`);
+  }
+}
+
+/** Use this instead only after App.jsx has been converted to usePath/parseRoute/Link/navigate:
+ *  old hash links (/#/u/dennys, /#/me) become real paths (/dennys, /me). */
+export function bootRouterClean() {
   const saved = sessionStorage.getItem('fiiyou:redirect');
   if (saved) { sessionStorage.removeItem('fiiyou:redirect'); history.replaceState(null, '', saved); }
-  // 2. old shared links: /#/u/dalin -> /dalin, /#/settings -> /settings (auth tokens like #access_token=... are untouched)
   const m = location.hash.match(/^#(\/.*)$/);
   if (m) history.replaceState(null, '', BASE + m[1].replace(/^\/u\//, '/'));
 }
