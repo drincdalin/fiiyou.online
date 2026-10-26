@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
+import { House, User, MapPin, ChatCircle, UsersThree, ShieldCheck } from '@phosphor-icons/react';
 import { posts, safety } from '../index.js';
 import { Avatar, ago, Rich } from './shared.jsx';
+
+/** Blue verified checkmark (Instagram style). */
+export function Verified() {
+  return (<svg className="vcheck" viewBox="0 0 24 24" role="img" aria-label="Verified" width="1em" height="1em"><title>Verified</title>
+    <circle cx="12" cy="12" r="11" fill="#0095f6" />
+    <path fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" d="M7 12.4l3.4 3.4L17 8.8" /></svg>);
+}
 
 /** Pop-up viewer. items: [{id, src, caption, likes, liked}]. Pass onLike to show the like button. */
 export function Lightbox({ items, index, onClose, onIndex, onLike }) {
@@ -34,11 +42,11 @@ export function PostCard({ p, me, img, go, onChange, onDelete, notify }) {
   const src = img[p.image_path];
   return (<article className={`post${p.author_official ? ' official' : ''}`}>
     <header><button className="who" onClick={() => go('profile', p.author_username)}><Avatar src={img[p.author_avatar_path]} />
-      <span><b>{p.author_display_name}{p.author_official && <em className="badge">Verified</em>}</b><small>@{p.author_username} · {ago(p.created_at)}{p.edited_at && ' · edited'}</small></span></button>
+      <span><b>{p.author_display_name}{p.author_official && <Verified />}</b><small>@{p.author_username} · {ago(p.created_at)}{p.edited_at && ' · edited'}</small></span></button>
       {!own && <span className="pa"><button className="ghost sm" onClick={() => setRep(true)}>Report</button></span>}
       {own && !edit && <span className="pa"><button className="ghost sm" onClick={() => setEdit(true)}>Edit</button><button className="ghost sm" onClick={del}>Delete</button></span>}</header>
     <div className={`pmain${p.image_path && src ? ' has' : ''}`}>
-      {p.image_path && src && <button className="pimg" onClick={() => setZoom(true)} aria-label="Open photo"><img src={src} alt="" loading="lazy" /></button>}
+      {p.image_path && src && <button className="pimg" style={{ '--bgimg': `url("${src}")` }} onClick={() => setZoom(true)} aria-label="Open photo"><img src={src} alt="" loading="lazy" /></button>}
       <div className="ptext">
         {p.kind === 'event' && <div className="evmeta">{new Date(p.event_at).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' })}{p.event_place && ` · ${p.event_place}`}</div>}
         {p.place_name && <div className="chipline">At {p.place_name}</div>}
@@ -91,4 +99,11 @@ export function Composer({ me, places = [], fixedPlace = null, onPosted, notify 
         <button type="button" className="ghost sm" onClick={() => setMore(!more)}>{more ? 'Fewer options' : 'More options'}</button>
         <button className="primary" disabled={busy || !f.body.trim()}>{busy ? 'Posting…' : ev ? 'Publish' : 'Post'}</button></div></>}
   </form>);
+}
+
+/** Navbar icons (Phosphor; they use currentColor so active/hover colours just work). */
+const NAV_ICONS = { home: House, profile: User, map: MapPin, messages: ChatCircle, people: UsersThree, admin: ShieldCheck };
+export function NavIcon({ name, active }) {
+  const Icon = NAV_ICONS[name];
+  return <Icon className="navic" size="1.4em" weight={active ? 'fill' : 'regular'} aria-hidden="true" />;
 }

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { auth, admin as adminApi, profiles, cards as cardsApi, friends, wall, social, safety, media, errorCode } from '../index.js';
 import { useImages, Boot, Avatar, Rich } from './shared.jsx';
 import { toCss } from './customCss.js';
-import { Lightbox, ReportModal } from './parts.jsx';
+import { Lightbox, ReportModal, Verified, NavIcon } from './parts.jsx';
 import ImportModal from './ImportModal.jsx';
 import { buildThemeExport, download } from './themeFile.js';
 import { HomeView, MapView, MessagesView, PeopleView } from './views.jsx';
@@ -111,7 +111,7 @@ function ProfileView({ username, go, notify, refreshMe }) {
   const patch = (id, p) => setDraft((x) => ({ ...x, cards: x.cards.map((c) => (c.id === id ? { ...c, ...p } : c)) }));
   const act = (fn, msg) => fn().then(() => { notify(msg); load(); }).catch((e) => notify(e.message, 'err'));
   const friendBtn = { none: ['Add friend', () => friends.sendRequest(profile.id), 'Request sent'], pending_sent: ['Cancel request', () => friends.removeFriend(profile.id), 'Request cancelled'],
-    pending_received: ['Accept request', () => friends.acceptRequest(rel.id), 'You are now friends'], friends: ['Unfriend', () => friends.removeFriend(profile.id), 'Removed'] }[rel.status];
+    pending_received: ['Accept request', () => friends.acceptRequest(rel.id), 'You are now friends'], friends: ['Friends', () => friends.removeFriend(profile.id), 'Friend removed'] }[rel.status];
   const name = draft?.fields.display_name ?? profile.display_name; const headline = draft?.fields.headline ?? profile.headline;
   const items = d.photos.map((p) => ({ id: p.id, src: img[p.path], caption: p.caption, likes: p.like_count, liked: p.liked }));
   const likePhoto = async (it) => { const on = !it.liked; const upd = (liked, n) => setD((x) => ({ ...x, photos: x.photos.map((p) => (p.id === it.id ? { ...p, liked, like_count: p.like_count + n } : p)) }));
@@ -124,15 +124,18 @@ function ProfileView({ username, go, notify, refreshMe }) {
       <main className="frame" ref={frame} data-layout={theme.layout || 'side-left'}>
         <aside className="side">
           <div className="avatar">{img[profile.avatar_path] ? <img src={img[profile.avatar_path]} alt="" /> : <i />}</div>
-          <div className="nameplate"><h1>{name}{profile.is_official && <em className="badge">Verified</em>}</h1><small>@{profile.username}{profile.locality ? ` · ${profile.locality.name}` : ''}</small>
+          <div className="nameplate"><h1>{name}{profile.is_official && <Verified />}</h1><small>@{profile.username}{profile.locality ? ` · ${profile.locality.name}` : ''}</small>
             <small className="views">{d.friendCount} friend{d.friendCount === 1 ? '' : 's'} · {d.views} view{d.views === 1 ? '' : 's'}</small></div>
           {headline && <p className="headline">{headline}</p>}
           {(audioUrl || music.url) && <Player key={music.audio || music.url} src={audioUrl || music.url} title={music.title} artist={music.artist} cover={img[music.cover]} />}
           {own ? !draft && <button className="primary wide" onClick={startEdit}>Customize profile</button> : <div className="actions">
-            {friendBtn && <button className="primary" onClick={() => act(friendBtn[1], friendBtn[2])}>{friendBtn[0]}</button>}
-            {rel.status === 'friends' && <button className="ghost" onClick={() => go('messages', null, profile.id)}>Message</button>}
-            <button className="ghost" onClick={() => setRep(true)}>Report</button>
-            <button className="ghost" onClick={() => confirm('Block this person?') && safety.blockUser(profile.id).then(() => go('people'))}>Block</button></div>}
+            {rel.status === 'friends' ? <div className="arow">
+              <button className="primary" onClick={() => go('messages', null, profile.id)}>Message</button>
+              <button className="ghost" title="Click to remove this friend" onClick={() => confirm('Remove this friend?') && act(friendBtn[1], friendBtn[2])}><svg className="ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>{friendBtn[0]}</button></div>
+              : friendBtn && <button className="primary wide" onClick={() => act(friendBtn[1], friendBtn[2])}>{friendBtn[0]}</button>}
+            <div className="safe">
+              <button className="link" onClick={() => setRep(true)}>Report</button><span aria-hidden="true">·</span>
+              <button className="link" onClick={() => confirm('Block this person?') && safety.blockUser(profile.id).then(() => go('people'))}>Block</button></div></div>}
         </aside>
         <div className="divider" />
         <div className="cards">{shown.filter((c) => c.visible && c.type !== 'music' && c.type !== 'sticker').map((c) => <CardView key={c.id} c={c} d={d} img={img} go={go} openPhoto={setLb} />)}</div>
@@ -185,7 +188,7 @@ export default function App() {
   const exportTheme = async () => { try { download('fiiyou-theme.json', buildThemeExport(await profiles.getMyProfile(), await cardsApi.listMine())); notify('Theme exported'); } catch (e) { notify(e.message, 'err'); } };
   return (<div className="app" style={appAccent(me.theme?.accent_color)}>
     <nav className="nav"><button className="logo" onClick={() => go('home')}>fiiyou</button>
-      <div className="navlinks">{NAV.map(([v, l]) => <button key={v} className={active(v) ? 'on' : ''} onClick={() => go(v)}>{l}{v === 'messages' && unread > 0 && <em className="dotb">{unread}</em>}</button>)}</div>
+      <div className="navlinks">{NAV.map(([v, l]) => <button key={v} className={active(v) ? 'on' : ''} aria-label={l} title={l} aria-current={active(v) ? 'page' : undefined} onClick={() => go(v)}><NavIcon name={v} active={active(v)} />{v === 'messages' && unread > 0 && <em className="dotb">{unread > 99 ? '99+' : unread}</em>}</button>)}</div>
       <div className="more" ref={menuRef}><button className="avbtn" onClick={() => setMenu(!menu)} aria-label="Account menu"><Avatar src={myImg[me.avatar_path]} size={34} /></button>{menu && <div className="menu">
         <button onClick={() => go('profile')}>My profile</button>
         <button onClick={exportTheme}>Export my theme</button>
