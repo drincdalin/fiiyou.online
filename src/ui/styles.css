@@ -367,3 +367,22 @@ input[type=file]::file-selector-button { background: var(--accent); color: var(-
 .navic { display: block; }
 .navlinks .dotb { position: absolute; top: -3px; right: -3px; margin: 0; min-width: 17px; font-size: .64rem; line-height: 17px; box-shadow: 0 0 0 2px var(--g1); }
 @media (max-width: 700px) { .navlinks button { padding: .55rem .1rem; } .navlinks .dotb { top: 0; right: calc(50% - 20px); } }
+
+/* stickers are the top layer of the profile (above cards, sidebar and buttons) but stay below the app navbar, menus and the customizer */
+.page { isolation: isolate; }
+.sticker { z-index: 100; }
+/* keep the sidebar exactly as wide as its column: nothing inside may push it wider */
+.side > * { min-width: 0; } .actions { grid-template-columns: minmax(0, 1fr); } .actions .arow { grid-template-columns: minmax(0, 1fr) auto; }
+.actions .primary, .actions .ghost { padding-left: .6rem; padding-right: .6rem; }
+/* editing: keep the page at the same 1210px design width a wide viewer sees, so sticker spots match what visitors get (scroll sideways on narrower screens) */
+@media (min-width: 1001px) { .page.editing { overflow-x: auto; } .page.editing .frame { min-width: 1210px; } }
+
+/* profile photos: bigger tiles, whole photo visible (no cropping of screenshots, wide shots, etc.) */
+.gal { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+.gal .gtile { background: color-mix(in srgb, var(--card) 60%, #000); border: var(--bw) var(--bs) var(--border); }
+.gal img { aspect-ratio: 4 / 3; object-fit: contain; border-radius: 0; }
+@media (max-width: 700px) { .gal { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); } }
+
+/* while editing, the owner sees a faded copy of the buttons visitors get, so sticker spots are chosen around the real layout */
+.actions.preview { opacity: .5; pointer-events: none; user-select: none; }
+.actions.preview .safe span { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
