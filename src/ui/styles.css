@@ -386,3 +386,9 @@ input[type=file]::file-selector-button { background: var(--accent); color: var(-
 /* while editing, the owner sees a faded copy of the buttons visitors get, so sticker spots are chosen around the real layout */
 .actions.preview { opacity: .5; pointer-events: none; user-select: none; }
 .actions.preview .safe span { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+
+/* readable hover / busy state for ghost buttons on any profile theme */
+.page .ghost:hover:not(:disabled),
+.page .ghost:focus-visible { background: color-mix(in srgb, var(--text) 12%, transparent); border-color: var(--accent); color: var(--text); }
+.page .ghost:disabled,
+.page .ghost:disabled:hover { background: transparent; color: var(--text); opacity: .6; cursor: progress; }

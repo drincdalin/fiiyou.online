@@ -10,7 +10,7 @@ import AdminView from './Admin.jsx';
 import { themeStyle, appAccent } from './theme.js';
 import Player from './Player.jsx';
 import Customizer from './Customizer.jsx';
-import { renderStory } from './exportStory.js';
+import { renderStory } from './storyImage.js';
 
 const BASE = import.meta.env.BASE_URL;
 function Auth() {
@@ -118,7 +118,7 @@ function ProfileView({ username, go, notify, refreshMe }) {
   const shareImage = async () => { if (sharing) return; setSharing(true);
     try { const c = await renderStory({ frame: frame.current, page: pageRef.current, bgSrc: img[theme.bg_image], username: profile.username });
       const blob = await new Promise((r) => c.toBlob(r, 'image/png')); const file = new File([blob], `fiiyou-${profile.username}.png`, { type: 'image/png' });
-      if (navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file], text: `${profile.display_name} on fiiyou` }); return; } catch (e) { if (e.name === 'AbortError') return; } }
+      if (navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file] }); return; } catch (e) { if (e.name === 'AbortError') return; } }
       const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = file.name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); notify('Image saved'); }
     catch (e) { notify('Could not create the image', 'err'); } finally { setSharing(false); } };
   const likePhoto = async (it) => { const on = !it.liked; const upd = (liked, n) => setD((x) => ({ ...x, photos: x.photos.map((p) => (p.id === it.id ? { ...p, liked, like_count: p.like_count + n } : p)) }));
