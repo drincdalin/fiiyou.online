@@ -1,163 +1,169 @@
-import { toCanvas } from 'html-to-image';
+import { FONT_STACKS, THEME_DEFAULTS } from './theme.js';
 
-/* 9:16 story: just the profile card, as large and sharp as it can be. No extra text. */
+/* 9:16 story, drawn directly on a canvas (no screenshot of the page), so it is always crisp and never contains
+   buttons, inputs or other things that only make sense on a live page. One calm card on the person's own colours:
+   avatar, name, handle, mood, the song they listen to, a few interests, and a small link at the bottom. */
 const W = 1080, H = 1920;
-const SHARE_ORIGIN = 'https://app.fiiyou.online';
-
-const MARGIN = 26;                         // min side margin of the card
-const CARD_TOP = 240, CARD_BOTTOM = 1680;  // area the card may use (clear of Instagram's top/bottom UI)
-const SHADOW = 0.1;                        // card shadow strength: 1 = as strong as the app's own, 0 = none
-const BLEED = 96;                          // transparent room around the card so stickers hanging outside it survive
-const WIDTHS = [460, 520, 580, 640, 700, 780, 860, 960]; // layout widths (css px) tried for the photo
-
-/* Owner buttons that never belong in a shared picture. Also anything marked data-nostory. */
-const NOISE = /customi[sz]e profile|edit profile|share as image|making image/i;
-/* Extra clutter, only removed with { clean: true } */
-const NOISE_CLEAN = /^\s*(send|delete|report|block|add friend|message)\s*$/i;
-
+export const SHARE_ORIGIN = 'https://app.fiiyou.online';
 export const profileUrl = (slug) => `${SHARE_ORIGIN}/${encodeURIComponent(slug)}`;
 
-const nextFrame = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-const withTimeout = (p, ms) => Promise.race([p, new Promise((r) => setTimeout(r, ms))]);
+const VERIFIED_BLUE = '#1d9bf0';
+const AREA_TOP = 230, AREA_BOTTOM = 1500;   // keeps clear of Instagram's top bar and reply bar
+const CARD_X = 90, CARD_W = W - CARD_X * 2, PAD = 64, INNER = CARD_W - PAD * 2;
+
 const loadImg = (src) => new Promise((res) => {
   if (!src) return res(null);
   const i = new Image(); i.crossOrigin = 'anonymous';
   i.onload = () => res(i); i.onerror = () => res(null); i.src = src;
 });
 
-/* ---------- colour helpers ---------- */
-function parseRGB(c) {
-  const m = /rgba?\(([^)]+)\)/.exec(c || ''); if (!m) return null;
-  const [r, g, b, a = 1] = m[1].split(/[\s,/]+/).filter(Boolean).map(parseFloat);
-  return [r, g, b].every(Number.isFinite) ? { r, g, b, a } : null;
+const rgbOf = (h) => { const m = /^#?([0-9a-f]{6})$/i.exec(String(h || '')); const n = m ? parseInt(m[1], 16) : 0; return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+const rgba = (h, a) => { const [r, g, b] = rgbOf(h); return `rgba(${r},${g},${b},${a})`; };
+const lum = (h) => { const f = (c) => { const x = c / 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }; const [r, g, b] = rgbOf(h); return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+
+function rr(g, x, y, w, h, r) {
+  r = Math.max(0, Math.min(r, w / 2, h / 2));
+  g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
 }
 
-function paintBackground(g, base) { g.fillStyle = base || '#0b0b0b'; g.fillRect(0, 0, W, H); }
-
-/* scale the alpha of every colour in a CSS box-shadow value */
-function scaleShadow(value, k) {
-  if (!value || value === 'none') return 'none';
-  let found = false;
-  const out = value.replace(/rgba?\(([^)]+)\)/g, (_, inner) => {
-    found = true;
-    const [r, g, b, a = 1] = inner.split(/[\s,/]+/).filter(Boolean).map(parseFloat);
-    return `rgba(${r}, ${g}, ${b}, ${(a * k).toFixed(4)})`;
-  });
-  return found ? out : 'none';
+/* cover-fit an image into a box */
+function drawCover(g, img, x, y, w, h) {
+  const k = Math.max(w / img.width, h / img.height), dw = img.width * k, dh = img.height * k;
+  g.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
 }
 
-/* ---------- build the off-screen copy that gets photographed ---------- */
-function makeCopy(frame, hide, clean) {
-  const copy = frame.cloneNode(true);
-  // <canvas> content is not copied by cloneNode
-  const src = frame.querySelectorAll('canvas'), dst = copy.querySelectorAll('canvas');
-  src.forEach((c, i) => { try { dst[i]?.getContext('2d')?.drawImage(c, 0, 0); } catch { /* tainted or webgl */ } });
+/* soft blur that works in every browser: shrink, then stretch back with smoothing */
+function blurred(img, strength = 28) {
+  const c = document.createElement('canvas'); c.width = Math.round(W / strength); c.height = Math.round(H / strength);
+  const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; drawCover(g, img, 0, 0, c.width, c.height);
+  return c;
+}
 
-  copy.querySelectorAll('audio, video, .grip, [data-nostory]').forEach((n) => n.remove());
-  if (hide) copy.querySelectorAll(hide).forEach((n) => n.remove());
-  copy.querySelectorAll('button, a').forEach((n) => { if (NOISE.test(n.textContent || '')) n.remove(); });
-  if (clean) {
-    copy.querySelectorAll('button, a').forEach((n) => { if (NOISE_CLEAN.test(n.textContent || '')) n.remove(); });
-    copy.querySelectorAll('input:not([type=range]), textarea').forEach((n) => n.remove());
+function wrapLines(g, str, maxW, maxLines) {
+  const words = String(str || '').split(/\s+/).filter(Boolean); const lines = []; let cur = '';
+  for (const w of words) {
+    const t = cur ? `${cur} ${w}` : w;
+    if (g.measureText(t).width <= maxW) cur = t; else { if (cur) lines.push(cur); cur = w; }
   }
-  copy.querySelectorAll('img').forEach((i) => { i.loading = 'eager'; });
-
-  Object.assign(copy.style, {
-    margin: '0', transform: 'none', position: 'relative', left: 'auto', top: 'auto',
-    minWidth: '0', maxWidth: 'none', height: 'auto', minHeight: '0',
-    boxShadow: scaleShadow(getComputedStyle(frame).boxShadow, SHADOW),
-  });
-  return copy;
+  if (cur) lines.push(cur);
+  if (lines.length > maxLines) { lines.length = maxLines; let l = lines[maxLines - 1]; while (l && g.measureText(`${l}…`).width > maxW) l = l.slice(0, -1); lines[maxLines - 1] = `${l.trimEnd()}…`; }
+  return lines;
 }
 
-/* The layout width that makes the card (and so its text) biggest inside the story area. */
-function pickWidth(copy, areaW, areaH) {
-  let best = null;
-  for (const w of WIDTHS) {
-    copy.style.width = `${w}px`;
-    const r = copy.getBoundingClientRect();
-    if (copy.scrollWidth > w + 2) continue;                       // content no longer fits: too narrow
-    const s = Math.min(areaW / r.width, areaH / r.height);
-    if (!best || s > best.s * 1.01) best = { w, s };
-  }
-  return best?.w ?? 680;
+function fit(g, str, weight, size, maxW, family, min = 40) {
+  let px = size; for (; px > min; px -= 2) { g.font = `${weight} ${px}px ${family}`; if (g.measureText(str).width <= maxW) break; }
+  g.font = `${weight} ${px}px ${family}`; return px;
 }
 
-const isSafari = () => /^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent);
+function checkBadge(g, cx, cy, r) {
+  g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fillStyle = VERIFIED_BLUE; g.fill();
+  g.strokeStyle = '#ffffff'; g.lineWidth = r * 0.2; g.lineCap = 'round'; g.lineJoin = 'round';
+  g.beginPath(); g.moveTo(cx - r * 0.42, cy + r * 0.04); g.lineTo(cx - r * 0.1, cy + r * 0.36); g.lineTo(cx + r * 0.46, cy - r * 0.3); g.stroke();
+}
 
 /**
  * Renders the 1080x1920 story.
- *  frame        – the profile element
- *  page         – element whose background colour / --overlay style the story
- *  bgSrc        – optional background image URL
- *  username     – used for the link; pass `slug` if the public URL differs
- *  hide         – optional extra CSS selector of things to leave out of the photo
- *  clean        – true also hides the guestbook box, Send/Delete buttons etc. (default false)
- *  captureWidth – 'auto' (default: picks the layout width that gives the biggest text) or a number of css px
+ *  profile  – { username, display_name, headline, locality, verified, friends }
+ *  theme    – the profile theme (colours, radius, fonts)
+ *  avatarSrc / bgSrc – signed image URLs (optional)
+ *  music    – { title, artist, coverSrc } (optional)
+ *  interests – array of short strings (optional)
  */
-export async function renderStory({ frame, page, bgSrc, username, slug = username, hide, captureWidth = 'auto', clean = false }) {
-  try { await document.fonts.ready; } catch { /* ignore */ }
+export async function renderStory({ profile, theme, avatarSrc, bgSrc, music, interests = [], slug = profile.username }) {
+  const t = { ...THEME_DEFAULTS, ...(theme || {}) };
+  const nameStack = FONT_STACKS[t.name_font] || FONT_STACKS.ubuntu; const bodyStack = FONT_STACKS[t.font] || FONT_STACKS.ubuntu;
+  try { await document.fonts.ready; await Promise.all([document.fonts.load(`800 80px ${nameStack}`), document.fonts.load(`600 36px ${bodyStack}`)]); } catch { /* system fallback */ }
+  const [avatar, bg, cover] = await Promise.all([loadImg(avatarSrc), loadImg(bgSrc), loadImg(music?.coverSrc)]);
 
-  const areaW = W - MARGIN * 2, areaH = CARD_BOTTOM - CARD_TOP;
-
-  /* 1. Photograph an off-screen copy of the profile */
-  const wrap = document.createElement('div');
-  wrap.style.cssText = `position:absolute;left:-10000px;top:0;padding:${BLEED}px;pointer-events:none;`;
-  const copy = makeCopy(frame, hide, clean);
-  wrap.appendChild(copy);
-  frame.parentNode.insertBefore(wrap, frame.nextSibling);
-
-  let shot, fw, fh, s;
-  try {
-    copy.style.width = `${typeof captureWidth === 'number' ? captureWidth : 680}px`;
-    await nextFrame();
-    await withTimeout(Promise.all([...copy.querySelectorAll('img')].map((i) => i.decode?.().catch(() => {}))), 3000);
-    if (captureWidth === 'auto') copy.style.width = `${pickWidth(copy, areaW, areaH)}px`;
-    await nextFrame();
-
-    const r = copy.getBoundingClientRect(); fw = r.width; fh = r.height;
-    s = Math.min(areaW / fw, areaH / fh);                                       // css px -> story px
-    const opts = {
-      pixelRatio: Math.min(4, Math.max(2, s * 1.5)),                            // always sharper than the size it is drawn at
-      cacheBust: false,
-      style: { position: 'static', left: '0', top: '0', margin: '0' },
-    };
-    if (isSafari()) await toCanvas(wrap, opts);                                 // Safari drops images on the first pass
-    shot = await toCanvas(wrap, opts);
-  } finally { wrap.remove(); }
-
-  /* 2. Canvas + background */
   const out = document.createElement('canvas'); out.width = W; out.height = H;
   const g = out.getContext('2d'); g.imageSmoothingQuality = 'high';
-  const cs = getComputedStyle(page);
-  let base = cs.backgroundColor;
-  if (!parseRGB(base) || parseRGB(base).a === 0) base = getComputedStyle(document.body).backgroundColor;
-  if (!parseRGB(base) || parseRGB(base).a === 0) base = '#0b0b0b';
-  paintBackground(g, base);
 
-  const bg = await loadImg(bgSrc);
-  if (bg) {
-    const k = Math.max(W / bg.width, H / bg.height);
-    g.drawImage(bg, (W - bg.width * k) / 2, (H - bg.height * k) / 2, bg.width * k, bg.height * k);
-    const ov = parseFloat(cs.getPropertyValue('--overlay'));
-    g.fillStyle = `rgba(0,0,0,${Number.isFinite(ov) ? ov : 0.4})`; g.fillRect(0, 0, W, H);
-  }
+  /* ---- background: their image, or their avatar softly blurred, under a calm wash of their page colour ---- */
+  g.fillStyle = t.bg_color; g.fillRect(0, 0, W, H);
+  const base = bg || avatar;
+  if (base) { g.drawImage(blurred(base, bg ? 16 : 30), 0, 0, W, H); g.fillStyle = rgba(t.bg_color, bg ? 0.55 : 0.78); g.fillRect(0, 0, W, H); }
 
-  /* 3. Card, centred. The shadow is light and drawn only outside the card, so it never dirties the glass. */
-  const cy = (CARD_TOP + CARD_BOTTOM) / 2;
-  const dw = (fw + BLEED * 2) * s, dh = (fh + BLEED * 2) * s;
-  const dx = (W - dw) / 2, dy = cy - dh / 2;
+  const ink = t.text_color, soft = rgba(t.text_color, 0.66);
+  const radius = Math.min(60, +t.radius * 2 + (+t.radius ? 6 : 0));
 
-  const sh = document.createElement('canvas'); sh.width = W; sh.height = H;
-  const sg = sh.getContext('2d');
-  sg.shadowColor = `rgba(0,0,0,${0.13 * SHADOW})`; sg.shadowBlur = 30; sg.shadowOffsetY = 8;
-  sg.drawImage(shot, dx, dy, dw, dh);
-  sg.shadowColor = 'transparent';
-  sg.globalCompositeOperation = 'destination-out';
-  for (let i = 0; i < 3; i++) sg.drawImage(shot, dx, dy, dw, dh);   // knock the card's own area out of the shadow
-  g.drawImage(sh, 0, 0);
-  g.drawImage(shot, dx, dy, dw, dh);
+  /* ---- layout pass (draw=false) measures, paint pass draws; shrinks the avatar until everything fits ---- */
+  const tags = (interests || []).filter(Boolean).slice(0, 8);
+  const sub = [`@${profile.username}`, profile.locality].filter(Boolean).join(' · ');
+  const hasMusic = !!(music && (music.title || music.artist));
 
+  const lay = (draw, top, A) => {
+    let y = top + PAD; const cx = W / 2;
+    // avatar
+    const ax = cx - A / 2, ar = Math.min(A / 2, radius * 1.4 + 10);
+    if (draw) {
+      g.save(); rr(g, ax, y, A, A, ar); g.clip();
+      if (avatar) drawCover(g, avatar, ax, y, A, A); else { g.fillStyle = rgba(t.accent_color, 0.25); g.fillRect(ax, y, A, A); g.fillStyle = ink; g.font = `800 ${A * 0.4}px ${nameStack}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText((profile.display_name || profile.username || '?').charAt(0).toUpperCase(), cx, y + A / 2); g.textBaseline = 'alphabetic'; }
+      g.restore();
+      rr(g, ax, y, A, A, ar); g.strokeStyle = t.accent_color; g.lineWidth = 6; g.stroke();
+    }
+    y += A + 52;
+    // name (+ verified badge)
+    const nm = t.name_case === 'upper' ? (profile.display_name || profile.username).toUpperCase() : (profile.display_name || profile.username);
+    const badge = profile.verified ? 70 : 0;
+    const px = fit(g, nm, 800, 88, INNER - badge, nameStack);
+    const nw = g.measureText(nm).width, total = nw + (badge ? badge - 6 : 0), nx = cx - total / 2;
+    if (draw) { g.fillStyle = ink; g.textAlign = 'left'; g.fillText(nm, nx, y + px * 0.8); if (badge) checkBadge(g, nx + nw + 6 + 31, y + px * 0.8 - px * 0.3, 31); }
+    y += px + 12;
+    // @handle · place
+    g.font = `600 38px ${bodyStack}`;
+    if (draw) { g.fillStyle = soft; g.textAlign = 'center'; g.fillText(sub, cx, y + 34, INNER); }
+    y += 52;
+    // mood / headline
+    if (profile.headline) {
+      g.font = `500 42px ${bodyStack}`; const ls = wrapLines(g, profile.headline, INNER - 40, 2);
+      y += 18;
+      if (draw) { g.fillStyle = rgba(t.text_color, 0.88); g.textAlign = 'center'; ls.forEach((l, i) => g.fillText(l, cx, y + 40 + i * 56)); }
+      y += ls.length * 56 + 8;
+    }
+    // now playing
+    if (hasMusic) {
+      y += 40; const ch = 132;
+      if (draw) {
+        rr(g, PAD + CARD_X, y, INNER, ch, Math.max(10, radius * 0.5)); g.fillStyle = rgba(t.text_color, 0.07); g.fill();
+        let tx = PAD + CARD_X + 28;
+        if (cover) { g.save(); rr(g, tx, y + 16, 100, 100, Math.max(6, radius * 0.3)); g.clip(); drawCover(g, cover, tx, y + 16, 100, 100); g.restore(); tx += 100 + 26; }
+        const room = PAD + CARD_X + INNER - 28 - tx; g.textAlign = 'left';
+        g.font = `700 24px ${bodyStack}`; g.fillStyle = rgba(t.text_color, 0.5); g.fillText('NOW PLAYING', tx, y + 44);
+        fit(g, music.title || 'Untitled', 750, 38, room, bodyStack, 26); g.fillStyle = ink; g.fillText(music.title || 'Untitled', tx, y + 84);
+        if (music.artist) { fit(g, music.artist, 550, 30, room, bodyStack, 22); g.fillStyle = soft; g.fillText(music.artist, tx, y + 118); }
+      }
+      y += ch;
+    }
+    // interests
+    if (tags.length) {
+      y += 40; const ch = 64, gap = 14; g.font = `600 32px ${bodyStack}`;
+      const rows = []; let row = [], rw = 0;
+      for (const tag of tags) { const w = g.measureText(tag).width + 56; if (row.length && rw + gap + w > INNER) { rows.push(row); row = []; rw = 0; } row.push({ tag, w }); rw += (rw ? gap : 0) + w; }
+      if (row.length) rows.push(row);
+      const shown = rows.slice(0, 3);
+      shown.forEach((r, ri) => {
+        const rowW = r.reduce((a, c) => a + c.w, 0) + gap * (r.length - 1); let x = cx - rowW / 2; const ry = y + ri * (ch + gap);
+        if (draw) r.forEach((c) => { rr(g, x, ry, c.w, ch, Math.min(radius, ch / 2)); g.strokeStyle = rgba(t.text_color, 0.28); g.lineWidth = 2; g.stroke(); g.fillStyle = ink; g.textAlign = 'center'; g.fillText(c.tag, x + c.w / 2, ry + 43); x += c.w + gap; });
+      });
+      y += shown.length * ch + (shown.length - 1) * gap;
+    }
+    return y + PAD - top;   // card height
+  };
+
+  let A = 400, cardH = lay(false, 0, A);
+  while (cardH > AREA_BOTTOM - AREA_TOP && A > 240) { A -= 20; cardH = lay(false, 0, A); }
+  const top = AREA_TOP + (AREA_BOTTOM - AREA_TOP - cardH) / 2;
+
+  /* ---- card ---- */
+  g.save(); g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 60; g.shadowOffsetY = 20;
+  rr(g, CARD_X, top, CARD_W, cardH, radius); g.fillStyle = rgba(t.card_color, base ? 0.92 : 1); g.fill(); g.restore();
+  rr(g, CARD_X, top, CARD_W, cardH, radius); g.strokeStyle = t.border_color; g.lineWidth = Math.max(2, +t.border_width * 2); g.stroke();
+  lay(true, top, A);
+
+  /* ---- footer: small, plain, no pill ---- */
+  g.textAlign = 'center'; g.fillStyle = ink; g.font = `800 54px ${nameStack}`; g.fillText('fiiyou', W / 2, 1596);
+  g.fillStyle = soft; g.font = `600 34px ${bodyStack}`; g.fillText(`${SHARE_ORIGIN.replace(/^https?:\/\//, '')}/${slug}`, W / 2, 1650);
+  void lum;
   return out;
 }
 
@@ -175,5 +181,3 @@ export async function shareStory(canvas, slug) {
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   return 'downloaded';
 }
-
-export { SHARE_ORIGIN };

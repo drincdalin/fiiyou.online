@@ -1,0 +1,310 @@
+/* ======================================================================
+   ui-theme.css: every colour in the app UI comes from the person's theme.
+   Load LAST (after styles.css and design.css).
+
+   appTheme.js sets --t-* (the 7 theme colours) plus the few computed values
+   (--on-accent, --accent-fg, --shade, ...) on <html>. Everything below is derived
+   from those with color-mix(), so there is no fixed grey, white, black, yellow,
+   red or green left in the chrome. The values in this :root block are the
+   Mono (black & white) defaults, used before sign-in and as the fallback.
+   ====================================================================== */
+
+:root {
+  /* inputs from appTheme.js (Mono defaults) */
+  --t-bg: #000000; --t-frame: #0a0a0a; --t-card: #111111; --t-border: #2f2f2f; --t-text: #f2f2f2; --t-link: #ffffff;
+  --accent: #ffffff; --on-accent: #000000; --accent-fg: #ffffff; --on-accent-fg: #000000; --link-fg: #ffffff;
+  --notice: #ffffff; --on-notice: #000000; --green: #ffffff; --on-green: #000000;
+  --red: #d92d35; --on-red: #ffffff; --red-fg: #ff6b72; --verified: #1d9bf0; --pink: #ffffff; --on-pink: #000000;
+  --shade: #000000; --scheme: dark;
+  --map-filter: invert(1) hue-rotate(180deg) grayscale(1) brightness(.82) contrast(1.15);
+
+  /* surfaces and text, derived */
+  --g0: var(--t-bg);
+  --g1: var(--t-card);
+  --g2: color-mix(in srgb, var(--t-card) 86%, var(--t-text));
+  --g3: var(--t-border);
+  --g4: color-mix(in srgb, var(--t-border) 70%, var(--t-text));
+  --hover: color-mix(in srgb, var(--t-card) 80%, var(--t-text));
+  --ink: var(--t-text);
+  --ink2: color-mix(in srgb, var(--t-text) 80%, var(--t-bg));
+  --muted: color-mix(in srgb, var(--t-text) 60%, var(--t-bg));
+  --yellow: var(--notice);                      /* legacy name: "notice" colour = accent */
+  --ring: color-mix(in srgb, var(--accent-fg) 38%, transparent);
+
+  /* shading and overlays */
+  --edge: color-mix(in srgb, var(--shade) 40%, transparent);
+  --lift: 0 3px 0 color-mix(in srgb, var(--shade) 60%, transparent);
+  --lift-lg: 0 4px 0 color-mix(in srgb, var(--shade) 55%, transparent), 0 18px 44px -14px color-mix(in srgb, var(--shade) 80%, transparent);
+  --scrim: color-mix(in srgb, var(--t-bg) 82%, transparent);       /* bars floating over a map or photo */
+  --scrim-hi: color-mix(in srgb, var(--t-bg) 92%, transparent);
+  --scrim-lo: color-mix(in srgb, var(--t-bg) 68%, transparent);
+}
+
+body { background: var(--g0); color: var(--ink); }
+
+/* ---------- navigation: logo without the dot ---------- */
+.nav { background: color-mix(in srgb, var(--t-frame) 94%, transparent); }
+.nav .logo::after { content: none; display: none; }
+
+/* ---------- messages: not only colour tells them apart (mono-safe) ---------- */
+.err::before, .toast.err::before { content: "\26A0\FE0E\00a0"; }
+.okmsg::before, .toast:not(.err)::before { content: "\2713\00a0"; }
+.err, .okmsg { font-weight: 700; }
+.note, .evmeta, .maphint, .snapstats b, .stats4 .hot b, .newp button:hover small { color: var(--accent-fg); }
+.evmeta { color: var(--ink); }
+.stats4 .hot { border-color: var(--accent); }
+.link:hover { color: inherit; }
+
+/* ---------- fills: text on a coloured fill is always the readable one ---------- */
+.primary, .customizer .primary, .tabs .on, .tabs button.on, .seg .on, .mapbar button.on, .mapbar .primary, .msearch .primary,
+.navlinks button.on, .nav > button.on, .bub.mine { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.primary { border-color: var(--edge); }
+.tabs .on, .tabs button.on, .mapbar > button.on, .like.on { border-color: var(--edge); }
+.badge, .dotb, .count.hot, .avs em { background: var(--notice); color: var(--on-notice); }
+.like.on, .like.on:hover { background: var(--pink); border-color: var(--edge); color: var(--on-pink); }
+.like:hover { border-color: var(--pink); color: var(--accent-fg); }
+.toast { background: var(--green); color: var(--on-green); }
+.toast.err, .err { background: var(--red); color: var(--on-red); }
+.okmsg { background: var(--green); color: var(--on-green); }
+input[type=file]::file-selector-button { background: var(--accent); color: var(--on-accent); }
+.tabs .on .count { background: color-mix(in srgb, var(--on-accent) 22%, transparent); color: inherit; }
+.bub.mine small { color: inherit; opacity: .65; }
+.navlinks .dotb { box-shadow: 0 0 0 2px var(--g1); }
+
+/* ---------- hovers / focus ---------- */
+:focus-visible { outline-color: var(--accent-fg); }
+.nav > button, .more > button, .navlinks button { color: var(--ink2); }
+.nav > button:hover, .more > button:hover, .navlinks button:hover, .nav .logo { color: var(--ink); }
+.navlinks button.on { color: var(--on-accent); }
+.ghost:hover, .tabs button:hover, .chip:hover, .filebtn:hover, .arrow:hover { border-color: var(--accent-fg); }
+.thumbs button.on { border-color: var(--accent-fg); }
+.seg button { color: var(--ink2); } .seg .on { color: var(--on-accent); }
+.customizer label { color: var(--ink2); }
+.safe .link:hover { color: var(--red); }
+
+/* ---------- range sliders / handles ---------- */
+input[type=range]::-webkit-slider-thumb { background: var(--accent); border: 3px solid var(--g0); box-shadow: 0 0 0 1px var(--accent); }
+input[type=range]::-moz-range-thumb { background: var(--accent); border: 3px solid var(--g0); }
+.grip { background: var(--ink); border: 3px solid var(--g0); }
+.sticker.sel { outline: 2px solid var(--ink); }
+.sticker.edit:hover { outline: 1px dashed color-mix(in srgb, var(--ink) 55%, transparent); }
+
+/* ---------- overlays ---------- */
+.lb { background: var(--scrim-hi); } .modal { background: var(--scrim-lo); }
+.lbimg { background: var(--g0); } .lbx, .arrow { background: var(--scrim); color: var(--ink); }
+.gtile span { background: var(--scrim); color: var(--ink); }
+.toast { box-shadow: 0 8px 30px color-mix(in srgb, var(--shade) 55%, transparent); }
+.preset .sw { border-color: color-mix(in srgb, var(--ink) 15%, transparent); }
+.pin.has .lbl, .pin.on .lbl { color: var(--ink); }
+.avs img, .avs i { border-color: var(--g1); }
+.pin.on .avs img, .pin.on .avs i { border-color: var(--accent); }
+
+/* ======================================================================
+   MAP
+   ====================================================================== */
+.mapview, .leaflet-container { background: var(--g0); }
+.leaflet-tile-pane { filter: var(--map-filter); }
+.leaflet-container { color: var(--ink); }
+.leaflet-control-attribution { background: var(--scrim) !important; color: var(--muted) !important; }
+.leaflet-control-attribution a { color: var(--ink2) !important; }
+.leaflet-bar a { background: var(--g1) !important; color: var(--ink) !important; border-color: var(--g3) !important; }
+.leaflet-bar a:hover { background: var(--hover) !important; }
+
+.mapbar > button, .msearch, .maphint { background: var(--scrim); color: var(--ink); }
+.mapbar > button.on, .mapbar .primary { background: var(--accent); color: var(--on-accent); }
+.msearch .primary { background: var(--accent); color: var(--on-accent); }
+.maphint { color: var(--accent-fg); }
+.sresults, .cand { background: var(--g1); color: var(--ink); }
+
+/* markers: normal = surface-on-ink, "hot" (has something new) = the accent, with a pulse so it never depends on hue */
+.mkp { background: var(--ink); color: var(--g0); border: 2px solid var(--g0); box-shadow: 0 2px 10px color-mix(in srgb, var(--shade) 65%, transparent);
+  transition: transform .18s var(--ease), box-shadow .18s; cursor: pointer; }
+.mkp.hot { background: var(--accent); color: var(--on-accent); animation: mk-pulse 2.4s ease-out infinite; }
+.mkf { border-color: var(--ink); box-shadow: 0 2px 8px color-mix(in srgb, var(--shade) 65%, transparent); transition: transform .18s var(--ease); cursor: pointer; }
+.mkq { background: var(--scrim); border-color: var(--accent); box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 22%, transparent); }
+@keyframes mk-pulse { 0% { box-shadow: 0 2px 10px color-mix(in srgb, var(--shade) 65%, transparent), 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+  70%, 100% { box-shadow: 0 2px 10px color-mix(in srgb, var(--shade) 65%, transparent), 0 0 0 12px transparent; } }
+
+/* responsiveness: markers and map controls react to hover and press */
+.mk:hover .mkp { transform: rotate(-45deg) scale(1.16); }
+.mk:active .mkp { transform: rotate(-45deg) scale(.94); }
+.mk:hover .mkf { transform: scale(1.12); } .mk:active .mkf { transform: scale(.94); }
+.mapbar > button { transition: background .15s, border-color .15s, transform .12s var(--ease), box-shadow .12s; }
+.mapbar > button:hover { border-color: var(--accent-fg); }
+.mapbar > button:active, .msearch .primary:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--edge); }
+.sresults button:not(.ghost), .cand button { transition: background .12s, transform .12s var(--ease); }
+.sresults button:not(.ghost):active { transform: scale(.985); }
+.leaflet-container { touch-action: pan-x pan-y; -webkit-tap-highlight-color: transparent; }
+.leaflet-marker-icon { transition: opacity .15s; }
+.leaflet-fade-anim .leaflet-tile { transition-duration: .12s; }
+.sheet { overscroll-behavior: contain; scrollbar-width: thin; }
+.sheet > * { min-width: 0; }
+
+/* the place panel: close button was stretching to the height of the title block */
+.sheet header { align-items: flex-start; }
+.sheet header > div { min-width: 0; }
+.sheet header > button, .sheet header > .ghost { flex: none; align-self: flex-start; width: 40px; height: 40px; min-height: 0; padding: 0; display: inline-grid; place-items: center; }
+.sheet .wide, .sheet button.wide { min-height: 0; padding-top: .5rem; padding-bottom: .5rem; }
+.sheet .pstrip button { flex: none; width: auto; height: auto; min-height: 0; }
+
+/* any icon-only close/delete button must stay square, wherever a flex row would stretch it */
+button.ghost[aria-label], .cm > .ghost.sm { align-self: flex-start; flex: none; }
+.cm > .ghost.sm { width: 32px; height: 32px; min-height: 0; padding: 0; display: inline-grid; place-items: center; }
+.gb > .ghost.sm { align-self: start; width: 32px; height: 32px; min-height: 0; padding: 0; display: inline-grid; place-items: center; }
+
+/* legacy .customizer shell (if still rendered) */
+.customizer { background: color-mix(in srgb, var(--g1) 96%, transparent); }
+
+/* ======================================================================
+   POLISH PASS
+   ====================================================================== */
+
+/* shadows: only FILLED things lift (primary, selected tab/nav item, liked). Outlined buttons stay flat, so there is no
+   dark stripe under a button sitting on a dark panel. The lift is a clean 2px step instead of 3px. */
+:root { --lift: 0 2px 0 color-mix(in srgb, var(--shade) 55%, transparent); }
+.ghost, .filebtn, .arrow, .like, .mapbar > button, .msearch .primary, .lbx { box-shadow: none; }
+.like.on, .mapbar > button.on { box-shadow: var(--lift); }
+.ghost:active:not(:disabled), .like:active, .filebtn:active { transform: translateY(1px); box-shadow: none; }
+.primary:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 1px 0 color-mix(in srgb, var(--shade) 55%, transparent); }
+.page .primary, .page .ghost { box-shadow: none; }
+.navlinks button.on, .tabs .on { box-shadow: var(--lift); }
+/* a lift needs 3px of room under it: scrolling tab rows would otherwise clip it */
+.tabs, .seg { padding-bottom: 3px; }
+
+/* disabled: never fade a filled button into an unreadable pastel; swap to a flat, clearly "off" look instead */
+.primary:disabled, .ghost:disabled, button.primary[disabled] {
+  opacity: 1; pointer-events: auto; cursor: not-allowed; filter: none; transform: none; box-shadow: none;
+  background: var(--g2); border-color: var(--g3); color: var(--muted);
+}
+.page .primary:disabled, .page .ghost:disabled, .page .ghost:disabled:hover, .page .primary:disabled:hover {
+  opacity: 1; background: color-mix(in srgb, var(--card) 88%, var(--text)); border-color: var(--border);
+  color: color-mix(in srgb, var(--text) 55%, var(--card)); filter: none;
+}
+.actions.preview { opacity: .6; }
+.actions.preview .safe span:nth-child(2) { text-decoration: none; }     /* the "·" was being underlined like a link */
+input:disabled, select:disabled, textarea:disabled { opacity: .55; cursor: not-allowed; }
+
+/* feel: every control eases in the same way */
+.primary, .ghost, .like, .tabs button, .filebtn, .arrow, .menu button, .crow2, .row, .chip, .preset, .top button {
+  transition: background .15s, border-color .15s, color .15s, box-shadow .15s, transform .1s var(--ease), filter .15s;
+}
+.menu { transform-origin: top right; animation: rise .16s var(--ease); }
+.card, .post, .panel { transition: border-color .15s; }
+.post:hover, .panel:hover { border-color: var(--g4); }
+.page .card:hover { border-color: var(--border); }
+
+/* layered surfaces read as depth, not as a stripe */
+.nav { box-shadow: 0 1px 0 var(--g3); }
+.sheet, .cz { box-shadow: -12px 0 32px -18px color-mix(in srgb, var(--shade) 70%, transparent); }
+.menu, .sresults, .cand { box-shadow: 0 14px 40px -16px color-mix(in srgb, var(--shade) 75%, transparent), 0 0 0 1px color-mix(in srgb, var(--g3) 60%, transparent); }
+
+/* small touches */
+::placeholder { color: var(--muted); opacity: 1; }
+a { color: var(--link-fg); }
+.page a, .page .link { color: var(--link); }
+hr { border: 0; border-top: 2px solid var(--g3); }
+img { image-rendering: auto; }
+.tabs, .seg, .cbody, .sheet, .clist, .msgs { scrollbar-width: thin; scrollbar-color: var(--g4) transparent; }
+@media (max-width: 700px) { .nav { box-shadow: 0 -1px 0 var(--g3); } .sheet, .cz { box-shadow: 0 -12px 32px -18px color-mix(in srgb, var(--shade) 70%, transparent); } }
+
+/* ======================================================================
+   SIGN-IN / SIGN-UP: just the card (the landing page lives elsewhere)
+   ====================================================================== */
+.authwrap {
+  min-height: 100vh; min-height: 100dvh; padding: 32px 16px; display: grid; place-items: center;
+  background: var(--g0);                       /* flat: no gradient */
+}
+.authcard { width: 100%; max-width: 400px; padding: 32px 28px 24px; gap: 16px; border-radius: 16px; background: var(--g1); border: 1px solid var(--g3); box-shadow: none; }
+.authhead { display: grid; gap: 6px; justify-items: start; text-align: left; margin-bottom: 2px; }
+.authhead .brand { margin: 0; font-size: 2.4rem; line-height: 1; letter-spacing: -.04em; font-weight: 800; }
+.authlead { margin: 0; font-size: .95rem; font-weight: 500; color: var(--muted); }
+/* plain text tabs with an underline, like a normal sign-in form */
+.authtabs { display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding: 0; border: 0; border-bottom: 1px solid var(--g3); border-radius: 0; background: none; }
+.authtabs button { border: 0; background: none; padding: .7rem .5rem; margin-bottom: -1px; border-bottom: 2px solid transparent; border-radius: 0; font-weight: 700; color: var(--muted); transition: color .15s, border-color .15s; }
+.authtabs button:hover { background: none; color: var(--ink); }
+.authtabs button.on { background: none; color: var(--ink); border-bottom-color: var(--ink); box-shadow: none; }
+.authcard input { border-width: 1px; border-radius: 10px; font-weight: 500; }
+.authcard .authgo { border-radius: 10px; box-shadow: none; }
+.field { display: grid; gap: 6px; } .field > span { font-size: .82rem; font-weight: 800; color: var(--ink2); }
+.pwbox { position: relative; } .pwbox input { padding-right: 3rem; }
+.pweye { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: var(--rad-s); background: none; color: var(--muted); }
+.pweye:hover { background: var(--g2); color: var(--ink); }
+.authgo { min-height: 48px; font-size: 1rem; margin-top: 4px; }
+.authforgot { justify-self: center; padding: .2rem; font-weight: 650; } .authforgot:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.authcard .legal { margin-top: 2px; }
+@media (max-width: 700px) { .authwrap { align-items: start; padding-top: 7vh; } .authcard { padding: 22px 18px 18px; } }
+
+/* ======================================================================
+   ACCOUNT MENU
+   ====================================================================== */
+.menu { min-width: min(272px, calc(100vw - 20px)); padding: 8px; gap: 2px; }
+.menu button { padding: .62rem .75rem; gap: 12px; font-weight: 700; white-space: nowrap; color: var(--ink2); }
+.menu button svg { flex: none; color: var(--muted); transition: color .15s; }
+.menu button:hover { color: var(--ink); } .menu button:hover svg { color: var(--ink); }
+.menu .msep { border: 0; height: 2px; margin: 6px 4px; background: var(--g3); }
+.menu .mhead { padding: .6rem .65rem; border-radius: var(--rad-m); color: var(--ink); background: var(--g2); }
+.menu .mhead:hover { background: var(--hover); }
+.menu .mhead span { display: grid; min-width: 0; line-height: 1.25; }
+.menu .mhead b { font-weight: 850; overflow: hidden; text-overflow: ellipsis; }
+.menu .mhead small { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.menu .danger, .menu .danger svg { color: var(--red-fg); }
+.menu .danger:hover { color: var(--red-fg); background: color-mix(in srgb, var(--red) 16%, transparent); }
+
+/* ======================================================================
+   RED = errors and destructive actions. Blue = verified. Both are fixed, never themed.
+   ====================================================================== */
+.ghost.danger, .page .ghost.danger { color: var(--red-fg); border-color: color-mix(in srgb, var(--red) 65%, transparent); }
+.ghost.danger:hover:not(:disabled), .page .ghost.danger:hover:not(:disabled), .ghost.danger:focus-visible { background: color-mix(in srgb, var(--red) 16%, transparent); border-color: var(--red); color: var(--red-fg); }
+.primary.danger { background: var(--red); border-color: var(--edge); color: var(--on-red); }
+.primary.danger:hover:not(:disabled) { filter: brightness(1.1); }
+.err, .toast.err { background: var(--red); color: var(--on-red); }
+.errpre { color: var(--red-fg); }
+.safe .link:hover { color: var(--red-fg); }
+.vcheck circle { fill: var(--verified); }
+.vcheck path { stroke: #fff; }
+.badge.vb { background: var(--verified); color: #fff; }
+.cz-err, .cz-err p { color: var(--red-fg); }
+@media (max-width: 700px) { .menu button { padding: .8rem .85rem; } }
+
+/* ======================================================================
+   REFINEMENT: lighter, calmer controls everywhere (thin borders, no hard lift, lighter type)
+   ====================================================================== */
+:root { --lift: none; --rad-s: 8px; --rad-m: 10px; --rad-l: 12px; --rad-xl: 16px;
+  --lift-lg: 0 18px 44px -18px color-mix(in srgb, var(--shade) 80%, transparent); }
+body { font-weight: 500; }
+small, .muted { font-weight: 500; }
+.ptitle { font-weight: 750; }
+.panel h3, .sheet h3, .post h3 { font-weight: 700; }
+.nav { border-bottom-width: 1px; } .navlinks, .nav .more > .avbtn, .menu { border-width: 1px; }
+.navlinks { padding: 3px; gap: 2px; } .navlinks button.on, .tabs .on, .like.on, .mapbar > button.on, .authtabs button.on { box-shadow: none; }
+.primary, .ghost, .tabs button, .like, .filebtn, .arrow, .mapbar > button, .msearch, .lbx, .toast { border-width: 1px; box-shadow: none; }
+.primary { font-weight: 650; letter-spacing: 0; } .ghost, .sm, .tabs button, .like, .filebtn, .mapbar > button { font-weight: 600; }
+.primary:active:not(:disabled), .ghost:active:not(:disabled), .like:active { box-shadow: none; transform: translateY(1px); }
+input, select, textarea { border-width: 1px; font-weight: 500; } input::placeholder, textarea::placeholder { font-weight: 500; }
+input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px var(--ring); }
+.panel, .post, .clist, .cthread, .lbfoot, .snap.panel, .plain .row, .stats4 div, .aprev, .dsep, .evmeta, .pimg, .lbimg, .sresults, .cand, .maphint, .authtabs { border-width: 1px; }
+.comments, .cthread header, .cthread .inline { border-width: 1px; } .cthread .inline input { border-width: 1px; }
+.menu button { font-weight: 600; } .badge, .count { font-weight: 700; } .bub { font-weight: 500; } .who b, .cm b { font-weight: 650; }
+.crow2 { border-width: 1px; } .leaflet-bar { border-width: 1px !important; } .mkp, .mkf { border-width: 2px; }
+.alog p { border-bottom-width: 1px; } input[type=file] { border-width: 1px; }
+
+/* sidebar buttons on a profile: compact, one line */
+.side > .wide, .actions .primary, .actions .ghost { min-height: 40px; padding: .45rem .8rem; font-size: .92rem; font-weight: 600; white-space: nowrap; gap: 8px; }
+.side > .wide svg { flex: none; }
+@media (max-width: 700px) { .primary { min-height: 42px; } .ghost { min-height: 38px; } .side > .wide, .actions .primary, .actions .ghost { min-height: 44px; } }
+
+/* ======================================================================
+   AVATARS: round everywhere except the big profile photo (kept as designed)
+   ====================================================================== */
+.av, .av img, .av i, .newp .av, .gb .av, .page .top img, .page .top i, .mkf, .avs img, .avs i { border-radius: 50%; }
+.av img { object-fit: cover; }
+.nav .more > .avbtn { width: 44px; height: 44px; aspect-ratio: 1; padding: 3px; border-radius: 50%; place-items: center; overflow: hidden; }
+.nav .more > .avbtn .av { display: block; width: 100% !important; height: 100% !important; }
+
+/* MAP: the floating search bar must never sit on top of the side panel (it was covering the close button) */
+.mapbar { pointer-events: none; max-width: calc(100% - 70px); }
+.mapbar > * { pointer-events: auto; }
+.mapview.open .mapbar { max-width: calc(100% - 400px - 70px); }
+.mapview .sheet { position: relative; z-index: 600; }
+@media (max-width: 1000px) { .mapview.open .mapbar { max-width: calc(100% - 70px); } }
+.sheet header > button, .sheet header > .ghost { position: relative; z-index: 1; }

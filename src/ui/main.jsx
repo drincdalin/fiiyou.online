@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client';
 import App from './App.jsx';
 import { bootRouter } from './router.jsx';
 import './styles.css';
+import './design.css';
+import './ui-theme.css';
 
 class Boundary extends Component {
   state = { e: null };

@@ -5,7 +5,7 @@ import { parseThemeFile } from './themeFile.js';
 /** Import a theme (or a full data export) from a file and apply it to MY profile. Images are not transferable between accounts. */
 export default function ImportModal({ onClose, onDone, notify }) {
   const [parsed, setParsed] = useState(null); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false); const [o, setO] = useState({ look: true, css: true, cards: false });
-  const pick = async (e) => { const f = e.target.files[0]; setErr(''); setParsed(null); if (!f) return;
+  const pick = async (e) => { const f = e.target.files[0]; e.target.value = ''; setErr(''); setParsed(null); if (!f) return;
     if (f.size > 1_000_000) return setErr('That file is too large to be a theme (max 1 MB).');
     try { const p = parseThemeFile(await f.text()); setParsed(p); setO({ look: !!Object.keys(p.theme).length, css: p.css.length > 0, cards: false }); } catch (er) { setErr(er.message); } };
   const apply = async () => { setBusy(true); setErr('');
@@ -17,7 +17,7 @@ export default function ImportModal({ onClose, onDone, notify }) {
         for (const [i, c] of parsed.cards.entries()) await cardsApi.createCard({ ...c, y: i * 10 }); }
       notify('Theme imported'); onDone(); } catch (er) { setErr(er.message || 'Import failed'); setBusy(false); } };
   const row = (k, label, n) => <label className="row" key={k}><input type="checkbox" disabled={!n} checked={o[k] && !!n} onChange={(e) => setO({ ...o, [k]: e.target.checked })} />{label} <small>({n || 'none in file'})</small></label>;
-  return (<div className="modal" onClick={onClose}><div className="panel mform" onClick={(e) => e.stopPropagation()}>
+  return (<div className="modal" onClick={busy ? undefined : onClose}><div className="panel mform" onClick={(e) => e.stopPropagation()}>
     <h3>Import theme</h3><p className="muted">Pick a theme file or a full data export from any fiiyou account. Photos, stickers, avatar and background images are not transferred (they belong to the other account), so they stay as they are on yours.</p>
     <input type="file" accept="application/json,.json" onChange={pick} />
     {err && <p className="err">{err}</p>}

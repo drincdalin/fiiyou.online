@@ -38,19 +38,20 @@ function AudioPlayer({ src, title, artist, cover }) {
   const shown = muted ? 0 : Math.round(vol * 100);
   const icon = <Icon n={shown === 0 ? 'mute' : shown < 34 ? 'low' : shown < 67 ? 'mid' : 'high'} size="1.2rem" />;
   const toggle = () => { const el = a.current; if (el.paused) el.play().catch(() => {}); else el.pause(); };
+  const ready = dur > 0;   // nothing is downloaded until play is pressed, so seeking is only possible after that
   return (
     <div className="player">
       {cover && <img className="cover" src={cover} alt="" />}
       <div className="ptitle"><b>{title || 'Untitled'}</b><span>{artist}</span></div>
       <audio ref={a} src={src} preload="none" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
         onTimeUpdate={(e) => setT(e.target.currentTime)} onLoadedMetadata={(e) => setDur(e.target.duration)} />
-      <input className="seek" type="range" min="0" max={dur || 1} step="0.1" value={t}
+      <input className="seek" type="range" min="0" max={dur || 1} step="0.1" value={t} disabled={!ready}
         onChange={(e) => { a.current.currentTime = +e.target.value; }} aria-label="Seek" />
       <div className="times"><span>{fmt(t)}</span><span>-{fmt(Math.max(0, dur - t))}</span></div>
       <div className="ctrl">
-        <button onClick={() => { a.current.currentTime = 0; }} aria-label="Restart"><Icon n="prev" size="1.2rem" /></button>
+        <button disabled={!ready} onClick={() => { a.current.currentTime = 0; }} aria-label="Restart"><Icon n="prev" size="1.2rem" /></button>
         <button className="big" onClick={toggle} aria-label={playing ? 'Pause' : 'Play'}><Icon n={playing ? 'pause' : 'play'} size="1.5rem" /></button>
-        <button onClick={() => { a.current.currentTime = Math.min(dur, t + 10); }} aria-label="Forward 10s"><Icon n="next" size="1.2rem" /></button>
+        <button disabled={!ready} onClick={() => { a.current.currentTime = Math.min(dur, t + 10); }} aria-label="Forward 10s"><Icon n="next" size="1.2rem" /></button>
       </div>
       <div className="volrow">
         <button className="volbtn" onClick={() => setMuted(!muted)} aria-label={muted || vol === 0 ? 'Unmute' : 'Mute'} title={muted || vol === 0 ? 'Unmute' : 'Mute'}>{icon}</button>

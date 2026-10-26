@@ -1,4 +1,5 @@
 import { THEME_DEFAULTS } from './theme.js';
+import { MONO_COLORS as M } from './appTheme.js';
 
 // Ready-made themes. Every value is valid for the database check (see is_valid_theme); users can tweak anything afterwards.
 const shape = { radius: '24', step: '8', border_width: '1', border_style: 'solid', shadow: 'none', frame_opacity: '70', card_opacity: '100', blur: '4', overlay: '60',
@@ -6,6 +7,10 @@ const shape = { radius: '24', step: '8', border_width: '1', border_style: 'solid
 const T = (id, name, c, extra = {}) => ({ id, name, theme: { ...THEME_DEFAULTS, ...shape, accent_color: c[0], border_color: c[1], card_color: c[2], frame_color: c[3], text_color: c[4], link_color: c[5], bg_color: c[6], ...extra } });
 //                                        accent     border     card       frame      text       link       page bg
 export const PRESETS = [
+
+  // ---- Default: black & white. Every colour in the app UI is derived from the theme, so this makes the whole UI monochrome ----
+  T('mono',        'Mono',           [M.accent_color, M.border_color, M.card_color, M.frame_color, M.text_color, M.link_color, M.bg_color],
+    { radius: '14', step: '8', border_width: '2', shadow: 'none', frame_opacity: '100', card_opacity: '100', blur: '0', overlay: '0', name_case: 'normal', card_gap: '20' }),
 
   // ---- Statement themes ----
   T('aero',        'Frutiger Aero',  ['#3bb54a', '#ffffff', '#ffffff', '#bfe9fa', '#0e3a52', '#0f7cc0', '#58bfe8'],
