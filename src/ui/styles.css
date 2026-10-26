@@ -410,7 +410,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 
 @media (max-width: 700px) {
   /* --- base --- */
-  :root { --nav-h: calc(58px + env(safe-area-inset-bottom, 0px)); }
+  :root { --nav-h: 58px; }
   html { scroll-behavior: auto; }
   body { overflow-x: clip; overscroll-behavior-y: none; }
   /* 16px inputs: iOS Safari zooms the whole page when a focused field is smaller */
@@ -420,7 +420,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   .primary:hover, .plain .row:hover, .top button:hover, .newp button:hover, .preset:hover, .nav .more > .avbtn:hover { transform: none; }
 
   /* --- bottom tab bar: thumb-sized, safe-area aware --- */
-  .nav { padding: 0 6px env(safe-area-inset-bottom, 0px); background: #000e; }
+  .nav { padding: 0 6px; background: #000e; }
   .navlinks button { min-height: 46px; font-size: 1.05rem; }
   .navlinks .dotb { top: 3px; right: calc(50% - 22px); }
   .nav .more > .avbtn { padding: 4px; }
@@ -541,11 +541,11 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   .lbimg img { max-height: 72vh; }
   .lbx { top: 8px; right: 8px; width: 44px; height: 44px; padding: 0; font-size: 1.1rem; }
   .arrow { width: 44px; height: 44px; }
-  .lbfoot { border-radius: 0; border-left: 0; border-right: 0; padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  .lbfoot { border-radius: 0; border-left: 0; border-right: 0; padding: 10px 14px 10px; }
 
   /* --- modals as bottom sheets --- */
   .modal { align-items: end; padding: 0; }
-  .modal .mform, .modal .panel { width: 100%; max-height: 88vh; border-radius: 24px 24px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); }
+  .modal .mform, .modal .panel { width: 100%; max-height: 88vh; border-radius: 24px 24px 0 0; padding: 18px 16px 18px; }
   .modal .acts { flex-wrap: nowrap; } .modal .acts > button { flex: 1; }
 
   /* --- admin --- */
