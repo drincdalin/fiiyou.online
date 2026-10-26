@@ -10,6 +10,7 @@ import AdminView from './Admin.jsx';
 import { themeStyle, appAccent } from './theme.js';
 import Player from './Player.jsx';
 import Customizer from './Customizer.jsx';
+import { renderStory } from './exportStory.js';
 
 const BASE = import.meta.env.BASE_URL;
 function Auth() {
@@ -96,7 +97,7 @@ function Sticker({ c, k, src, edit, selected, onSelect, onChange }) {
 
 function ProfileView({ username, go, notify, refreshMe }) {
   const [d, setD] = useState(null); const [draft, setDraft] = useState(null); const [sel, setSel] = useState(null); const [k, setK] = useState(1);
-  const [collapsed, setCollapsed] = useState(false); const [lb, setLb] = useState(null); const [rep, setRep] = useState(false); const frame = useRef();
+  const [collapsed, setCollapsed] = useState(false); const [lb, setLb] = useState(null); const [rep, setRep] = useState(false); const frame = useRef(); const pageRef = useRef(); const [sharing, setSharing] = useState(false);
   const load = useCallback(() => profiles.getFullProfile(username).then(setD).catch((e) => notify(e.message, 'err')), [username]);
   useEffect(() => { setD(null); setDraft(null); setSel(null); setLb(null); load(); }, [load]);
   useEffect(() => { const el = frame.current; if (!el) return; const ro = new ResizeObserver(() => setK(Math.min(1, el.clientWidth / 1210) || 1)); ro.observe(el); return () => ro.disconnect(); }, [d]);
@@ -114,11 +115,17 @@ function ProfileView({ username, go, notify, refreshMe }) {
     pending_received: ['Accept request', () => friends.acceptRequest(rel.id), 'You are now friends'], friends: ['Friends', () => friends.removeFriend(profile.id), 'Friend removed'] }[rel.status];
   const name = draft?.fields.display_name ?? profile.display_name; const headline = draft?.fields.headline ?? profile.headline;
   const items = d.photos.map((p) => ({ id: p.id, src: img[p.path], caption: p.caption, likes: p.like_count, liked: p.liked }));
+  const shareImage = async () => { if (sharing) return; setSharing(true);
+    try { const c = await renderStory({ frame: frame.current, page: pageRef.current, bgSrc: img[theme.bg_image], username: profile.username });
+      const blob = await new Promise((r) => c.toBlob(r, 'image/png')); const file = new File([blob], `fiiyou-${profile.username}.png`, { type: 'image/png' });
+      if (navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file], text: `${profile.display_name} on fiiyou` }); return; } catch (e) { if (e.name === 'AbortError') return; } }
+      const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = file.name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); notify('Image saved'); }
+    catch (e) { notify('Could not create the image', 'err'); } finally { setSharing(false); } };
   const likePhoto = async (it) => { const on = !it.liked; const upd = (liked, n) => setD((x) => ({ ...x, photos: x.photos.map((p) => (p.id === it.id ? { ...p, liked, like_count: p.like_count + n } : p)) }));
     upd(on, on ? 1 : -1); try { await social.setPhotoLike(it.id, on); } catch (e) { upd(!on, on ? -1 : 1); notify(e.message, 'err'); } };
   return (
     <>
-    <div className={`page view${draft ? ' editing' : ''}${draft && collapsed ? ' collapsed' : ''}`} style={themeStyle(theme, img[theme.bg_image])} onPointerDown={() => draft && setSel(null)}>
+    <div ref={pageRef} className={`page view${draft ? ' editing' : ''}${draft && collapsed ? ' collapsed' : ''}`} style={themeStyle(theme, img[theme.bg_image])} onPointerDown={() => draft && setSel(null)}>
       <style>{toCss(draft ? draft.css : profile.custom_css)}</style>
       <div className="dim" />
       <main className="frame" ref={frame} data-layout={theme.layout || 'side-left'}>
@@ -128,7 +135,9 @@ function ProfileView({ username, go, notify, refreshMe }) {
             <small className="views">{d.friendCount} friend{d.friendCount === 1 ? '' : 's'} · {d.views} view{d.views === 1 ? '' : 's'}</small></div>
           {headline && <p className="headline">{headline}</p>}
           {(audioUrl || music.url) && <Player key={music.audio || music.url} src={audioUrl || music.url} title={music.title} artist={music.artist} cover={img[music.cover]} />}
-          {own ? !draft && <button className="primary wide" onClick={startEdit}>Customize profile</button> : <div className="actions">
+          {own ? (!draft ? <><button className="primary wide" onClick={startEdit}>Customize profile</button><button className="ghost wide" disabled={sharing} onClick={shareImage}>{sharing ? 'Making image…' : 'Share as image'}</button></>
+            : <div className="actions preview" aria-hidden="true"><div className="arow"><button className="primary" tabIndex={-1} disabled>Message</button><button className="ghost" tabIndex={-1} disabled>Friends</button></div>
+              <div className="safe"><span>Report</span><span>·</span><span>Block</span></div></div>) : <div className="actions">
             {rel.status === 'friends' ? <div className="arow">
               <button className="primary" onClick={() => go('messages', null, profile.id)}>Message</button>
               <button className="ghost" title="Click to remove this friend" onClick={() => confirm('Remove this friend?') && act(friendBtn[1], friendBtn[2])}><svg className="ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>{friendBtn[0]}</button></div>

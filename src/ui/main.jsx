@@ -1,6 +1,7 @@
 import { Component } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.jsx';
+import { bootRouter } from './router.jsx';
 import './styles.css';
 
 class Boundary extends Component {
@@ -9,4 +10,6 @@ class Boundary extends Component {
   render() { return this.state.e ? (<div className="boot"><h3>Something broke.</h3><pre className="errpre">{String(this.state.e.message || this.state.e)}</pre>
     <button className="primary" onClick={() => location.reload()}>Reload</button></div>) : this.props.children; }
 }
+
+bootRouter();
 createRoot(document.getElementById('root')).render(<Boundary><App /></Boundary>);
