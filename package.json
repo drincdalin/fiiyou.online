@@ -3,9 +3,10 @@
   "private": true,
   "type": "module",
   "version": "1.0.0",
-  "description": "fiiyou \u2014 local, customizable social network",
+  "description": "fiiyou — local, customizable social network",
   "main": "src/index.js",
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
     "@supabase/supabase-js": "^2.45.0",
     "leaflet": "^1.9.4",
     "react": "^18.3.1",
