@@ -1,0 +1,157 @@
+/* ======================================================================
+   design.css: one design language for the whole app.
+   Taken from the customizer: near-black surfaces, 2px borders, square-ish
+   12-18px radii (no pills), a hard 3px "lift" under every button, heavy
+   type weights, and the user's accent as the only colour.
+   Loaded after styles.css. It only touches colour, border, radius, shadow
+   and weight, so the layout and phone rules in styles.css stay in charge.
+   ====================================================================== */
+
+:root {
+  /* colours (--g0..--g4, --ink, --muted, --hover, shadows) are derived from the theme in ui-theme.css */
+  --rad-s: 10px; --rad-m: 12px; --rad-l: 14px; --rad-xl: 18px;
+  --header-h: var(--nav-h); /* the customizer sits right under the nav */
+}
+
+/* ---------- base ---------- */
+body { font-weight: 600; background: var(--g0); }
+small, .muted { font-weight: 550; }
+::selection { background: var(--accent); color: var(--on-accent); }
+* { scrollbar-width: thin; scrollbar-color: var(--g4) transparent; }
+input[type=checkbox], input[type=radio], input[type=range] { accent-color: var(--accent); }
+.view { animation: d-fade .2s ease backwards; }
+@keyframes d-fade { from { opacity: 0; } }
+.ptitle { font-weight: 850; letter-spacing: -.02em; }
+.panel h3, .sheet h3, .post h3 { font-weight: 800; }
+.empty { font-weight: 600; }
+.boot { font-weight: 650; }
+
+/* ---------- navigation ---------- */
+.nav { background: var(--g1); backdrop-filter: none; border-bottom: 2px solid var(--g3); }
+.nav .logo { font-weight: 850; font-size: 1.3rem; letter-spacing: -.035em; }
+.nav .logo:hover { transform: none; }
+.navlinks { background: var(--g0); border: 2px solid var(--g3); border-radius: var(--rad-l); padding: 4px; gap: 4px; }
+.navlinks button { border-radius: var(--rad-s); }
+.navlinks button:hover { background: var(--g2); }
+.navlinks button.on { box-shadow: var(--lift); }
+.navlinks .dotb { border-radius: 7px; }
+.nav .more > .avbtn { border: 2px solid var(--g3); }
+.menu { background: var(--g1); border: 2px solid var(--g3); border-radius: var(--rad-l); box-shadow: var(--lift-lg); padding: 4px; gap: 2px; }
+.menu button { display: flex; align-items: center; gap: 10px; border-radius: var(--rad-s); font-weight: 750; }
+.menu button:hover { background: var(--hover); }
+.menu .danger:hover { background: color-mix(in srgb, var(--red) 18%, transparent); }
+@media (max-width: 700px) { .nav { border-bottom: 0; border-top: 2px solid var(--g3); } }
+
+/* ---------- buttons ---------- */
+.primary, .ghost { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border-radius: var(--rad-m); box-shadow: var(--lift); }
+.primary { border: 2px solid var(--edge); font-weight: 850; letter-spacing: .01em; }
+.primary:hover { transform: none; filter: brightness(1.08); }
+.ghost { border: 2px solid var(--g4); background: var(--g2); font-weight: 800; }
+.ghost:hover { background: var(--hover); border-color: var(--muted); }
+.primary:active:not(:disabled), .ghost:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 color-mix(in srgb, var(--shade) 60%, transparent); }
+.ghost:disabled { opacity: .45; }
+.sm { font-weight: 800; }
+.link { font-weight: inherit; }
+
+/* on a visitor's themed profile the owner's theme decides: flat, thin, no lift */
+.page .primary, .page .ghost { box-shadow: none; border-width: 1px; }
+.page .ghost { background: transparent; }
+.page .primary:active:not(:disabled), .page .ghost:active:not(:disabled) { transform: none; }
+
+/* ---------- fields ---------- */
+input, select, textarea { background: var(--g0); border: 2px solid var(--g3); border-radius: var(--rad-m); font-weight: 600; }
+input::placeholder, textarea::placeholder { color: var(--muted); font-weight: 550; }
+input:hover, select:hover, textarea:hover { border-color: var(--g4); }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--ring); }
+.page input:focus { box-shadow: none; }
+.filebtn { border: 2px solid var(--g4); border-radius: var(--rad-m); background: var(--g2); box-shadow: var(--lift); font-weight: 800; display: inline-flex; align-items: center; gap: 7px; }
+.filebtn:hover { background: var(--hover); border-color: var(--muted); }
+input[type=file] { border: 2px dashed var(--g4); border-radius: var(--rad-m); }
+input[type=file]::file-selector-button { border-radius: var(--rad-s); }
+
+/* ---------- surfaces ---------- */
+.panel, .post, .clist, .cthread, .lbfoot, .snap.panel { background: var(--g1); border: 2px solid var(--g3); border-radius: var(--rad-xl); }
+.post:hover { border-color: var(--g4); }
+.plain .row { border: 2px solid var(--g3); border-radius: var(--rad-l); background: var(--g1); }
+.plain .row:hover { transform: none; border-color: var(--g4); background: var(--g2); }
+.authcard { border: 2px solid var(--g3); border-radius: var(--rad-xl); box-shadow: var(--lift-lg); }
+.brand { font-weight: 850; }
+.sheet { background: var(--g1); border-left: 2px solid var(--g3); }
+.modal .mform, .modal .panel { box-shadow: var(--lift-lg); }
+.err, .okmsg { border-radius: var(--rad-m); font-weight: 700; }
+
+/* ---------- tabs, badges, counters ---------- */
+.tabs button { display: inline-flex; align-items: center; gap: 7px; border: 2px solid var(--g3); border-radius: var(--rad-m); background: var(--g1); font-weight: 800; }
+.tabs button:hover { border-color: var(--muted); background: var(--g2); }
+.tabs .on, .tabs button.on { border-color: var(--edge); box-shadow: var(--lift); }
+.count, .badge, .dotb { border-radius: 8px; }
+.badge { font-weight: 800; }
+.stats4 div { border: 2px solid var(--g3); border-radius: var(--rad-l); background: var(--g1); }
+.stats4 .hot { border-color: var(--yellow); }
+.stats3 button, .stats3 span, .snapstats li button, .snapstats li span { border-radius: var(--rad-m); background: var(--g2); }
+.stats3 b { font-weight: 850; }
+.newp .av { border-radius: var(--rad-m); }
+.newp button:hover { transform: none; }
+
+/* ---------- posts, events, comments ---------- */
+.who b { font-weight: 800; }
+.evmeta, .chipline { display: inline-flex; align-items: center; gap: 6px; width: fit-content; }
+.evmeta { border: 2px solid var(--g3); border-radius: 8px; background: var(--g2); }
+.chipline { font-weight: 650; }
+.pimg { border: 2px solid var(--g3); border-radius: var(--rad-l); }
+.like { display: inline-flex; align-items: center; gap: 6px; border: 2px solid var(--g4); border-radius: var(--rad-m); background: var(--g2); font-weight: 800; box-shadow: var(--lift); }
+.like:hover { background: var(--hover); }
+.like.on { border-color: var(--edge); }
+.like:active { transform: translateY(2px); box-shadow: 0 1px 0 color-mix(in srgb, var(--shade) 60%, transparent); }
+.comments { border-top: 2px solid var(--g3); }
+.cm b { font-weight: 800; }
+.post .pa .ghost, .post footer .ghost { box-shadow: none; }
+.composer textarea { border: 2px solid transparent; border-radius: var(--rad-m); }
+.composer textarea:focus { border-color: var(--accent); }
+
+/* ---------- photos and lightbox ---------- */
+.gtile { border-radius: var(--rad-m); }
+.gtile span { display: inline-flex; align-items: center; gap: 4px; border-radius: 8px; font-weight: 800; }
+.lbimg { border: 2px solid var(--g3); border-radius: var(--rad-l); }
+.lbx { border-radius: var(--rad-m); width: 40px; height: 40px; padding: 0; display: grid; place-items: center; background: var(--g1); }
+.arrow { border: 2px solid var(--g4); border-radius: var(--rad-m); background: var(--g1); display: grid; place-items: center; box-shadow: var(--lift); }
+.arrow:hover { background: var(--hover); border-color: var(--muted); }
+
+/* ---------- chat ---------- */
+.crow2 { border: 2px solid transparent; border-radius: var(--rad-l); }
+.crow2:hover { background: var(--g2); }
+.crow2.on { background: var(--g2); border-color: var(--g4); }
+.bub { border-radius: var(--rad-l) var(--rad-l) var(--rad-l) 4px; font-weight: 600; }
+.bub.mine { border-radius: var(--rad-l) var(--rad-l) 4px var(--rad-l); }
+.dsep { border: 2px solid var(--g3); border-radius: 8px; background: var(--g1); font-weight: 700; }
+.cthread header, .cthread .inline { border-color: var(--g3); border-width: 2px; }
+.cthread .inline input { border-radius: var(--rad-m); background: var(--g0); border: 2px solid var(--g3); }
+.cthread .inline input:focus { border-color: var(--accent); }
+
+/* ---------- map ---------- */
+.mapbar > button, .msearch { background: var(--g1); border: 2px solid var(--g3); border-radius: var(--rad-m); box-shadow: var(--lift); font-weight: 800; }
+.mapbar > button:hover { background: var(--hover); border-color: var(--muted); }
+.mapbar > button.on { border-color: var(--edge); }
+.msearch input { border: 0; box-shadow: none; background: none; }
+.msearch .primary { box-shadow: none; border-radius: var(--rad-s); }
+.sresults, .cand { background: var(--g1); border: 2px solid var(--g3); border-radius: var(--rad-l); box-shadow: var(--lift-lg); }
+.maphint { background: var(--g1); border: 2px solid var(--g3); border-radius: var(--rad-m); font-weight: 750; }
+.leaflet-bar { border: 2px solid var(--g3) !important; border-radius: var(--rad-m) !important; overflow: hidden; box-shadow: var(--lift); }
+.leaflet-bar a { background: var(--g1) !important; border-color: var(--g3) !important; }
+.leaflet-bar a:hover { background: var(--hover) !important; }
+.mkp { border-radius: 50% 50% 50% 4px; border-width: 3px; }
+.mkf { border-radius: var(--rad-s); border-width: 3px; }
+
+/* ---------- toast ---------- */
+.toast { border: 2px solid var(--edge); border-radius: var(--rad-m); box-shadow: var(--lift-lg); font-weight: 800; }
+
+/* ---------- admin ---------- */
+.aprev { border: 2px solid var(--g3); border-radius: var(--rad-l); background: var(--g0); }
+.athumb { border-radius: var(--rad-s); }
+.alog p { border-bottom: 2px solid var(--g2); padding-bottom: .25rem; }
+
+/* ---------- profile editing: leave room for the 400px customizer ---------- */
+.page.editing { margin-right: 400px; }
+.page.editing.collapsed { margin-right: 0; }
+@media (max-width: 860px) { .page.editing { margin-right: 0; } }
+@media (max-width: 700px) { .page.editing { padding-bottom: 62vh; padding-bottom: min(70dvh, 660px); } }

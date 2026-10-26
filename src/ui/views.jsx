@@ -30,7 +30,7 @@ function Snapshot({ go, unread }) {
   if (!me) return <aside className="snap panel"><div className="boot">…</div></aside>;
   return (<aside className="snap panel"><div className="snaptop"><Avatar src={img[me.avatar_path]} size={64} /><div><b>{me.display_name}</b><small>{me.headline || 'No mood set yet'}</small></div></div>
     <div className="stats3"><button onClick={() => go('messages')}><b>{unread}</b><small>messages</small></button><button onClick={() => go('people')}><b>{req}</b><small>requests</small></button><span><b>{views ?? '–'}</b><small>views</small></span></div>
-    <button className="primary wide" onClick={() => go('profile')}>Edit my profile</button>
+    <button className="primary wide" onClick={() => go('profile', null, null, true)}>Edit my profile</button>
     {fresh.length > 0 && <><h4>Cool new people</h4><div className="newp">{fresh.map((p) => <button key={p.id} onClick={() => go('profile', p.username)}><Avatar src={img[p.avatar_path]} size={52} /><small>{p.display_name}</small></button>)}</div></>}
   </aside>);
 }
@@ -63,7 +63,7 @@ function PlaceSheet({ place, me, go, notify, onClose, onChanged }) {
     {pics.length > 0 && <div className="pstrip">{pics.map((p, i) => <button key={p.id} onClick={() => setLb(i)}><img src={img[p.image_path]} alt="" /></button>)}</div>}
     <Composer me={me} fixedPlace={place.id} onPosted={() => { load(); onChanged(); }} notify={notify} />
     {rows ? (rows.length ? rows.map((p) => <PostCard key={p.id} p={p} me={me} img={img} go={go} onChange={change} onDelete={drop} notify={notify} />) : <p className="empty">Nobody has posted here yet.</p>) : <div className="boot">Loading…</div>}
-    {place.created_by === me.id && <button className="ghost sm" onClick={async () => { if (!confirm('Delete this place? Posts stay, but lose the place tag.')) return; try { await social.deletePlace(place.id); onChanged(); onClose(); notify('Place deleted'); } catch (e) { notify(e.message, 'err'); } }}>Delete place</button>}
+    {place.created_by === me.id && <button className="ghost sm danger" onClick={async () => { if (!confirm('Delete this place? Posts stay, but lose the place tag.')) return; try { await social.deletePlace(place.id); onChanged(); onClose(); notify('Place deleted'); } catch (e) { notify(e.message, 'err'); } }}>Delete place</button>}
     {lb != null && <Lightbox items={pics.map((p) => ({ id: p.id, src: img[p.image_path], caption: p.body }))} index={lb} onClose={() => setLb(null)} onIndex={setLb} />}
   </aside>);
 }
