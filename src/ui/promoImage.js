@@ -1,26 +1,22 @@
 import { FONT_STACKS, THEME_DEFAULTS } from './theme.js';
 import { onColor, VERIFIED_BLUE } from './appTheme.js';
-import { profileUrl } from './storyImage.js';
+import { profileUrl, renderStory } from './storyImage.js';
 
 /* ======================================================================
-   promoImage.js — share cards that sit directly on the profile's backdrop.
+   promoImage.js: share cards (1080 x 1920).
 
-   Layout (1080 × 1920):
-     header   wordmark left, @handle right
-     content  one of the templates below, vertically balanced in the
-              open area between the header and the call to action
-     footer   hairline, call-to-action text + link, round arrow button
-
-   The profile theme drives fonts, colours, borders and radii. Avatars keep
-   their exact natural aspect ratio on the intro card. Content is measured first and
-   scaled or trimmed to fit, never squeezed after the fact.
+   Every card is a zoomed-in piece of the real profile page: the same
+   frame, the same titled card panels, the same theme (colours, borders,
+   radius, shadow, glass blur, fonts) and the same call-to-action pill as
+   the full profile export. Nothing here is a separate "marketing" look.
 
    Templates:
-     card  — portrait, name, headline, stats
-     top8  — ranked friends, open spots inviting participation
-     vibe  — album art and player
-     wall  — one guestbook message in a speech bubble
-     full  — compact profile with the selected sections
+     card  - avatar (exact 220:250 ratio), name plate, stats, music, guestbook
+     top8  - the top friends card, 2 x 4 slots, open slots are dashed
+     vibe  - the music player, big, plus who is listening
+     wall  - one guestbook entry as it appears on the wall
+     full  - the whole profile. Delegates to renderStory so the output is
+             identical to the profile story export (stickers included).
    ====================================================================== */
 
 const UI_STACK =
@@ -37,21 +33,22 @@ const canvasStack = (key, customFamily) =>
 const W = 1080;
 const H = 1920;
 
-const MX = 84; // side margin
-const CW = W - MX * 2; // content width
+// Instagram / TikTok cover roughly the top and bottom 190px of a story.
+const SAFE_TOP = 190;
+const SAFE_BOT = 1730;
 
-const HEAD_CY = 234; // vertical centre of the header row
+const SIDE = 48;
+const FW = W - SIDE * 2;
 
-const ROOM_TOP = 322; // open area for content
-const ROOM_BOT = 1530;
-const ROOM = ROOM_BOT - ROOM_TOP;
+const CTA_H = 104;
+const CTA_GAP = 32;
 
-const RULE_Y = 1576; // hairline above the call to action
-const BTN_R = 44;
-const BTN_CY = 1658;
+// The profile avatar is always a 220 x 250 box. Never stretch or re-crop it.
+const AVATAR_W = 220;
+const AVATAR_H = 250;
+const avatarHeightFor = (width) => Math.round((width * AVATAR_H) / AVATAR_W);
 
-// Fallback aspect ratio (height / width)
-const PORTRAIT = 250 / 220;
+const TEMPLATE_IDS = ['card', 'top8', 'vibe', 'wall', 'full'];
 
 /* ------------------------------------------------------------ templates */
 
@@ -59,43 +56,37 @@ export const PROMO_TEMPLATES = [
   {
     id: 'card',
     label: 'Say hi',
-    hint: 'A personal intro people can actually share.',
+    hint: 'Your avatar, name and stats, with a spot to say hi.',
     needs: () => true,
   },
   {
     id: 'top8',
     label: 'My top 8',
-    hint: 'Your people, ranked. Invite friends to compare.',
+    hint: 'Your top friends card, open slots included.',
     needs: (d) => d.topFriends.length > 0,
   },
   {
     id: 'vibe',
     label: 'On repeat',
-    hint: 'A snapshot of what you’re listening to lately.',
+    hint: 'Your music player, blown up.',
     needs: (d) => !!(d.music && (d.music.title || d.music.artist)),
   },
   {
     id: 'wall',
     label: 'Left on my wall',
-    hint: 'A real message from someone who stopped by.',
+    hint: 'One real guestbook message.',
     needs: (d) => d.guestbook.length > 0,
   },
   {
     id: 'full',
     label: 'Full profile',
-    hint: 'A compact look at the things that make you you.',
+    hint: 'Your whole profile, exactly as it looks on fiiyou.',
     needs: () => true,
   },
 ];
 
 export const availablePromos = (data = {}) => {
-  const d = {
-    music: null,
-    topFriends: [],
-    guestbook: [],
-    ...data,
-  };
-
+  const d = { music: null, topFriends: [], guestbook: [], ...data };
   return PROMO_TEMPLATES.filter((p) => p.needs(d));
 };
 
@@ -104,11 +95,11 @@ export const promoShareText = (template, slug) => {
 
   return (
     {
-      card: `A little corner of the internet, all mine. Come say hi → ${url}`,
-      top8: `Your top 8 says a lot. Who’s on yours? ${url}`,
-      vibe: `Current rotation. What have you got on repeat? ${url}`,
-      wall: `Someone left me this. Leave me a note too → ${url}`,
-      full: `Get to know me a little better → ${url}`,
+      card: `Come say hi on fiiyou → ${url}`,
+      top8: `This is my top 8. Who’s on yours? ${url}`,
+      vibe: `What I’m listening to right now → ${url}`,
+      wall: `Someone left this on my wall. Sign it too → ${url}`,
+      full: `My fiiyou profile → ${url}`,
     }[template] || url
   );
 };
@@ -259,6 +250,8 @@ function drawCover(g, image, x, y, w, h) {
 
 const isPixelArt = (image) => Math.max(image.width, image.height) <= 160;
 
+// Cover-fit that crops from the source rect (no resampling of a pre-scaled
+// copy) and keeps tiny pixel-art avatars crisp when they are scaled up.
 function drawCoverCrisp(g, image, x, y, w, h) {
   const scale = Math.max(w / image.width, h / image.height);
   const sourceWidth = w / scale;
@@ -336,6 +329,20 @@ function blurCover(image, radius) {
   g.drawImage(current, 0, 0, W, H);
 
   return out;
+}
+
+/** Cheap blur that works everywhere: shrink, then scale back up smoothed. */
+function shrinkBlur(source, factor) {
+  const canvas = mk(
+    Math.max(1, Math.round(W / factor)),
+    Math.max(1, Math.round(H / factor))
+  );
+  const context = canvas.getContext('2d');
+
+  context.imageSmoothingQuality = 'high';
+  context.drawImage(source, 0, 0, canvas.width, canvas.height);
+
+  return canvas;
 }
 
 function ellipsize(g, value, maxWidth) {
@@ -447,6 +454,7 @@ export async function renderPromo({ template = 'card', ...args }) {
     photos = [],
     topFriends = [],
     guestbook = [],
+    stickers = [],
     guestIndex,
     slug = args.profile?.username,
     fontFamily = null,
@@ -454,6 +462,30 @@ export async function renderPromo({ template = 'card', ...args }) {
 
   if (!profile) {
     throw new Error('renderPromo requires a profile object');
+  }
+
+  if (!TEMPLATE_IDS.includes(template)) {
+    throw new Error(`Unknown promo template: ${template}`);
+  }
+
+  /* ---- full profile: exactly the story export ------------------------ */
+
+  if (template === 'full') {
+    return renderStory({
+      profile,
+      theme,
+      avatarSrc,
+      bgSrc,
+      music,
+      interests,
+      cards,
+      photos,
+      topFriends,
+      guestbook,
+      stickers,
+      slug,
+      fontFamily,
+    });
   }
 
   const t = { ...THEME_DEFAULTS, ...(theme || {}) };
@@ -465,7 +497,7 @@ export async function renderPromo({ template = 'card', ...args }) {
     await document.fonts.ready;
 
     await Promise.all(
-      [400, 500, 600, 700]
+      [400, 500, 600, 700, 800]
         .map((weight) => document.fonts.load(`${weight} 30px ${bodyStack}`))
         .concat(document.fonts.load(`800 52px ${nameStack}`))
     );
@@ -476,17 +508,7 @@ export async function renderPromo({ template = 'card', ...args }) {
   /* ---- data ---------------------------------------------------------- */
 
   const hasMusic = !!(music && (music.title || music.artist));
-
-  const friends = topFriends.slice(0, template === 'top8' ? 8 : 6);
-  const gallery = photos.slice(0, 5);
-
-  const interestOf = (items) =>
-    (
-      items.find((item) => item.type === 'interests')?.content?.interests ||
-      interests
-    ).filter(Boolean);
-
-  const interestList = interestOf(cards);
+  const friends = topFriends.slice(0, 8);
 
   const entry =
     template === 'wall'
@@ -506,21 +528,15 @@ export async function renderPromo({ template = 'card', ...args }) {
     throw new Error('The "wall" promo requires a guestbook entry.');
   }
 
-  if (!['card', 'top8', 'vibe', 'wall', 'full'].includes(template)) {
-    throw new Error(`Unknown promo template: ${template}`);
-  }
-
-  const [avatar, bg, cover, entryImg, photoImgs, friendImgs] =
-    await Promise.all([
-      loadImg(avatarSrc),
-      loadImg(bgSrc),
-      template === 'vibe' || template === 'full'
-        ? loadImg(music?.coverSrc)
-        : null,
-      loadImg(entry?.src),
-      Promise.all(gallery.map((photo) => loadImg(photo.src))),
-      Promise.all(friends.map((friend) => loadImg(friend.src))),
-    ]);
+  const [avatar, bg, cover, entryImg, friendImgs] = await Promise.all([
+    loadImg(avatarSrc),
+    loadImg(bgSrc),
+    template === 'vibe' || template === 'card' ? loadImg(music?.coverSrc) : null,
+    loadImg(entry?.src),
+    Promise.all(
+      (template === 'top8' ? friends : []).map((friend) => loadImg(friend.src))
+    ),
+  ]);
 
   const out = mk(W, H);
   const g = out.getContext('2d');
@@ -528,22 +544,34 @@ export async function renderPromo({ template = 'card', ...args }) {
   g.imageSmoothingEnabled = true;
   g.imageSmoothingQuality = 'high';
 
-  /* ---- theme metrics ------------------------------------------------- */
+  /* ---- theme metrics (same maths as the profile story export) -------- */
 
   const bw = clamp(num(t.border_width, 1), 0, 6);
   const lw = bw === 0 ? 0 : Math.max(2, Math.round(bw * 1.8));
 
   const step = num(t.step, 8);
 
-  const r1 = clamp(num(t.radius, 14) * 1.5, 0, 56);
+  const r1 = clamp(num(t.radius, 14) * 1.5, 0, 64);
   const r2 = Math.max(0, r1 - step * 1.5);
   const r3 = Math.max(0, r1 - step * 3);
 
-  const panelAlpha = Math.max(0.92, clamp(num(t.card_opacity, 100) / 100, 0, 1));
+  const base = clamp(Math.round(num(t.font_size, 15) * 1.7), 22, 32);
+
+  const cardAlpha = clamp(num(t.card_opacity, 100) / 100, 0, 1);
+  const frameAlpha = clamp(num(t.frame_opacity, 100) / 100, 0, 1);
+  const blurPx = num(t.blur, 0);
+  const overlay = clamp(num(t.overlay, 0) / 100, 0, 1);
+
+  const fpad = clamp(Math.round(step * 3 * 1.3), 24, 40);
+  const cpad = clamp(Math.round(step * 2 * 1.4), 20, 32);
+
+  const IW = FW - fpad * 2; // width inside the frame
+  const CIW = IW - cpad * 2; // width inside a card
+  const GAP = 18; // gap between cards
 
   const ink = t.text_color;
   const soft = rgba(t.text_color, 0.62);
-  const hair = rgba(t.text_color, 0.14);
+  const faint = rgba(t.text_color, 0.4);
 
   const onAccent = onColor(rgbOf(t.accent_color));
 
@@ -559,10 +587,15 @@ export async function renderPromo({ template = 'card', ...args }) {
 
   const dispName = caseOf(profile.display_name || profile.username || 'user');
 
+  const handleStr = `@${profile.username}${
+    profile.locality ? `  ·  ${profile.locality}` : ''
+  }`;
+
+  // accent colour nudged toward the text colour until it is readable on cards
   const accentText = (() => {
     const accent = rgbOf(t.accent_color);
     const textColor = rgbOf(t.text_color);
-    const background = rgbOf(t.bg_color);
+    const background = rgbOf(t.card_color);
 
     let value = accent;
 
@@ -579,35 +612,74 @@ export async function renderPromo({ template = 'card', ...args }) {
     return `rgb(${value.map(Math.round).join(',')})`;
   })();
 
-  /* ---- backdrop ------------------------------------------------------ */
+  const titleOf = (type, fallback) =>
+    cards.find((card) => card.type === type)?.title || fallback;
 
-  g.fillStyle = t.bg_color;
-  g.fillRect(0, 0, W, H);
+  const stats = (() => {
+    const friendsCount = profile.friends ?? profile.friends_count;
+    const viewsCount = profile.views;
 
-  const backdrop = template === 'vibe' && cover ? cover : bg;
+    return [
+      friendsCount != null && {
+        n: compact(friendsCount),
+        l: Number(friendsCount) === 1 ? 'friend' : 'friends',
+      },
+      viewsCount != null && {
+        n: compact(viewsCount),
+        l: Number(viewsCount) === 1 ? 'view' : 'views',
+      },
+    ].filter(Boolean);
+  })();
 
-  if (backdrop) {
-    g.drawImage(blurCover(backdrop, template === 'vibe' ? 44 : 14), 0, 0);
+  /* ---- backdrop: the profile background, panels blur it like glass --- */
 
-    g.fillStyle = `rgba(0,0,0,${clamp(num(t.overlay, 0) / 100, 0.3, 0.8)})`;
-    g.fillRect(0, 0, W, H);
-  }
+  const useCoverBackdrop = template === 'vibe' && cover;
+  const backdropImage = useCoverBackdrop ? cover : bg;
+
+  const baseBg = mk(W, H);
 
   {
-    const scrim = g.createLinearGradient(0, 0, 0, H);
+    const b = baseBg.getContext('2d');
 
-    scrim.addColorStop(0, rgba(t.bg_color, 0.78));
-    scrim.addColorStop(0.24, rgba(t.bg_color, 0));
-    scrim.addColorStop(0.62, rgba(t.bg_color, 0));
-    scrim.addColorStop(0.8, rgba(t.bg_color, 0.6));
-    scrim.addColorStop(0.9, rgba(t.bg_color, 0.94));
-    scrim.addColorStop(1, rgba(t.bg_color, 0.98));
+    b.fillStyle = t.bg_color;
+    b.fillRect(0, 0, W, H);
 
-    g.fillStyle = scrim;
-    g.fillRect(0, 0, W, H);
+    if (backdropImage) {
+      if (useCoverBackdrop) {
+        b.drawImage(blurCover(cover, 44), 0, 0);
+      } else {
+        drawCover(b, backdropImage, 0, 0, W, H);
+      }
+    }
+
+    const dim = useCoverBackdrop ? Math.max(overlay, 0.4) : overlay;
+
+    if (dim) {
+      b.fillStyle = `rgba(0,0,0,${dim})`;
+      b.fillRect(0, 0, W, H);
+    }
   }
 
+  g.drawImage(baseBg, 0, 0);
+
+  const glass =
+    backdropImage && blurPx > 0
+      ? shrinkBlur(baseBg, clamp(blurPx * 0.9 + 2, 3, 24))
+      : null;
+
   /* ---- drawing primitives -------------------------------------------- */
+
+  function panel(x, y, w, h, radius, color, alpha) {
+    g.save();
+    rr(g, x, y, w, h, radius);
+    g.clip();
+
+    if (glass) g.drawImage(glass, 0, 0, W, H);
+
+    g.fillStyle = rgba(color, alpha);
+    g.fillRect(x, y, w, h);
+    g.restore();
+  }
 
   function outline(x, y, w, h, radius, color, width = lw) {
     if (!width) return;
@@ -651,18 +723,35 @@ export async function renderPromo({ template = 'card', ...args }) {
     g.restore();
   }
 
-  function dashedCircle(cx, cy, diameter, color, width = 3) {
-    g.save();
+  /** Box shadow outside the frame only, so the glass underneath stays clean. */
+  function frameShadow(x, y, w, h, radius) {
+    if (!t.shadow || t.shadow === 'none') return;
 
-    g.strokeStyle = color;
-    g.lineWidth = width;
-    g.setLineDash([width * 3, width * 2.4]);
-    g.lineCap = 'round';
+    const OFF = 4000;
+
+    g.save();
+    g.beginPath();
+    g.rect(0, 0, W, H);
+    rrp(g, x, y, w, h, radius);
+    g.clip('evenodd');
 
     g.beginPath();
-    g.arc(cx, cy, diameter / 2 - width / 2, 0, Math.PI * 2);
-    g.stroke();
+    rrp(g, x - OFF, y, w, h, radius);
 
+    if (t.shadow === 'hard') {
+      g.shadowColor = t.border_color;
+      g.shadowBlur = 0;
+      g.shadowOffsetX = OFF + 12;
+      g.shadowOffsetY = 12;
+    } else {
+      g.shadowColor = 'rgba(0,0,0,0.45)';
+      g.shadowBlur = 60;
+      g.shadowOffsetX = OFF;
+      g.shadowOffsetY = 22;
+    }
+
+    g.fillStyle = '#000';
+    g.fill();
     g.restore();
   }
 
@@ -681,6 +770,7 @@ export async function renderPromo({ template = 'card', ...args }) {
     return capCache.get(font);
   };
 
+  /** Draws text with its capital-letter height centred on cy. */
   const put = (value, x, cy, font, color, align = 'left') => {
     const cap = capOf(font);
 
@@ -693,33 +783,10 @@ export async function renderPromo({ template = 'card', ...args }) {
 
   const para = (lines, x, y, lineHeight, font, color, align = 'left') => {
     lines.forEach((line, index) => {
-      if (line) put(line, x, y + index * lineHeight + lineHeight / 2, font, color, align);
+      if (line) {
+        put(line, x, y + index * lineHeight + lineHeight / 2, font, color, align);
+      }
     });
-  };
-
-  const tracked = (value, x, cy, font, color, gap, align = 'left') => {
-    g.font = font;
-
-    const chars = [...value];
-    const widths = chars.map((character) => g.measureText(character).width);
-    const total =
-      widths.reduce((sum, width) => sum + width, 0) + gap * (chars.length - 1);
-
-    let cursor = align === 'center' ? x - total / 2 : x;
-
-    const baseline = Math.round(cy + capOf(font) / 2);
-
-    g.font = font;
-    g.fillStyle = color;
-    g.textAlign = 'left';
-    g.textBaseline = 'alphabetic';
-
-    chars.forEach((character, index) => {
-      g.fillText(character, cursor, baseline);
-      cursor += widths[index] + gap;
-    });
-
-    return total;
   };
 
   const fitSize = (value, maxWidth, start, min, weight, stack) => {
@@ -753,6 +820,7 @@ export async function renderPromo({ template = 'card', ...args }) {
     g.stroke();
   };
 
+  /** Picture in a rounded box. Cover-fit, never stretched. */
   function pic(
     image,
     x,
@@ -791,103 +859,26 @@ export async function renderPromo({ template = 'card', ...args }) {
     outline(x, y, w, h, radius, edge, edgeWidth);
   }
 
-  const portraitH = (width) => Math.round(width * PORTRAIT);
+  /** The profile owner's avatar: always the 220:250 box, accent outline. */
+  const ownerAvatar = (x, y, width) =>
+    pic(
+      avatar,
+      x,
+      y,
+      width,
+      avatarHeightFor(width),
+      r2,
+      initial(dispName),
+      t.accent_color,
+      lw
+    );
 
-  function chips(labels, maxRows, fontSize, width, { color = ink, edge = t.border_color } = {}) {
-    const pillHeight = Math.round(fontSize * 2);
-    const padX = Math.round(fontSize * 0.9);
-    const gap = Math.round(fontSize * 0.45);
-    const font = `500 ${fontSize}px ${bodyStack}`;
-    const radius = Math.min(r3 + 2, pillHeight / 2);
-
-    g.font = font;
-
-    const items = labels.map((label) => {
-      const value = ellipsize(g, label, width - padX * 2);
-
-      return { s: value, w: g.measureText(value).width + padX * 2 };
-    });
-
-    const rows = [[]];
-
-    let x = 0;
-    let shown = 0;
-
-    for (const item of items) {
-      if (x + item.w > width && rows[rows.length - 1].length) {
-        if (rows.length >= maxRows) break;
-
-        rows.push([]);
-        x = 0;
-      }
-
-      rows[rows.length - 1].push(item);
-      x += item.w + gap;
-      shown++;
-    }
-
-    let hidden = items.length - shown;
-
-    if (hidden > 0) {
-      const last = rows[rows.length - 1];
-
-      const rowWidth = (row) =>
-        row.reduce((total, item) => total + item.w, 0) + gap * (row.length - 1);
-
-      const moreItem = () => {
-        const value = `+${hidden}`;
-
-        return {
-          s: value,
-          w: g.measureText(value).width + padX * 2,
-          more: true,
-        };
-      };
-
-      let more = moreItem();
-
-      while (last.length > 1 && rowWidth(last) + gap + more.w > width) {
-        last.pop();
-        hidden++;
-        more = moreItem();
-      }
-
-      last.push(more);
-    }
-
-    return {
-      h: rows.length * pillHeight + (rows.length - 1) * gap,
-
-      draw(x0, y0) {
-        rows.forEach((row, rowIndex) => {
-          let px = x0;
-          const py = y0 + rowIndex * (pillHeight + gap);
-
-          for (const item of row) {
-            outline(
-              px,
-              py,
-              item.w,
-              pillHeight,
-              radius,
-              item.more ? t.border_color : edge,
-              Math.max(1, Math.min(lw, 3))
-            );
-
-            put(item.s, px + item.w / 2, py + pillHeight / 2, font, item.more ? soft : color, 'center');
-
-            px += item.w + gap;
-          }
-        });
-      },
-    };
-  }
-
-  function nameBlock(maxWidth, start, min) {
+  /** Display name + verified badge, fitted to maxWidth. */
+  function fitName(maxWidth, start, min) {
     const badge = !!profile.verified;
     const font = (size) => `800 ${size}px ${nameStack}`;
     const extra = (size) =>
-      badge ? Math.round(size * 0.22) + Math.round(size * 0.42) : 0;
+      badge ? Math.round(size * 0.22) + Math.round(size * 0.5) : 0;
 
     let size = start;
 
@@ -903,1154 +894,670 @@ export async function renderPromo({ template = 'card', ...args }) {
 
     const value = ellipsize(g, dispName, maxWidth - extra(size));
     const textWidth = g.measureText(value).width;
-    const finalFont = font(size);
-    const cap = capOf(finalFont);
-    const height = Math.round(size * 1.1);
-    const badgeSize = Math.round(size * 0.42);
-    const badgeGap = Math.round(size * 0.22);
 
     return {
-      h: height,
+      size,
+      total: textWidth + extra(size),
 
-      draw(x, y) {
-        const baseline = y + height / 2 + cap / 2;
-
-        g.font = finalFont;
-        g.fillStyle = ink;
-        g.textAlign = 'left';
-        g.textBaseline = 'alphabetic';
-        g.fillText(value, x, Math.round(baseline));
+      draw(x, cy) {
+        put(value, x, cy, font(size), ink);
 
         if (badge) {
-          checkBadge(
-            x + textWidth + badgeGap + badgeSize / 2,
-            baseline - cap / 2,
-            badgeSize / 2
-          );
+          const badgeSize = Math.round(size * 0.5);
+          const badgeGap = Math.round(size * 0.22);
+
+          checkBadge(x + textWidth + badgeGap + badgeSize / 2, cy, badgeSize / 2);
         }
       },
     };
   }
 
-  const handleText = (maxWidth, size) => {
-    g.font = `500 ${size}px ${bodyStack}`;
+  /* ---- card chrome: same as a profile card (panel, border, title) ---- */
 
-    return ellipsize(
-      g,
-      `@${profile.username}${profile.locality ? `  ·  ${profile.locality}` : ''}`,
-      maxWidth
-    );
-  };
+  const TITLE_SIZE = Math.round(base * 1.15);
+  const TITLE_H = Math.round(TITLE_SIZE * 1.25) + 10;
 
-  const stack = (items) => ({
-    h: items.reduce(
-      (total, item, index) => total + item.h + (index ? item.gap || 0 : 0),
-      0
-    ),
+  function cardBox(x, y, w, h, title, rightText) {
+    panel(x, y, w, h, r2, t.card_color, cardAlpha);
+    outline(x, y, w, h, r2, t.border_color);
 
-    draw(x, y, width) {
-      let yy = y;
+    if (!title) return;
 
-      items.forEach((item, index) => {
-        if (index) yy += item.gap || 0;
+    const font = `700 ${TITLE_SIZE}px ${bodyStack}`;
+    const cy = y + cpad + Math.round(TITLE_SIZE * 0.6);
 
-        item.draw(x, yy, width);
-        yy += item.h;
-      });
-    },
-  });
+    let room = w - cpad * 2;
 
-  const eyebrow = (label, { center = false } = {}) => ({
-    h: 40,
+    if (rightText) {
+      const rightFont = `600 ${Math.round(TITLE_SIZE * 0.78)}px ${bodyStack}`;
 
-    draw(x, y, w) {
-      const font = `600 30px ${bodyStack}`;
-      const cy = y + 20;
-      const value = label.toUpperCase();
+      g.font = rightFont;
+      room -= g.measureText(rightText).width + 24;
 
-      if (center) {
-        tracked(value, x + w / 2, cy, font, accentText, 7, 'center');
-        return;
-      }
-
-      g.fillStyle = t.accent_color;
-      g.fillRect(x, Math.round(cy - 1.5), 48, 3);
-
-      tracked(value, x + 48 + 22, cy, font, accentText, 7);
-    },
-  });
-
-  const stats = (() => {
-    const friendsCount = profile.friends ?? profile.friends_count;
-    const viewsCount = profile.views;
-
-    return [
-      friendsCount != null && {
-        n: compact(friendsCount),
-        l: Number(friendsCount) === 1 ? 'friend' : 'friends',
-      },
-
-      viewsCount != null && {
-        n: compact(viewsCount),
-        l: Number(viewsCount) === 1 ? 'view' : 'views',
-      },
-    ].filter(Boolean);
-  })();
-
-  /* ---- Say hi (Card Template) ---------------------------------------- */
-
-  function buildCard() {
-    const eb = eyebrow('Come say hi');
-    const ebGap = 28;
-    const avatarGap = 32;
-
-    // Use the exact same profile aspect ratio formula as full profile (aspect-ratio: 5/6)
-    const avatarRatio = avatar ? avatar.width / avatar.height : 5 / 6;
-    let aw = CW;
-    let ah = Math.round(aw / avatarRatio);
-    const maxAh = 620;
-    if (ah > maxAh) {
-      ah = maxAh;
-      aw = Math.round(ah * avatarRatio);
+      put(rightText, x + w - cpad, cy, rightFont, soft, 'right');
     }
 
-    const name = nameBlock(CW, 108, 48);
-    const nameGap = 6;
+    g.font = font;
+    put(ellipsize(g, title, room), x + cpad, cy, font, ink);
+  }
+
+  /* ==================================================================
+     Say hi
+     ================================================================== */
+
+  function buildCard(maxH) {
+    const side = stats.length > 0 || hasMusic;
+
+    // name plate
+    const nameFit = fitName(CIW, 80, 40);
+    const nameH = Math.round(nameFit.size * 1.2);
 
     const handleSize = 32;
-    const handleBox = Math.round(handleSize * 1.4);
-    const handleGap = 18;
-    const handle = handleText(CW, handleSize);
+    const handleH = 44;
 
-    const headlineSize = 38;
-    const headlineLH = Math.round(headlineSize * 1.4);
+    const headlineSize = 36;
+    const headlineLH = 50;
 
-    g.font = `400 ${headlineSize}px ${bodyStack}`;
+    g.font = `500 ${headlineSize}px ${bodyStack}`;
 
-    const headlineLines = profile.headline ? wrap(g, profile.headline, CW, 3) : [];
-    const headlineGap = headlineLines.length ? 28 : 0;
+    const headlineLines = profile.headline
+      ? wrap(g, profile.headline, CIW, 3)
+      : [];
 
-    const statsBlockH = stats.length ? 2 + 22 + 70 + 26 : 0;
+    const plateH =
+      cpad +
+      nameH +
+      6 +
+      handleH +
+      (headlineLines.length ? 14 + headlineLines.length * headlineLH : 0) +
+      cpad;
 
-    const totalH =
-      eb.h +
-      ebGap +
-      ah +
-      avatarGap +
-      name.h +
-      nameGap +
-      handleBox +
-      handleGap +
-      headlineLines.length * headlineLH +
-      headlineGap +
-      statsBlockH;
+    // guestbook prompt
+    const inputH = 64;
+    const guestH = cpad * 2 + TITLE_H + inputH;
 
-    return {
-      h: totalH,
+    // avatar width: as big as the budget allows, ratio is fixed
+    let AW = side ? 600 : 640;
 
-      draw(x, y, w) {
-        let yy = y;
-
-        eb.draw(x, yy, w);
-        yy += eb.h + ebGap;
-
-        const currentAw = Math.min(w, ah * avatarRatio);
-        const currentAx = x + (w - currentAw) / 2;
-        pic(
-          avatar,
-          currentAx,
-          yy,
-          currentAw,
-          ah,
-          Math.min(r2, currentAw / 2),
-          initial(dispName),
-          t.accent_color,
-          lw
-        );
-        yy += ah + avatarGap;
-
-        name.draw(x, yy);
-        yy += name.h + nameGap;
-
-        put(handle, x, yy + handleBox / 2, `500 ${handleSize}px ${bodyStack}`, soft);
-        yy += handleBox + handleGap;
-
-        if (headlineLines.length) {
-          para(
-            headlineLines,
-            x,
-            yy,
-            headlineLH,
-            `400 ${headlineSize}px ${bodyStack}`,
-            rgba(t.text_color, 0.9)
-          );
-          yy += headlineLines.length * headlineLH + headlineGap;
-        }
-
-        if (stats.length) {
-          g.fillStyle = hair;
-          g.fillRect(x, yy, w, 2);
-          yy += 22;
-
-          const statNumberSize = 64;
-          const statLabelSize = 28;
-          const statBox = 90;
-
-          let sx = x;
-          const colW = w / stats.length;
-
-          stats.forEach((stat) => {
-            const size = fitSize(stat.n, colW, statNumberSize, 36, 800, nameStack);
-            put(stat.n, sx, yy + statBox / 2, `800 ${size}px ${nameStack}`, ink);
-            put(stat.l, sx, yy + statBox + 16, `500 ${statLabelSize}px ${bodyStack}`, soft);
-            sx += colW;
-          });
-        }
-      },
-    };
-  }
-
-  /* ---- My top 8 ------------------------------------------------------ */
-
-  function buildTop8() {
-    const open = Math.max(0, 8 - friends.length);
-    const count = friends.length + (open ? 1 : 0);
-    const minGap = 56;
-
-    const makeTitle = (scale) => {
-      const size = fitSize('My top 8', CW * 0.92 * scale, 300, 36, 800, nameStack);
-      const font = `800 ${size}px ${nameStack}`;
-      const cap = capOf(font);
-      const descender = Math.round(size * 0.22);
-      const subSize = Math.max(26, Math.round(size * 0.22));
-      const subBox = Math.round(subSize * 1.35);
-
-      return {
-        h: Math.round(cap) + descender + 6 + subBox,
-
-        draw(x, y) {
-          g.font = font;
-          g.textAlign = 'left';
-          g.textBaseline = 'alphabetic';
-
-          const heading = 'My top ';
-          const headingWidth = g.measureText(heading).width;
-          const baseline = Math.round(y + cap);
-
-          g.fillStyle = ink;
-          g.fillText(heading, x, baseline);
-
-          g.fillStyle = accentText;
-          g.fillText('8', x + headingWidth, baseline);
-
-          put(
-            'Am I in yours?',
-            x,
-            y + Math.round(cap) + descender + 6 + subBox / 2,
-            `500 ${subSize}px ${bodyStack}`,
-            soft
-          );
-        },
-      };
-    };
-
-    let title;
-    let rowH = 0;
-
-    for (const scale of [1, 0.8, 0.64, 0.52, 0.42]) {
-      title = makeTitle(scale);
-      rowH = Math.floor((ROOM - title.h - minGap) / count);
-
-      if (rowH >= 150) break;
+    while (
+      AW > 360 &&
+      avatarHeightFor(AW) + GAP + plateH + GAP + guestH > maxH
+    ) {
+      AW -= 20;
     }
 
-    rowH = clamp(rowH, 88, 311);
-
-    const free = ROOM - title.h - count * rowH;
-    const titleGap = clamp(Math.round(free * 0.6), minGap, 170);
-
-    const inset = Math.round(rowH * 0.115);
-    const d = rowH - inset;
-    const numberW = clamp(Math.round(rowH * 0.385), 56, 120);
-    const textX = numberW + d + 28;
-
-    const nameSize = clamp(Math.round(rowH * 0.17), 28, 52);
-    const subSize = Math.round(nameSize * 0.78);
-    const nameBox = Math.round(nameSize * 1.25);
-    const subBox = Math.round(subSize * 1.25);
-    const pairGap = 6;
-    const pairH = nameBox + pairGap + subBox;
-
-    const drawRow = (index, x, y) => {
-      const isOpen = index >= friends.length;
-      const friend = friends[index];
-      const cy = y + rowH / 2;
-      const ax = x + numberW;
-      const ay = y + inset / 2;
-      const pairTop = cy - pairH / 2;
-
-      put(
-        isOpen ? '+' : String(index + 1).padStart(2, '0'),
-        x,
-        cy,
-        `800 ${clamp(Math.round(rowH * 0.17), 26, 52)}px ${nameStack}`,
-        index === 0 && !isOpen ? accentText : rgba(t.text_color, 0.42)
-      );
-
-      if (!isOpen) {
-        pic(friendImgs[index], ax, ay, d, d, d / 2, initial(friend.name || friend.username));
-
-        g.font = `600 ${nameSize}px ${bodyStack}`;
-
-        put(
-          ellipsize(g, friend.name || friend.username || '', CW - textX),
-          x + textX,
-          pairTop + nameBox / 2,
-          `600 ${nameSize}px ${bodyStack}`,
-          ink
-        );
-
-        if (friend.username) {
-          g.font = `400 ${subSize}px ${bodyStack}`;
-
-          put(
-            ellipsize(g, `@${friend.username}`, CW - textX),
-            x + textX,
-            pairTop + nameBox + pairGap + subBox / 2,
-            `400 ${subSize}px ${bodyStack}`,
-            soft
-          );
-        }
-      } else {
-        dashedCircle(ax + d / 2, ay + d / 2, d, rgba(t.accent_color, 0.7), 3);
-
-        put('?', ax + d / 2, ay + d / 2, `800 ${Math.round(d * 0.4)}px ${nameStack}`, accentText, 'center');
-
-        put(
-          `${open} spot${open === 1 ? '' : 's'} open`,
-          x + textX,
-          pairTop + nameBox / 2,
-          `600 ${nameSize}px ${bodyStack}`,
-          ink
-        );
-
-        put(
-          'Could be you',
-          x + textX,
-          pairTop + nameBox + pairGap + subBox / 2,
-          `500 ${subSize}px ${bodyStack}`,
-          accentText
-        );
-      }
-
-      if (index < count - 1) {
-        g.fillStyle = hair;
-        g.fillRect(ax, y + rowH - 1, CW - numberW, 2);
-      }
-    };
+    const AH = avatarHeightFor(AW);
 
     return {
-      h: title.h + titleGap + count * rowH,
+      h: AH + GAP + plateH + GAP + guestH,
 
       draw(x, y) {
-        title.draw(x, y);
+        /* avatar + side column */
+        const ax = side ? x : x + Math.round((IW - AW) / 2);
 
-        const rowsTop = y + title.h + titleGap;
+        ownerAvatar(ax, y, AW);
 
-        for (let index = 0; index < count; index++) {
-          drawRow(index, x, rowsTop + index * rowH);
+        if (side) {
+          const sx = x + AW + GAP;
+          const sw = IW - AW - GAP;
+
+          const baseStatH = 150;
+
+          let musicH = 0;
+
+          if (hasMusic) {
+            musicH = AH - stats.length * (baseStatH + GAP);
+
+            if (stats.length && musicH < 240) musicH = 0;
+          }
+
+          const statCount = stats.length;
+          const statH = statCount
+            ? musicH
+              ? baseStatH
+              : Math.floor((AH - (statCount - 1) * GAP) / statCount)
+            : 0;
+
+          let yy = y;
+
+          stats.forEach((stat) => {
+            cardBox(sx, yy, sw, statH);
+
+            const size = fitSize(
+              stat.n,
+              sw - cpad * 2,
+              Math.min(96, Math.round(statH * 0.5)),
+              32,
+              800,
+              nameStack
+            );
+
+            put(stat.n, sx + sw / 2, yy + statH * 0.4, `800 ${size}px ${nameStack}`, ink, 'center');
+            put(stat.l, sx + sw / 2, yy + statH * 0.76, `500 28px ${bodyStack}`, soft, 'center');
+
+            yy += statH + GAP;
+          });
+
+          if (musicH) {
+            const my = y + AH - musicH;
+            const pad = 16;
+
+            cardBox(sx, my, sw, musicH);
+
+            const textBlock = 12 + 34 + 30;
+            const cs = Math.min(sw - pad * 2, musicH - pad * 2 - textBlock);
+
+            if (cs >= 100) {
+              pic(cover, sx + pad, my + pad, cs, cs, r3, '♪', t.border_color, Math.min(lw, 3));
+
+              const tFont = `700 28px ${bodyStack}`;
+              const aFont = `500 24px ${bodyStack}`;
+
+              g.font = tFont;
+              put(
+                ellipsize(g, music.title || 'Unknown title', sw - pad * 2),
+                sx + pad,
+                my + pad + cs + 12 + 17,
+                tFont,
+                ink
+              );
+
+              if (music.artist) {
+                g.font = aFont;
+                put(
+                  ellipsize(g, music.artist, sw - pad * 2),
+                  sx + pad,
+                  my + pad + cs + 12 + 34 + 15,
+                  aFont,
+                  soft
+                );
+              }
+            }
+          }
+        }
+
+        /* name plate */
+        const py = y + AH + GAP;
+
+        cardBox(x, py, IW, plateH);
+
+        const mid = x + IW / 2;
+        const nameCy = py + cpad + nameH / 2;
+
+        nameFit.draw(mid - nameFit.total / 2, nameCy);
+
+        g.font = `600 ${handleSize}px ${bodyStack}`;
+
+        put(
+          ellipsize(g, handleStr, CIW),
+          mid,
+          py + cpad + nameH + 6 + handleH / 2,
+          `600 ${handleSize}px ${bodyStack}`,
+          soft,
+          'center'
+        );
+
+        para(
+          headlineLines,
+          mid,
+          py + cpad + nameH + 6 + handleH + 14,
+          headlineLH,
+          `500 ${headlineSize}px ${bodyStack}`,
+          rgba(t.text_color, 0.85),
+          'center'
+        );
+
+        /* guestbook prompt: how the empty wall looks on the real page */
+        const gy = py + plateH + GAP;
+
+        cardBox(x, gy, IW, guestH, titleOf('guestbook', 'Guestbook'));
+
+        const bx = 150;
+        const iw = CIW - bx - 14;
+        const iy = gy + cpad + TITLE_H;
+
+        panel(x + cpad, iy, iw, inputH, r3, t.card_color, 0.9);
+        outline(x + cpad, iy, iw, inputH, r3, t.border_color, Math.min(lw, 2));
+
+        put('Write something…', x + cpad + 22, iy + inputH / 2, `500 ${base}px ${bodyStack}`, faint);
+
+        rr(g, x + cpad + iw + 14, iy, bx, inputH, r3);
+        g.fillStyle = t.accent_color;
+        g.fill();
+
+        put('Send', x + cpad + iw + 14 + bx / 2, iy + inputH / 2, `700 ${base}px ${bodyStack}`, onAccent, 'center');
+      },
+    };
+  }
+
+  /* ==================================================================
+     My top 8
+     ================================================================== */
+
+  function buildTop8(maxH) {
+    const title = titleOf('top_friends', 'Top 8');
+    const open = Math.max(0, 8 - friends.length);
+
+    const cols = 2;
+    const rows = 4;
+    const gx = 24;
+    const gy = 22;
+
+    const cellW = Math.floor((CIW - gx) / cols);
+
+    const rowH = clamp(
+      Math.floor((maxH - cpad * 2 - TITLE_H - gy * (rows - 1)) / rows),
+      110,
+      200
+    );
+
+    const h = cpad * 2 + TITLE_H + rows * rowH + gy * (rows - 1);
+
+    const ns = clamp(Math.round(rowH * 0.19), 26, 36);
+    const us = Math.round(ns * 0.78);
+    const tag = clamp(Math.round(rowH * 0.2), 30, 40);
+
+    return {
+      h,
+
+      draw(x, y) {
+        cardBox(x, y, IW, h, title, open ? `${open} open` : '');
+
+        let firstOpen = true;
+
+        for (let index = 0; index < cols * rows; index++) {
+          const col = index % cols;
+          const row = Math.floor(index / cols);
+
+          const cx = x + cpad + col * (cellW + gx);
+          const cy = y + cpad + TITLE_H + row * (rowH + gy);
+
+          const tx = cx + rowH + 18;
+          const tw = cellW - rowH - 18;
+          const mid = cy + rowH / 2;
+
+          const friend = friends[index];
+          const radius = Math.min(r3, rowH / 2);
+
+          if (friend) {
+            pic(
+              friendImgs[index],
+              cx,
+              cy,
+              rowH,
+              rowH,
+              radius,
+              initial(friend.name || friend.username)
+            );
+
+            // rank tag in the corner of the picture
+            g.fillStyle = t.accent_color;
+            g.fillRect(cx, cy, tag, tag);
+
+            put(String(index + 1), cx + tag / 2, cy + tag / 2, `800 ${Math.round(tag * 0.58)}px ${nameStack}`, onAccent, 'center');
+
+            const nameFont = `600 ${ns}px ${bodyStack}`;
+
+            g.font = nameFont;
+            put(
+              ellipsize(g, friend.name || friend.username || '', tw),
+              tx,
+              friend.username ? mid - ns * 0.62 : mid,
+              nameFont,
+              ink
+            );
+
+            if (friend.username) {
+              const userFont = `400 ${us}px ${bodyStack}`;
+
+              g.font = userFont;
+              put(ellipsize(g, `@${friend.username}`, tw), tx, mid + ns * 0.62, userFont, soft);
+            }
+
+            continue;
+          }
+
+          // open slot: dashed tile
+          g.save();
+          g.strokeStyle = rgba(t.accent_color, 0.65);
+          g.lineWidth = 3;
+          g.setLineDash([10, 8]);
+          rr(g, cx + 1.5, cy + 1.5, rowH - 3, rowH - 3, Math.max(0, radius - 1.5));
+          g.stroke();
+          g.restore();
+
+          put('+', cx + rowH / 2, cy + rowH / 2, `800 ${Math.round(rowH * 0.36)}px ${nameStack}`, accentText, 'center');
+
+          const isFirst = firstOpen;
+          firstOpen = false;
+
+          const openFont = `600 ${ns}px ${bodyStack}`;
+
+          g.font = openFont;
+          put(
+            ellipsize(g, isFirst ? 'Could be you' : 'Open', tw),
+            tx,
+            mid - ns * 0.62,
+            openFont,
+            isFirst ? accentText : soft
+          );
+
+          put(`#${index + 1}`, tx, mid + ns * 0.62, `400 ${us}px ${bodyStack}`, faint);
         }
       },
     };
   }
 
-  /* ---- On repeat ----------------------------------------------------- */
+  /* ==================================================================
+     On repeat
+     ================================================================== */
 
-  function buildVibe() {
-    const eb = eyebrow('On repeat', { center: true });
-
-    const titleSize = 62;
-    const titleLH = Math.round(titleSize * 1.2);
+  function buildVibe(maxH) {
+    const titleSize = 58;
+    const titleLH = 66;
 
     g.font = `800 ${titleSize}px ${nameStack}`;
 
-    const titleLines = wrap(g, music.title || 'Unknown title', CW, 2);
+    const titleLines = wrap(g, music.title || 'Unknown title', CIW, 2);
 
-    const artistSize = 40;
-    const artistBox = 50;
+    const artistSize = 36;
+    const artistBox = 48;
 
     g.font = `500 ${artistSize}px ${bodyStack}`;
 
-    const artist = music.artist ? ellipsize(g, music.artist, CW) : '';
+    const artist = music.artist ? ellipsize(g, music.artist, CIW) : '';
 
-    const gaps = { eyebrow: 53, title: 31, artist: 8, bar: 56, controls: 23, listener: 55 };
+    const gapCover = 30;
+    const gapArtist = 8;
+    const gapControls = 34;
+    const controlsH = 84;
 
-    const barH = 26;
-    const controlsH = 94;
-    const listenerH = 78;
-    const titleH = titleLines.length * titleLH;
+    const textH = titleLines.length * titleLH;
 
-    const others =
-      eb.h +
-      gaps.eyebrow +
-      gaps.title +
-      titleH +
-      (artist ? gaps.artist + artistBox : 0) +
-      gaps.bar +
-      barH +
-      gaps.controls +
-      controlsH +
-      gaps.listener +
-      listenerH;
+    const fixed =
+      cpad * 2 +
+      gapCover +
+      textH +
+      (artist ? gapArtist + artistBox : 0) +
+      gapControls +
+      controlsH;
 
-    const cs = clamp(ROOM - others, 360, 618);
+    // who is listening
+    const oAW = 96;
+    const oAH = avatarHeightFor(oAW);
+    const ownerH = oAH + 36;
 
-    const barX = MX + 82;
-    const barW = CW - 164;
-
-    const drawControls = (cx, cy) => {
-      const icon = rgba(t.text_color, 0.72);
-
-      g.fillStyle = icon;
-
-      g.fillRect(cx - 126 - 17, cy - 17, 4, 34);
-      g.beginPath();
-      g.moveTo(cx - 126 + 17, cy - 17);
-      g.lineTo(cx - 126 + 17, cy + 17);
-      g.lineTo(cx - 126 - 13, cy);
-      g.closePath();
-      g.fill();
-
-      g.fillRect(cx + 126 + 13, cy - 17, 4, 34);
-      g.beginPath();
-      g.moveTo(cx + 126 - 17, cy - 17);
-      g.lineTo(cx + 126 - 17, cy + 17);
-      g.lineTo(cx + 126 + 13, cy);
-      g.closePath();
-      g.fill();
-
-      g.beginPath();
-      g.arc(cx, cy, 47, 0, Math.PI * 2);
-      g.fillStyle = t.accent_color;
-      g.fill();
-
-      g.beginPath();
-      g.moveTo(cx - 13, cy - 19);
-      g.lineTo(cx + 21, cy);
-      g.lineTo(cx - 13, cy + 19);
-      g.closePath();
-      g.fillStyle = onAccent;
-      g.fill();
-    };
-
-    const drawListener = (x, y, w) => {
-      const nameFont = `600 34px ${bodyStack}`;
-      const subFont = `400 27px ${bodyStack}`;
-      const label = 'What are you listening to?';
-      const avatarD = 78;
-      const gap = 19;
-      const room = w - avatarD - gap;
-
-      g.font = nameFont;
-      const name = ellipsize(g, profile.display_name || profile.username || '', room);
-      const nameWidth = g.measureText(name).width;
-
-      g.font = subFont;
-      const sub = ellipsize(g, label, room);
-      const subWidth = g.measureText(sub).width;
-
-      const total = avatarD + gap + Math.max(nameWidth, subWidth);
-      const left = x + (w - total) / 2;
-
-      pic(avatar, left, y, avatarD, avatarD, avatarD / 2, initial(dispName), t.accent_color, lw);
-
-      put(name, left + avatarD + gap, y + avatarD / 2 - 20, nameFont, ink);
-      put(sub, left + avatarD + gap, y + avatarD / 2 + 20, subFont, soft);
-    };
+    const cs = clamp(maxH - ownerH - GAP - fixed, 360, CIW);
+    const playerH = fixed + cs;
 
     return {
-      h: others + cs,
+      h: playerH + GAP + ownerH,
 
-      draw(x, y, w) {
-        let yy = y;
+      draw(x, y) {
+        cardBox(x, y, IW, playerH);
 
-        eb.draw(x, yy, w);
-        yy += eb.h + gaps.eyebrow;
+        let yy = y + cpad;
 
         pic(
           cover,
-          x + (w - cs) / 2,
+          x + cpad + (CIW - cs) / 2,
           yy,
           cs,
           cs,
-          Math.min(r2, 28),
+          r3,
           '♪',
           t.border_color,
           Math.min(lw, 3)
         );
-        yy += cs + gaps.title;
 
-        para(titleLines, x + w / 2, yy, titleLH, `800 ${titleSize}px ${nameStack}`, ink, 'center');
-        yy += titleH;
+        yy += cs + gapCover;
+
+        para(
+          titleLines,
+          x + cpad,
+          yy,
+          titleLH,
+          `800 ${titleSize}px ${nameStack}`,
+          ink
+        );
+
+        yy += textH;
 
         if (artist) {
-          yy += gaps.artist;
-          put(artist, x + w / 2, yy + artistBox / 2, `500 ${artistSize}px ${bodyStack}`, soft, 'center');
+          yy += gapArtist;
+          put(artist, x + cpad, yy + artistBox / 2, `500 ${artistSize}px ${bodyStack}`, soft);
           yy += artistBox;
         }
 
-        yy += gaps.bar;
+        yy += gapControls;
 
-        const barCy = yy + barH / 2;
+        // controls row: play button + progress, like the real mini player
+        const cy = yy + controlsH / 2;
+        const pr = controlsH / 2;
+        const px = x + cpad + pr;
 
-        rr(g, barX, barCy - 3, barW, 6, 3);
-        g.fillStyle = rgba(t.text_color, 0.22);
-        g.fill();
-
-        rr(g, barX, barCy - 3, barW * 0.38, 6, 3);
+        g.beginPath();
+        g.arc(px, cy, pr, 0, Math.PI * 2);
         g.fillStyle = t.accent_color;
         g.fill();
 
         g.beginPath();
-        g.arc(barX + barW * 0.38, barCy, 13, 0, Math.PI * 2);
+        g.moveTo(px - 11 + 3, cy - 18);
+        g.lineTo(px + 19 + 3, cy);
+        g.lineTo(px - 11 + 3, cy + 18);
+        g.closePath();
+        g.fillStyle = onAccent;
+        g.fill();
+
+        const bx = x + cpad + pr * 2 + 28;
+        const bwid = x + IW - cpad - bx;
+
+        rr(g, bx, cy - 5, bwid, 10, 5);
+        g.fillStyle = rgba(t.text_color, 0.18);
+        g.fill();
+
+        rr(g, bx, cy - 5, bwid * 0.38, 10, 5);
         g.fillStyle = t.accent_color;
         g.fill();
 
-        yy += barH + gaps.controls;
+        /* owner */
+        const oy = y + playerH + GAP;
 
-        drawControls(x + w / 2, yy + controlsH / 2);
-        yy += controlsH + gaps.listener;
+        cardBox(x, oy, IW, ownerH);
 
-        drawListener(x, yy, w);
+        ownerAvatar(x + 18, oy + 18, oAW);
+
+        const tx = x + 18 + oAW + 24;
+        const nameFit = fitName(x + IW - cpad - tx, 42, 28);
+
+        nameFit.draw(tx, oy + ownerH / 2 - 20);
+
+        g.font = `500 30px ${bodyStack}`;
+        put(
+          ellipsize(g, `@${profile.username}`, x + IW - cpad - tx),
+          tx,
+          oy + ownerH / 2 + 24,
+          `500 30px ${bodyStack}`,
+          soft
+        );
       },
     };
   }
 
-  /* ---- Left on my wall ----------------------------------------------- */
+  /* ==================================================================
+     Left on my wall
+     ================================================================== */
 
-  const QUOTE = ['.XX.XX', 'XX.XX.', 'X..X..'];
-
-  function buildWall() {
-    const eb = eyebrow('Left on my wall');
-
+  function buildWall(maxH) {
     const body = String(entry.body || '').trim();
     const length = body.length;
 
-    const padX = 70;
-    const innerW = CW - padX * 2;
+    const AV = 104;
+    const authorGap = 30;
 
-    const ebGap = 72;
-    const tail = 48;
-    const bubbleToAuthor = 112;
-    const authorD = 112;
-    const authorToRule = 107;
-    const ruleToOwner = 83;
-    const ownerD = 120;
+    const oAW = 92;
+    const oAH = avatarHeightFor(oAW);
+    const ownerH = oAH + 36;
 
-    const glyphTop = 22;
-    const glyphU = 14;
-    const glyphH = QUOTE.length * glyphU;
-    const textTopGap = 32;
-    const textBottomGap = 48;
-    const bubbleMin = 398;
+    const fixed = cpad * 2 + TITLE_H + AV + authorGap;
+    const textRoom = maxH - ownerH - GAP - fixed - 10;
 
-    const fixed =
-      eb.h + ebGap + bubbleToAuthor + authorD + authorToRule + ruleToOwner + ownerD;
+    const display = length <= 24;
+    const stack = display ? nameStack : bodyStack;
+    const weight = display ? 800 : 500;
 
-    const maxBubble = ROOM - fixed;
-    const textRoom = maxBubble - (glyphTop + glyphH + textTopGap + textBottomGap);
-
-    let size = length <= 14 ? 132 : length <= 40 ? 100 : length <= 90 ? 74 : 56;
+    let size = length <= 14 ? 132 : length <= 40 ? 96 : length <= 90 ? 68 : 52;
     let lines;
     let lineH;
 
     for (;;) {
-      g.font = `500 ${size}px ${bodyStack}`;
-      lines = wrap(g, body, innerW, 99);
-      lineH = Math.round(size * 1.22);
+      g.font = `${weight} ${size}px ${stack}`;
+      lines = wrap(g, body, CIW, 99);
+      lineH = Math.round(size * 1.25);
 
-      if (lines.length * lineH <= textRoom || size <= 32) break;
+      if (lines.length * lineH <= textRoom || size <= 30) break;
 
       size -= 2;
     }
 
     const maxLines = Math.max(1, Math.floor(textRoom / lineH));
 
-    if (lines.length > maxLines) lines = wrap(g, body, innerW, maxLines);
+    if (lines.length > maxLines) lines = wrap(g, body, CIW, maxLines);
 
     const textH = lines.length * lineH;
-
-    const bubbleH = Math.max(
-      bubbleMin,
-      glyphTop + glyphH + textTopGap + textH + textBottomGap
-    );
-
-    const drawBubble = (x, y) => {
-      const radius = Math.min(r2, 24);
-
-      rr(g, x, y, CW, bubbleH, radius);
-      g.fillStyle = rgba(t.card_color, panelAlpha);
-      g.fill();
-
-      outline(x, y, CW, bubbleH, radius, t.border_color);
-
-      const tx = x + 80;
-      const by = y + bubbleH;
-      const bar = Math.max(lw, 2);
-
-      g.beginPath();
-      g.moveTo(tx, by - bar);
-      g.lineTo(tx + 72 + 1.5 * bar, by - bar);
-      g.lineTo(tx, by + tail);
-      g.closePath();
-      g.fillStyle = rgba(t.card_color, panelAlpha);
-      g.fill();
-
-      if (lw) {
-        g.save();
-        g.strokeStyle = t.border_color;
-        g.lineWidth = lw;
-        g.lineJoin = 'miter';
-        g.beginPath();
-        g.moveTo(tx + lw / 2, by - bar);
-        g.lineTo(tx + lw / 2, by + tail);
-        g.lineTo(tx + 72 + 1.5 * bar, by - bar);
-        g.stroke();
-        g.restore();
-      }
-
-      g.fillStyle = t.accent_color;
-
-      QUOTE.forEach((row, rowIndex) => {
-        [...row].forEach((cell, colIndex) => {
-          if (cell === 'X') {
-            g.fillRect(
-              x + padX + colIndex * glyphU,
-              y + glyphTop + rowIndex * glyphU,
-              glyphU,
-              glyphU
-            );
-          }
-        });
-      });
-
-      const areaTop = glyphTop + glyphH;
-      const textTop = y + areaTop + (bubbleH - areaTop - textH) / 2;
-
-      para(lines, x + padX, textTop, lineH, `500 ${size}px ${bodyStack}`, ink);
-    };
-
-    const drawAuthor = (x, y) => {
-      const ax = x + 74;
-      const nameFont = `600 44px ${bodyStack}`;
-      const subFont = `400 32px ${bodyStack}`;
-      const textX = ax + authorD + 20;
-      const room = CW - (textX - x);
-      const cy = y + authorD / 2;
-
-      pic(entryImg, ax, y, authorD, authorD, authorD / 2, initial(entry.name || entry.username));
-
-      g.font = nameFont;
-
-      const name = ellipsize(g, entry.name || entry.username || 'Someone', room);
-
-      if (entry.username) {
-        put(name, textX, cy - 24, nameFont, ink);
-
-        g.font = subFont;
-        put(ellipsize(g, `@${entry.username}`, room), textX, cy + 24, subFont, soft);
-      } else {
-        put(name, textX, cy, nameFont, ink);
-      }
-    };
-
-    const drawOwner = (x, y) => {
-      const nameFont = `600 44px ${bodyStack}`;
-      const subFont = `400 32px ${bodyStack}`;
-      const textX = x + ownerD + 18;
-      const room = CW - ownerD - 18;
-      const cy = y + ownerD / 2;
-
-      pic(avatar, x, y, ownerD, ownerD, ownerD / 2, initial(dispName), t.accent_color, Math.max(lw, 3));
-
-      g.font = nameFont;
-      put(ellipsize(g, profile.display_name || profile.username || '', room), textX, cy - 24, nameFont, ink);
-
-      g.font = subFont;
-      put(ellipsize(g, `on @${profile.username}'s wall`, room), textX, cy + 24, subFont, soft);
-    };
+    const cardH = Math.max(420, fixed + textH + 10);
 
     return {
-      h: fixed + bubbleH,
+      h: cardH + GAP + ownerH,
 
-      draw(x, y, w) {
-        let yy = y;
+      draw(x, y) {
+        cardBox(x, y, IW, cardH, titleOf('guestbook', 'Guestbook'));
 
-        eb.draw(x, yy, w);
-        yy += eb.h + ebGap;
+        const ay = y + cpad + TITLE_H;
+        const ax = x + cpad;
 
-        drawBubble(x, yy);
-        yy += bubbleH + bubbleToAuthor;
+        pic(
+          entryImg,
+          ax,
+          ay,
+          AV,
+          AV,
+          AV / 2,
+          initial(entry.name || entry.username)
+        );
 
-        drawAuthor(x, yy);
-        yy += authorD + authorToRule;
+        const tx = ax + AV + 22;
+        const room = x + IW - cpad - tx;
 
-        g.fillStyle = hair;
-        g.fillRect(x, yy, w, 2);
-        yy += ruleToOwner;
+        const nameFont = `700 40px ${bodyStack}`;
+        const nameValue = entry.name || entry.username || 'Someone';
 
-        drawOwner(x, yy);
+        g.font = nameFont;
+
+        if (entry.username) {
+          put(ellipsize(g, nameValue, room), tx, ay + AV / 2 - 22, nameFont, ink);
+
+          g.font = `400 30px ${bodyStack}`;
+          put(
+            ellipsize(g, `@${entry.username}`, room),
+            tx,
+            ay + AV / 2 + 24,
+            `400 30px ${bodyStack}`,
+            soft
+          );
+        } else {
+          put(ellipsize(g, nameValue, room), tx, ay + AV / 2, nameFont, ink);
+        }
+
+        para(
+          lines,
+          ax,
+          ay + AV + authorGap,
+          lineH,
+          `${weight} ${size}px ${stack}`,
+          ink
+        );
+
+        /* whose wall it is */
+        const oy = y + cardH + GAP;
+
+        cardBox(x, oy, IW, ownerH);
+
+        ownerAvatar(x + 18, oy + 18, oAW);
+
+        const ox = x + 18 + oAW + 24;
+        const orm = x + IW - cpad - ox;
+        const nameFit = fitName(orm, 40, 28);
+
+        nameFit.draw(ox, oy + ownerH / 2 - 20);
+
+        g.font = `500 30px ${bodyStack}`;
+        put(
+          ellipsize(g, `on @${profile.username}'s wall`, orm),
+          ox,
+          oy + ownerH / 2 + 24,
+          `500 30px ${bodyStack}`,
+          soft
+        );
       },
     };
   }
 
-  /* ---- Full profile -------------------------------------------------- */
+  /* ---- layout: build, fit, centre in the safe area ------------------- */
 
-  const RANK = {
-    guestbook: 1,
-    links: 2,
-    top_friends: 3,
-    interests: 4,
-    gallery: 5,
-    text: 6,
-    about: 7,
-  };
+  const maxContent = SAFE_BOT - SAFE_TOP - CTA_H - CTA_GAP - fpad * 2;
 
-  const flowCards = cards.length
-    ? cards
-    : interests.length
-      ? [
-          {
-            id: 'interests',
-            type: 'interests',
-            title: 'Interests',
-            content: { interests },
-          },
-        ]
-      : [];
+  const built = { card: buildCard, top8: buildTop8, vibe: buildVibe, wall: buildWall }[
+    template
+  ](maxContent);
 
-  function planFull() {
-    const output = [];
+  const frameH = Math.min(maxContent + fpad * 2, built.h + fpad * 2);
+  const groupH = frameH + CTA_GAP + CTA_H;
 
-    if (hasMusic) {
-      output.push({ key: 'music', rank: 4.5, title: 'Listening to' });
-    }
+  const FX = SIDE;
+  const FY = Math.round(SAFE_TOP + (SAFE_BOT - SAFE_TOP - groupH) / 2);
 
-    for (const card of flowCards) {
-      const available = {
-        about: () => String(card.content?.body || '').trim(),
-        text: () => String(card.content?.body || '').trim(),
-        interests: () => (card.content?.interests || []).filter(Boolean).length,
-        links: () => (card.content?.links || []).length,
-        gallery: () => photos.length,
-        top_friends: () => topFriends.length,
-        guestbook: () => guestbook.length,
-      }[card.type]?.();
+  frameShadow(FX, FY, FW, frameH, r1);
+  panel(FX, FY, FW, frameH, r1, t.frame_color, frameAlpha);
+  outline(FX, FY, FW, frameH, r1, t.border_color);
 
-      if (available) {
-        output.push({
-          key: card.type,
-          rank: RANK[card.type] ?? 0,
-          title: card.title || '',
-          card,
-        });
-      }
-    }
+  built.draw(FX + fpad, FY + fpad);
 
-    return output;
-  }
+  /* ---- call to action: same quiet pill as the full profile export ---- */
 
-  const fullPlan = template === 'full' ? planFull() : [];
-
-  function buildFull(scale, drop) {
-    const items = [];
-
-    const avatarSize = Math.round(170 * scale);
-    const avatarHeight = portraitH(avatarSize);
-    const columnX = avatarSize + 36;
-    const columnWidth = CW - columnX;
-
-    const name = nameBlock(columnWidth, Math.round(64 * scale), 34);
-
-    const handleSize = Math.round(30 * scale);
-    const handleBox = Math.round(handleSize * 1.4);
-    const handle = handleText(columnWidth, handleSize);
-
-    items.push({
-      h: avatarHeight,
-
-      draw(x, y) {
-        pic(avatar, x, y, avatarSize, avatarHeight, Math.min(r2, avatarSize / 2), initial(dispName), t.accent_color, lw);
-
-        name.draw(x + columnX, y);
-
-        put(
-          handle,
-          x + columnX,
-          y + name.h + Math.round(4 * scale) + handleBox / 2,
-          `500 ${handleSize}px ${bodyStack}`,
-          soft
-        );
-
-        if (stats.length) {
-          const statSize = Math.round(32 * scale);
-          const statBox = Math.round(statSize * 1.4);
-
-          put(
-            stats.map((stat) => `${stat.n} ${stat.l}`).join('   ·   '),
-            x + columnX,
-            y + avatarHeight - statBox / 2,
-            `600 ${statSize}px ${bodyStack}`,
-            ink
-          );
-        }
-      },
-    });
-
-    if (profile.headline) {
-      const fontSize = Math.round(36 * scale);
-      const lineHeight = Math.round(fontSize * 1.4);
-
-      g.font = `400 ${fontSize}px ${bodyStack}`;
-
-      const lines = wrap(g, profile.headline, CW, 2);
-
-      items.push({
-        gap: Math.round(22 * scale),
-        h: lines.length * lineHeight,
-
-        draw(x, y) {
-          para(lines, x, y, lineHeight, `400 ${fontSize}px ${bodyStack}`, rgba(t.text_color, 0.9));
-        },
-      });
-    }
-
-    const dropped = new Set(
-      [...fullPlan]
-        .sort((a, b) => a.rank - b.rank)
-        .slice(0, drop)
-        .map((item) => item.key + (item.card?.id ?? ''))
-    );
-
-    const labelSize = Math.round(26 * scale);
-    const labelBox = Math.round(labelSize * 1.4);
-    const topPad = Math.round(24 * scale);
-    const labelGap = Math.round(16 * scale);
-    const sectionGap = Math.round(24 * scale);
-
-    const section = (title, height, drawBody) => ({
-      gap: sectionGap,
-      h: topPad + (title ? labelBox + labelGap : 0) + height,
-
-      draw(x, y, width) {
-        g.fillStyle = hair;
-        g.fillRect(x, y, width, 2);
-
-        const labelFont = `600 ${labelSize}px ${bodyStack}`;
-
-        if (title) {
-          g.font = labelFont;
-          put(ellipsize(g, title, width), x, y + topPad + labelBox / 2, labelFont, soft);
-        }
-
-        drawBody(x, y + topPad + (title ? labelBox + labelGap : 0), width);
-      },
-    });
-
-    for (const item of fullPlan) {
-      if (dropped.has(item.key + (item.card?.id ?? ''))) continue;
-
-      const card = item.card;
-
-      if (item.key === 'music') {
-        const coverSize = Math.round(104 * scale);
-
-        items.push(
-          section(item.title, coverSize, (x, y, width) => {
-            pic(cover, x, y, coverSize, coverSize, Math.min(r3 + 2, 16), '♪');
-
-            const titleSize = Math.round(36 * scale);
-            const artistSize = Math.round(28 * scale);
-            const titleBox = Math.round(titleSize * 1.25);
-            const artistBox = Math.round(artistSize * 1.25);
-            const pairH = titleBox + (music.artist ? 4 + artistBox : 0);
-            const textY = y + (coverSize - pairH) / 2;
-            const textX = x + coverSize + 24;
-            const room = width - coverSize - 24;
-
-            g.font = `600 ${titleSize}px ${bodyStack}`;
-            put(
-              ellipsize(g, music.title || 'Unknown title', room),
-              textX,
-              textY + titleBox / 2,
-              `600 ${titleSize}px ${bodyStack}`,
-              ink
-            );
-
-            if (music.artist) {
-              g.font = `400 ${artistSize}px ${bodyStack}`;
-              put(
-                ellipsize(g, music.artist, room),
-                textX,
-                textY + titleBox + 4 + artistBox / 2,
-                `400 ${artistSize}px ${bodyStack}`,
-                soft
-              );
-            }
-          })
-        );
-      } else if (item.key === 'about' || item.key === 'text') {
-        const fontSize = Math.round(34 * scale);
-        const lineHeight = Math.round(fontSize * 1.42);
-
-        g.font = `400 ${fontSize}px ${bodyStack}`;
-
-        const lines = wrap(g, card.content.body, CW, 4);
-
-        items.push(
-          section(item.title, lines.length * lineHeight, (x, y) => {
-            para(lines, x, y, lineHeight, `400 ${fontSize}px ${bodyStack}`, ink);
-          })
-        );
-      } else if (item.key === 'interests') {
-        const interestChips = chips(
-          (card.content.interests || []).filter(Boolean),
-          2,
-          Math.round(28 * scale),
-          CW
-        );
-
-        items.push(section(item.title, interestChips.h, (x, y) => interestChips.draw(x, y)));
-      } else if (item.key === 'links') {
-        const linkChips = chips(
-          (card.content.links || [])
-            .map(
-              (link) =>
-                link.label ||
-                String(link.url || '')
-                  .replace(/^https?:\/\//, '')
-                  .replace(/\/$/, '')
-            )
-            .filter(Boolean),
-          2,
-          Math.round(28 * scale),
-          CW,
-          { color: t.link_color, edge: rgba(t.link_color, 0.55) }
-        );
-
-        items.push(section(item.title, linkChips.h, (x, y) => linkChips.draw(x, y)));
-      } else if (item.key === 'gallery') {
-        const count = gallery.length;
-        const gap = 14;
-        const tileSize = Math.floor((CW - gap * 4) / 5);
-        const extra = photos.length - count;
-        const radius = Math.min(r3 + 2, 16);
-
-        items.push(
-          section(item.title, tileSize, (x, y) => {
-            for (let index = 0; index < count; index++) {
-              const tileX = x + index * (tileSize + gap);
-
-              pic(photoImgs[index], tileX, y, tileSize, tileSize, radius, '');
-
-              if (extra > 0 && index === count - 1) {
-                g.save();
-                rr(g, tileX, y, tileSize, tileSize, radius);
-                g.clip();
-                g.fillStyle = 'rgba(0,0,0,0.58)';
-                g.fillRect(tileX, y, tileSize, tileSize);
-                g.restore();
-
-                put(
-                  `+${extra}`,
-                  tileX + tileSize / 2,
-                  y + tileSize / 2,
-                  `800 ${Math.round(40 * scale)}px ${nameStack}`,
-                  '#fff',
-                  'center'
-                );
-              }
-            }
-          })
-        );
-      } else if (item.key === 'top_friends') {
-        const count = Math.min(friends.length, 6);
-        const tileSize = Math.round(112 * scale);
-        const gap = Math.floor((CW - 6 * tileSize) / 5);
-        const nameSize = Math.round(26 * scale);
-        const nameBox = Math.round(nameSize * 1.4);
-
-        items.push(
-          section(item.title, tileSize + 10 + nameBox, (x, y) => {
-            for (let index = 0; index < count; index++) {
-              const tileX = x + index * (tileSize + gap);
-              const friend = friends[index];
-
-              pic(friendImgs[index], tileX, y, tileSize, tileSize, tileSize / 2, initial(friend.name || friend.username));
-
-              g.font = `500 ${nameSize}px ${bodyStack}`;
-
-              put(
-                ellipsize(g, friend.name || friend.username || '', tileSize + gap - 6),
-                tileX,
-                y + tileSize + 10 + nameBox / 2,
-                `500 ${nameSize}px ${bodyStack}`,
-                soft
-              );
-            }
-          })
-        );
-      } else if (item.key === 'guestbook') {
-        const entries = guestbook.slice(0, 2);
-        const avatarD = Math.round(56 * scale);
-        const nameSize = Math.round(30 * scale);
-        const bodySize = Math.round(32 * scale);
-        const lineHeight = Math.round(bodySize * 1.38);
-        const nameBox = Math.round(nameSize * 1.3);
-
-        g.font = `400 ${bodySize}px ${bodyStack}`;
-
-        const bodies = entries.map((guest) => wrap(g, guest.body, CW - avatarD - 20, 2));
-
-        const entryGap = Math.round(20 * scale);
-
-        const heights = entries.map((_, index) =>
-          Math.max(avatarD, nameBox + 4 + bodies[index].length * lineHeight)
-        );
-
-        items.push(
-          section(
-            item.title,
-            heights.reduce((total, height) => total + height, 0) +
-              entryGap * (entries.length - 1),
-            (x, y) => {
-              let yy = y;
-
-              entries.forEach((guest, index) => {
-                pic(null, x, yy, avatarD, avatarD, avatarD / 2, initial(guest.name || guest.username));
-
-                g.font = `600 ${nameSize}px ${bodyStack}`;
-
-                put(
-                  ellipsize(g, guest.name || guest.username || 'Someone', CW - avatarD - 20),
-                  x + avatarD + 20,
-                  yy + nameBox / 2,
-                  `600 ${nameSize}px ${bodyStack}`,
-                  ink
-                );
-
-                para(
-                  bodies[index],
-                  x + avatarD + 20,
-                  yy + nameBox + 4,
-                  lineHeight,
-                  `400 ${bodySize}px ${bodyStack}`,
-                  rgba(t.text_color, 0.88)
-                );
-
-                yy += heights[index] + entryGap;
-              });
-            }
-          )
-        );
-      }
-    }
-
-    return stack(items);
-  }
-
-  /* ---- pick and fit the content -------------------------------------- */
-
-  const FULL_SCALES = [1.25, 1.18, 1.12, 1.06, 1, 0.94, 0.88, 0.82, 0.76, 0.7, 0.64, 0.58];
-
-  let built = null;
-
-  if (template === 'full') {
-    search: for (let drop = 0; drop <= fullPlan.length; drop++) {
-      for (const scale of FULL_SCALES) {
-        built = buildFull(scale, drop);
-
-        if (built.h <= ROOM) break search;
-      }
-    }
-  } else {
-    built = { card: buildCard, top8: buildTop8, vibe: buildVibe, wall: buildWall }[template]();
-  }
-
-  /* ---- chrome: header and call to action ----------------------------- */
-
-  function drawHeader() {
-    put('fiiyou', MX, HEAD_CY, `800 46px ${nameStack}`, ink);
-
-    g.font = `500 30px ${bodyStack}`;
-
-    put(
-      ellipsize(g, `@${profile.username}`, CW * 0.5),
-      MX + CW,
-      HEAD_CY,
-      `500 30px ${bodyStack}`,
-      soft,
-      'right'
-    );
-  }
-
-  function drawFooter() {
+  {
     const labels = {
       card: 'Find me on fiiyou',
       top8: 'Make your own top 8',
       vibe: 'Listen with me on fiiyou',
       wall: 'Sign my guestbook',
-      full: 'Get to know me',
     };
 
-    const label = labels[template] || 'Visit my profile';
+    const label = labels[template] || 'Find me on fiiyou';
     const url = profileUrl(slug).replace(/^https?:\/\//, '');
-    const textWidth = CW - BTN_R * 2 - 32;
 
-    g.fillStyle = hair;
-    g.fillRect(MX, RULE_Y, CW, 2);
+    const f1 = `700 32px ${nameStack}`;
+    const f2 = `500 23px ${bodyStack}`;
 
-    const size = fitSize(label, textWidth, 44, 28, 700, nameStack);
-    const labelFont = `700 ${size}px ${nameStack}`;
+    g.font = f1;
+    const w1 = g.measureText(label).width;
 
-    g.font = labelFont;
-    put(ellipsize(g, label, textWidth), MX, BTN_CY - 28, labelFont, ink);
+    g.font = f2;
+    const w2 = Math.min(g.measureText(url).width, FW - 140);
 
-    g.font = `500 26px ${bodyStack}`;
-    put(ellipsize(g, url, textWidth), MX, BTN_CY + 26, `500 26px ${bodyStack}`, soft);
+    const cw = clamp(Math.max(w1, w2) + 100, 480, FW);
+    const cx = Math.round((W - cw) / 2);
+    const cy = FY + frameH + CTA_GAP;
+    const cr = Math.min(CTA_H / 2, Math.max(r1, 12));
 
-    const cx = MX + CW - BTN_R;
+    panel(cx, cy, cw, CTA_H, cr, t.frame_color, Math.max(frameAlpha, 0.6));
+    outline(cx, cy, cw, CTA_H, cr, rgba(t.accent_color, 0.4), Math.min(lw || 2, 2));
 
-    g.beginPath();
-    g.arc(cx, BTN_CY, BTN_R, 0, Math.PI * 2);
-    g.fillStyle = t.accent_color;
-    g.fill();
+    put(label, W / 2, cy + CTA_H * 0.37, f1, rgba(t.text_color, 0.9), 'center');
 
-    g.save();
-    g.strokeStyle = onAccent;
-    g.lineWidth = 5;
-    g.lineCap = 'round';
-    g.lineJoin = 'round';
-
-    g.beginPath();
-    g.moveTo(cx - 18, BTN_CY);
-    g.lineTo(cx + 18, BTN_CY);
-    g.moveTo(cx + 4, BTN_CY - 14);
-    g.lineTo(cx + 18, BTN_CY);
-    g.lineTo(cx + 4, BTN_CY + 14);
-    g.stroke();
-    g.restore();
+    g.font = f2;
+    put(ellipsize(g, url, FW - 140), W / 2, cy + CTA_H * 0.71, f2, rgba(t.text_color, 0.5), 'center');
   }
-
-  /* ---- render -------------------------------------------------------- */
-
-  drawHeader();
-
-  const top = Math.round(ROOM_TOP + Math.max(0, ROOM - built.h) * 0.45);
-
-  built.draw(MX, top, CW);
-
-  drawFooter();
 
   return out;
 }
