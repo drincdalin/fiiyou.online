@@ -4,6 +4,8 @@ import 'leaflet/dist/leaflet.css';
 import { posts, social, friends, discover, profiles } from '../index.js';
 import { useImages, Avatar, ago } from './shared.jsx';
 import { PostCard, Composer, Lightbox } from './parts.jsx';
+import { ask } from './dialog.jsx';
+import { ArrowBendUpLeft, PaperPlaneRight, X } from '@phosphor-icons/react';
 
 const useFeed = (args, notify) => {
   const [rows, setRows] = useState(null); const [more, setMore] = useState(false); const key = JSON.stringify(args);
@@ -63,7 +65,7 @@ function PlaceSheet({ place, me, go, notify, onClose, onChanged }) {
     {pics.length > 0 && <div className="pstrip">{pics.map((p, i) => <button key={p.id} onClick={() => setLb(i)}><img src={img[p.image_path]} alt="" /></button>)}</div>}
     <Composer me={me} fixedPlace={place.id} onPosted={() => { load(); onChanged(); }} notify={notify} />
     {rows ? (rows.length ? rows.map((p) => <PostCard key={p.id} p={p} me={me} img={img} go={go} onChange={change} onDelete={drop} notify={notify} />) : <p className="empty">Nobody has posted here yet.</p>) : <div className="boot">Loading…</div>}
-    {place.created_by === me.id && <button className="ghost sm danger" onClick={async () => { if (!confirm('Delete this place? Posts stay, but lose the place tag.')) return; try { await social.deletePlace(place.id); onChanged(); onClose(); notify('Place deleted'); } catch (e) { notify(e.message, 'err'); } }}>Delete place</button>}
+    {place.created_by === me.id && <button className="ghost sm danger" onClick={async () => { if (!(await ask({ title: 'Delete this place?', message: 'Posts stay, but lose the place tag.', confirmLabel: 'Delete', danger: true }))) return; try { await social.deletePlace(place.id); onChanged(); onClose(); notify('Place deleted'); } catch (e) { notify(e.message, 'err'); } }}>Delete place</button>}
     {lb != null && <Lightbox items={pics.map((p) => ({ id: p.id, src: img[p.image_path], caption: p.body }))} index={lb} onClose={() => setLb(null)} onIndex={setLb} />}
   </aside>);
 }
@@ -126,32 +128,45 @@ export function MapView({ me, go, notify }) {
 const dayLabel = (iso) => { const d = new Date(iso), t = new Date(); const y = new Date(); y.setDate(t.getDate() - 1);
   return d.toDateString() === t.toDateString() ? 'Today' : d.toDateString() === y.toDateString() ? 'Yesterday' : d.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long' }); };
 export function MessagesView({ me, peer, go, notify, refreshUnread }) {
-  const [convs, setConvs] = useState([]); const [fl, setFl] = useState([]); const [cur, setCur] = useState(peer || null); const [msgs, setMsgs] = useState(null); const [txt, setTxt] = useState(''); const end = useRef();
+  const [convs, setConvs] = useState([]); const [fl, setFl] = useState([]); const [cur, setCur] = useState(peer || null); const [msgs, setMsgs] = useState(null); const [txt, setTxt] = useState(''); const end = useRef(); const inp = useRef(); const [replyTo, setReplyTo] = useState(null);
   const loadConvs = () => social.conversations().then(setConvs).catch(() => {});
   const loadThread = useCallback(async (id) => { try { setMsgs(await social.thread(id)); await social.markRead(id); loadConvs(); refreshUnread(); } catch (e) { notify(e.message, 'err'); } }, []);
   useEffect(() => { loadConvs(); friends.listFriends().then(setFl); }, []);
-  useEffect(() => { setMsgs(null); if (cur) loadThread(cur); }, [cur]);
+  useEffect(() => { setMsgs(null); setReplyTo(null); if (cur) loadThread(cur); }, [cur]);
   useEffect(() => { const off = social.onMessage(me.id, () => { loadConvs(); if (cur) loadThread(cur); });
     const t = setInterval(() => { loadConvs(); if (cur) loadThread(cur); }, 12000); return () => { off(); clearInterval(t); }; }, [cur]);
   useEffect(() => { end.current?.scrollIntoView({ block: 'end' }); }, [msgs?.length, cur]);
   const img = useImages([...convs, ...fl].map((p) => p.avatar_path));
   const who = convs.find((c) => c.id === cur) || fl.find((f) => f.id === cur);
-  const send = async (e) => { e.preventDefault(); const body = txt.trim(); if (!body) return; setTxt('');
-    try { const m = await social.sendMessage(cur, body); setMsgs((x) => [...(x || []), m]); loadConvs(); } catch (er) { setTxt(body); notify(er.message?.includes('rate_limit') ? 'Slow down a little.' : 'Could not send. Are you still friends?', 'err'); } };
+  const send = async (e) => { e.preventDefault(); const body = txt.trim(); if (!body) return; const rep = replyTo; setTxt(''); setReplyTo(null);
+    try { const m = await social.sendMessage(cur, body, rep?.id); setMsgs((x) => [...(x || []), m]); loadConvs(); } catch (er) { setTxt(body); setReplyTo(rep); notify(er.message?.includes('rate_limit') ? 'Slow down a little.' : 'Could not send. Are you still friends?', 'err'); } };
+  const startReply = (m) => { setReplyTo(m); inp.current?.focus(); };
+  const nameOf = (m) => (m.sender_id === me.id ? 'You' : who?.display_name);
+  // the quoted message is looked up among the loaded messages first, so a message that is not a reply (reply_to empty) can never show a quote
+  const byId = new Map((msgs || []).map((x) => [x.id, x]));
+  const replyLabel = (m, q) => { const them = who?.display_name || 'them'; const mine = m.sender_id === me.id, qm = q.sender_id === me.id;
+    return mine ? (qm ? 'You replied to yourself' : `You replied to ${them}`) : (qm ? `${them} replied to you` : `${them} replied to themselves`); };
+  /** scroll to the quoted message and flash it (only works while it is among the loaded messages) */
+  const jump = (id) => { const el = document.getElementById(`m-${id}`); if (!el) return; el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1300); };
+  const replyBtn = (m) => <button type="button" className="replybtn" aria-label="Reply" title="Reply" onClick={() => startReply(m)}><ArrowBendUpLeft size={16} weight="bold" aria-hidden="true" /></button>;
   const fresh = fl.filter((f) => !convs.some((c) => c.id === f.id));
   return (<div className={`chat view${cur ? ' thread' : ''}`}>
     <aside className="clist"><h3>Messages</h3>
       {fresh.length > 0 && <select value="" onChange={(e) => e.target.value && setCur(e.target.value)}><option value="">New message…</option>{fresh.map((f) => <option key={f.id} value={f.id}>{f.display_name}</option>)}</select>}
       {!convs.length && !fresh.length && <p className="empty">Add friends to start chatting.</p>}
-      {convs.map((c) => (<button key={c.id} className={`crow2${cur === c.id ? ' on' : ''}`} onClick={() => setCur(c.id)}><Avatar src={img[c.avatar_path]} size={44} />
+      {convs.map((c) => (<button key={c.id} className={`crow2${cur === c.id ? ' on' : ''}${c.unread > 0 ? ' unread' : ''}`} onClick={() => setCur(c.id)}><Avatar src={img[c.avatar_path]} size={44} />
         <span className="ctext"><span className="cl1"><b>{c.display_name}</b><small>{ago(c.last_at)}</small></span>
           <span className="cl2"><small className="prev">{c.last_mine ? 'You: ' : ''}{c.last_body}</small>{c.unread > 0 && <em className="dotb">{c.unread}</em>}</span></span></button>))}</aside>
     <section className="cthread">{cur && who ? (<>
       <header><button className="ghost sm back" onClick={() => setCur(null)}>‹</button><Avatar src={img[who.avatar_path]} size={34} /><button className="link" onClick={() => go('profile', who.username)}><b>{who.display_name}</b><small>@{who.username}</small></button></header>
       <div className="msgs">{msgs ? (msgs.length ? msgs.map((m, i) => { const mine = m.sender_id === me.id; const newDay = i === 0 || new Date(m.created_at).toDateString() !== new Date(msgs[i - 1].created_at).toDateString();
-        return (<Fragment key={m.id}>{newDay && <div className="dsep">{dayLabel(m.created_at)}</div>}<div className={`brow${mine ? ' mine' : ''}`}>{!mine && <Avatar src={img[who.avatar_path]} size={26} />}
-          <div className={`bub${mine ? ' mine' : ''}`}><p>{m.body}</p><small>{new Date(m.created_at).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}</small></div></div></Fragment>); }) : <p className="empty">Say hi.</p>) : <div className="boot">…</div>}<div ref={end} /></div>
-      <form className="inline" onSubmit={send}><input value={txt} maxLength={1000} placeholder="Write a message…" onChange={(e) => setTxt(e.target.value)} autoFocus /><button className="primary" disabled={!txt.trim()}>Send</button></form></>)
+        const nx = msgs[i + 1]; const first = newDay || msgs[i - 1].sender_id !== m.sender_id;   // first / last bubble of a run from the same person
+        const tail = !nx || nx.sender_id !== m.sender_id || new Date(nx.created_at).toDateString() !== new Date(m.created_at).toDateString();
+        const q = m.reply_to ? (byId.get(m.reply_to) || (m.reply?.id ? m.reply : null)) : null;
+        return (<Fragment key={m.id}>{newDay && <div className="dsep">{dayLabel(m.created_at)}</div>}<div className={`brow${mine ? ' mine' : ''}${first ? ' first' : ''}${tail ? ' tail' : ''}`} id={`m-${m.id}`}>{!mine && (tail ? <Avatar src={img[who.avatar_path]} size={26} /> : <span className="avsp" />)}{mine && replyBtn(m)}
+          <div className="bcol">{q && <button type="button" className="rq" onClick={() => jump(q.id)} aria-label="Go to the original message"><span className="rqlab"><ArrowBendUpLeft size={12} weight="bold" aria-hidden="true" />{replyLabel(m, q)}</span><span className="rqtxt">{q.body}</span></button>}<div className={`bub${mine ? ' mine' : ''}`}><p>{m.body}</p><small>{new Date(m.created_at).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}</small></div></div>{!mine && replyBtn(m)}</div></Fragment>); }) : <p className="empty">Say hi.</p>) : <div className="boot">…</div>}<div ref={end} /></div>
+      {replyTo && <div className="replybar"><ArrowBendUpLeft className="ric" size={18} weight="bold" aria-hidden="true" /><div><b>Replying to {nameOf(replyTo)}</b><span>{replyTo.body}</span></div><button type="button" aria-label="Cancel reply" title="Cancel reply" onClick={() => setReplyTo(null)}><X size={16} weight="bold" aria-hidden="true" /></button></div>}
+      <form className="inline" onSubmit={send}><input ref={inp} value={txt} maxLength={1000} placeholder="Write a message…" onChange={(e) => setTxt(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && replyTo && setReplyTo(null)} autoFocus /><button className="primary sendbtn" aria-label="Send" title="Send" disabled={!txt.trim()}><PaperPlaneRight size={20} weight="fill" aria-hidden="true" /></button></form></>)
       : <p className="empty">Pick a conversation.</p>}</section></div>);
 }
 
@@ -174,7 +189,7 @@ export function PeopleView({ me, go, notify }) {
       {!people.length && <p className="empty">No one to show.</p>}
       {people.map((p) => row(p, sent[p.id] ? <small>Request sent</small> : <button className="primary sm" onClick={() => friends.sendRequest(p.id).then(() => { setSent({ ...sent, [p.id]: 1 }); notify('Request sent'); }).catch((e) => notify(e.message, 'err'))}>Add</button>,
         [p.headline, lname(p.locality_id)].filter(Boolean).join(' · ') || `@${p.username}`))}</>}
-    {tab === 'friends' && (fl.length ? fl.map((f) => row(f, <span className="acts"><button className="primary sm" onClick={() => go('messages', null, f.id)}>Message</button><button className="ghost sm" onClick={() => confirm('Remove this friend?') && act(() => friends.removeFriend(f.id), 'Removed')}>Remove</button></span>)) : <p className="empty">No friends yet. Find people in Discover.</p>)}
+    {tab === 'friends' && (fl.length ? fl.map((f) => row(f, <span className="acts"><button className="primary sm" onClick={() => go('messages', null, f.id)}>Message</button><button className="ghost sm" onClick={async () => (await ask({ title: 'Remove this friend?', message: `${f.display_name} will be removed from your friends.`, confirmLabel: 'Remove', danger: true })) && act(() => friends.removeFriend(f.id), 'Removed')}>Remove</button></span>)) : <p className="empty">No friends yet. Find people in Discover.</p>)}
     {tab === 'requests' && (inc.length ? inc.map((r) => row(r.from, <span className="acts"><button className="primary sm" onClick={() => act(() => friends.acceptRequest(r.id), 'Friend added')}>Accept</button><button className="ghost sm" onClick={() => act(() => friends.declineRequest(r.id), 'Declined')}>Decline</button></span>)) : <p className="empty">No pending requests.</p>)}
   </div>);
 }

@@ -5,22 +5,34 @@ export async function usernameAvailable(username) {
   return unwrap(await supabase.rpc('username_available', { p_username: username }));
 }
 
+/** True when an admin banned this email (see spam_and_bans.sql). Only used to show the right message: the database blocks the sign-up itself. */
+export async function emailBanned(email) {
+  try { return (await supabase.rpc('email_banned', { p_email: email })).data === true; } catch { return false; }
+}
+/** Supabase hides trigger errors ("Database error saving new user"), so after any failure we ask whether the email is banned and throw a clear 'banned'. */
+async function orBanned(email, fn) {
+  try { return await fn(); } catch (e) { if (await emailBanned(email)) throw new Error('banned'); throw e; }
+}
+
 /** Username/display name are passed as metadata; a DB trigger creates the profile + starter cards. */
 export async function signUp({ email, password, username, displayName }) {
+  if (await emailBanned(email)) throw new Error('banned');
   if (!(await usernameAvailable(username))) throw new Error('username_taken');
-  return unwrap(await supabase.auth.signUp({
+  return orBanned(email, async () => unwrap(await supabase.auth.signUp({
     email, password,
     options: { data: { username: username.toLowerCase(), display_name: displayName || username } },
-  }));
+  })));
 }
 
 export async function signIn({ email, password }) {
-  return unwrap(await supabase.auth.signInWithPassword({ email, password }));
+  return orBanned(email, async () => unwrap(await supabase.auth.signInWithPassword({ email, password })));
 }
 export async function signInWithMagicLink(email) {
-  return unwrap(await supabase.auth.signInWithOtp({ email }));
+  if (await emailBanned(email)) throw new Error('banned');
+  return orBanned(email, async () => unwrap(await supabase.auth.signInWithOtp({ email })));
 }
-export async function signOut() { return unwrap({ error: (await supabase.auth.signOut()).error }); }
+/** scope 'local' signs out this device only. The default ('global') revokes the user's sessions on every device. */
+export async function signOut() { return unwrap({ error: (await supabase.auth.signOut({ scope: 'local' })).error }); }
 
 export async function getSession() { return unwrap(await supabase.auth.getSession()).session; }
 export function onAuthChange(cb) {

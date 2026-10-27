@@ -132,8 +132,12 @@ input[type=file]::file-selector-button { border-radius: var(--rad-s); }
 .mapbar > button, .msearch { background: var(--g1); border: 2px solid var(--g3); border-radius: var(--rad-m); box-shadow: var(--lift); font-weight: 800; }
 .mapbar > button:hover { background: var(--hover); border-color: var(--muted); }
 .mapbar > button.on { border-color: var(--edge); }
-.msearch input { border: 0; box-shadow: none; background: none; }
-.msearch .primary { box-shadow: none; border-radius: var(--rad-s); }
+/* toolbar buttons keep their size; only the search pill is allowed to shrink, so nothing overlaps */
+.mapbar > button { flex: none; white-space: nowrap; }
+/* the search field must not draw its own box inside the pill (the global input:focus ring was leaking in); the pill itself shows focus */
+.msearch input, .msearch input:hover, .msearch input:focus { border: 0 !important; box-shadow: none !important; background: none !important; outline: 0; border-radius: 0; }
+.msearch:focus-within { border-color: var(--accent); box-shadow: var(--lift), 0 0 0 4px var(--ring); }
+.msearch .primary { box-shadow: none; border-radius: var(--rad-s); flex: none; }
 .sresults, .cand { background: var(--g1); border: 2px solid var(--g3); border-radius: var(--rad-l); box-shadow: var(--lift-lg); }
 .maphint { background: var(--g1); border: 2px solid var(--g3); border-radius: var(--rad-m); font-weight: 750; }
 .leaflet-bar { border: 2px solid var(--g3) !important; border-radius: var(--rad-m) !important; overflow: hidden; box-shadow: var(--lift); }
@@ -151,7 +155,78 @@ input[type=file]::file-selector-button { border-radius: var(--rad-s); }
 .alog p { border-bottom: 2px solid var(--g2); padding-bottom: .25rem; }
 
 /* ---------- profile editing: leave room for the 400px customizer ---------- */
+/* styles.css makes the panel 360px wide, so the page margin (400px) left a 40px dead strip: make the panel match */
+@media (min-width: 701px) { .customizer:not(.collapsed) { width: 400px; } }
 .page.editing { margin-right: 400px; }
 .page.editing.collapsed { margin-right: 0; }
 @media (max-width: 860px) { .page.editing { margin-right: 0; } }
 @media (max-width: 700px) { .page.editing { padding-bottom: 62vh; padding-bottom: min(70dvh, 660px); } }
+
+/* ---------- dialogs: the in-app card that replaces window.confirm / window.alert (see dialog.jsx) ---------- */
+.dlg { z-index: 900; background: var(--scrim); }
+.dlgcard { width: min(420px, 100%); display: grid; gap: 14px; padding: 20px; box-shadow: var(--lift-lg); animation: d-pop .18s ease backwards; }
+@keyframes d-pop { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+.dlghead { display: flex; align-items: center; gap: 10px; }
+.dlghead h3 { margin: 0; font-size: 1.05rem; font-weight: 850; letter-spacing: -.01em; }
+.dlgic { flex: none; width: 34px; height: 34px; display: grid; place-items: center; border-radius: var(--rad-m); background: var(--g2); border: 2px solid var(--g3); color: var(--accent-fg, var(--accent)); }
+.dlgcard.danger .dlgic { color: var(--red); border-color: color-mix(in srgb, var(--red) 45%, var(--g3)); background: color-mix(in srgb, var(--red) 14%, var(--g1)); }
+.dlgmsg { margin: 0; color: var(--ink); font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; white-space: pre-wrap; }
+.dlgacts { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.primary.dangerbtn { background: var(--red); border-color: var(--red); color: var(--on-red); }
+.primary.dangerbtn:hover { filter: brightness(1.1); }
+@media (max-width: 700px) { .dlgacts { flex-wrap: nowrap; } .dlgacts > button { flex: 1; } }
+
+/* ---------- chat: unread conversations (WhatsApp style) ---------- */
+.crow2.unread .cl1 b { color: var(--ink); font-weight: 850; }
+.crow2.unread .cl1 small { color: var(--accent-fg, var(--accent)); font-weight: 800; }
+.crow2.unread .prev { color: var(--ink); font-weight: 750; }
+.crow2.unread .dotb { background: var(--accent); color: var(--on-accent); }
+
+/* ---------- chat: conversation design ---------- */
+.msgs { gap: 2px; padding: 18px 20px; }
+.dsep { margin: 14px 0 8px; font-size: .74rem; letter-spacing: .02em; }
+.brow { gap: 8px; max-width: 78%; }
+.brow.first { margin-top: 10px; }
+.dsep + .brow.first { margin-top: 0; }
+.avsp { width: 26px; flex: none; }
+
+/* bubbles: soft corners, only the last one of a run gets the pointed corner */
+.brow .bub { border-radius: 18px; padding: .5rem .8rem .35rem; font-size: .97rem; line-height: 1.4; min-width: 0; }
+.bub:not(.mine) { background: var(--g2); }
+.brow.tail:not(.mine) .bub { border-bottom-left-radius: 6px; }
+.brow.tail.mine .bub { border-bottom-right-radius: 6px; }
+.bub small { margin-top: 3px; font-size: .68rem; opacity: .6; }
+
+/* reply button next to a bubble */
+.replybtn { flex: none; align-self: center; width: 30px; height: 30px; padding: 0; display: grid; place-items: center; background: var(--g2); border: 2px solid var(--g3); border-radius: var(--rad-m); color: var(--muted); opacity: 0; transition: opacity .15s, color .15s, border-color .15s; }
+.replybtn:hover { color: var(--ink); border-color: var(--g4); }
+.brow:hover .replybtn, .replybtn:focus-visible { opacity: 1; }
+@media (hover: none) { .replybtn { opacity: .75; } }
+
+/* a reply: small label + the quoted message as a dimmed bubble tucked under the real one (Instagram style) */
+.bcol { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; max-width: 100%; }
+.brow.mine .bcol { align-items: flex-end; }
+.bcol .bub { position: relative; z-index: 1; max-width: 100%; }
+.rq { display: flex; flex-direction: column; align-items: inherit; gap: 4px; max-width: 100%; padding: 0; margin: 4px 0 0; background: none; border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.rqlab { display: inline-flex; align-items: center; gap: 5px; padding: 0 .35rem; font-size: .74rem; font-weight: 750; color: var(--muted); }
+.rqtxt { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; max-width: 100%; padding: .5rem .85rem 1.15rem; margin-bottom: -.85rem; background: var(--g1); border: 2px solid var(--g3); border-radius: 18px; color: var(--muted); font-size: .88rem; font-weight: 550; line-height: 1.35; transition: border-color .15s, color .15s; }
+.rq:hover .rqtxt { border-color: var(--g4); color: var(--ink); }
+.rq:hover .rqlab { color: var(--ink); }
+.brow.flash .bub { animation: d-flash 1.2s ease; }
+@keyframes d-flash { 0%, 55% { box-shadow: 0 0 0 3px var(--accent); } 100% { box-shadow: 0 0 0 3px transparent; } }
+
+/* "replying to" strip above the input */
+.replybar { display: flex; align-items: center; gap: 10px; margin: 10px 12px 0; padding: .5rem .5rem .5rem .8rem; background: var(--g2); border: 2px solid var(--g3); border-radius: var(--rad-l); }
+.replybar .ric { flex: none; color: var(--accent-fg, var(--accent)); }
+.replybar > div { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.replybar b { font-size: .8rem; font-weight: 800; color: var(--accent-fg, var(--accent)); }
+.replybar span { font-size: .88rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.replybar button { flex: none; width: 30px; height: 30px; padding: 0; display: grid; place-items: center; background: none; border: 0; border-radius: var(--rad-s); color: var(--muted); }
+.replybar button:hover { background: var(--hover); color: var(--ink); }
+.replybar + .inline { border-top: 0; padding-top: 8px; }
+
+/* message input + send */
+.cthread .inline { align-items: center; gap: 8px; }
+.cthread .inline input { border-radius: var(--rad-l); padding: .7rem 1rem; background: var(--g2); border: 2px solid transparent; }
+.cthread .inline input:focus { border-color: var(--g4); box-shadow: none; }
+.cthread .inline .sendbtn { flex: none; width: 46px; height: 46px; min-height: 0; padding: 0; border-radius: var(--rad-l); }

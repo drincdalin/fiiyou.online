@@ -2,6 +2,16 @@ import { useEffect, useState } from 'react';
 import { House, User, MapPin, ChatCircle, UsersThree, ShieldCheck, Heart, X, CaretLeft, CaretRight, Flag, PencilSimple, Trash, PaperPlaneRight, ImageSquare, CalendarBlank } from '@phosphor-icons/react';
 import { posts, safety } from '../index.js';
 import { Avatar, ago, Rich } from './shared.jsx';
+import { ask } from './dialog.jsx';
+
+/** Friendly text for the database's spam-guard errors (see spam_and_bans.sql). Returns null for any other error. */
+export const spamMessage = (er) => {
+  const m = `${er?.message || ''} ${er?.details || ''} ${er?.hint || ''}`;
+  if (m.includes('rate_limit')) return 'You are posting too fast. Wait a few minutes and try again.';
+  if (m.includes('spam_duplicate')) return 'You already posted that. Try saying something new.';
+  if (m.includes('spam_links')) return 'Too many links in one message. New accounts cannot post links during their first day.';
+  return null;
+};
 
 /** Verified checkmark (Instagram style), coloured by the theme accent. */
 export function Verified() {
@@ -32,11 +42,11 @@ export function Lightbox({ items, index, onClose, onIndex, onLike }) {
 export function PostCard({ p, me, img, go, onChange, onDelete, notify }) {
   const [edit, setEdit] = useState(false); const [body, setBody] = useState(p.body); const [title, setTitle] = useState(p.title || '');
   const [open, setOpen] = useState(false); const [cs, setCs] = useState(null); const [txt, setTxt] = useState(''); const [zoom, setZoom] = useState(false); const [rep, setRep] = useState(false);
-  const own = p.author_id === me.id; const fail = (e) => notify(e.message || 'Something went wrong', 'err');
+  const own = p.author_id === me.id; const fail = (e) => notify(spamMessage(e) || e.message || 'Something went wrong', 'err');
   const like = async () => { const on = !p.liked; onChange({ ...p, liked: on, like_count: p.like_count + (on ? 1 : -1) }); try { await posts.setLike(p.id, on); } catch (e) { onChange(p); fail(e); } };
   const save = async () => { try { const r = await posts.updatePost(p.id, { body, title: p.kind === 'event' ? title : undefined }); onChange({ ...p, body: r.body, title: r.title, edited_at: r.edited_at }); setEdit(false); notify('Post updated'); } catch (e) { fail(e); } };
   const dropImg = async () => { try { await posts.updatePost(p.id, { body: p.body }, { removeImage: true, oldImage: p.image_path }); onChange({ ...p, image_path: null }); } catch (e) { fail(e); } };
-  const del = async () => { if (!confirm('Delete this post?')) return; try { await posts.deletePost(p.id, p.image_path); onDelete(p.id); notify('Post deleted'); } catch (e) { fail(e); } };
+  const del = async () => { if (!(await ask({ title: 'Delete this post?', message: 'This cannot be undone.', confirmLabel: 'Delete', danger: true }))) return; try { await posts.deletePost(p.id, p.image_path); onDelete(p.id); notify('Post deleted'); } catch (e) { fail(e); } };
   const toggle = async () => { setOpen(!open); if (!open && !cs) setCs(await posts.listComments(p.id).catch(() => [])); };
   const send = async (e) => { e.preventDefault(); try { await posts.addComment(p.id, txt); setTxt(''); setCs(await posts.listComments(p.id)); onChange({ ...p, comment_count: p.comment_count + 1 }); } catch (er) { fail(er); } };
   const src = img[p.image_path];
@@ -86,7 +96,7 @@ export function Composer({ me, places = [], fixedPlace = null, onPosted, notify 
   const submit = async (e) => { e.preventDefault(); setBusy(true);
     try { await posts.createPost({ body: f.body, kind: f.kind, title: ev ? f.title : null, eventAt: ev ? new Date(f.when).toISOString() : null, eventPlace: ev ? f.where || null : null,
         visibility: f.visibility, placeId: fixedPlace || f.place || null, localityId: me.locality_id, imageFile: file });
-      setF({ ...blank, kind: f.kind, visibility: f.visibility }); setFile(null); setOpen(false); e.target.reset?.(); onPosted(); notify(ev ? 'Event published' : 'Posted'); } catch (er) { notify(er.message || 'Could not post', 'err'); } setBusy(false); };
+      setF({ ...blank, kind: f.kind, visibility: f.visibility }); setFile(null); setOpen(false); e.target.reset?.(); onPosted(); notify(ev ? 'Event published' : 'Posted'); } catch (er) { notify(spamMessage(er) || er.message || 'Could not post', 'err'); } setBusy(false); };
   return (<form className={`composer panel${expanded ? ' open' : ''}`} onSubmit={submit}>
     {ev && <input placeholder="Event title" maxLength={100} required value={f.title} onChange={set('title')} />}
     <textarea rows={expanded ? 3 : 1} maxLength={1000} required placeholder={ev ? 'Details' : f.kind === 'ask' ? 'Ask your neighbours…' : "What's happening?"} value={f.body} onFocus={() => setOpen(true)} onChange={set('body')} />

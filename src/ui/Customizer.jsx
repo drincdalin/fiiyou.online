@@ -826,7 +826,7 @@ function ProfileTab({ ctx }) {
 function ThemeSelect({ k, th, setTheme }) {
   return (
     <Select label={sentence(k)} value={th[k]} onChange={(e) => setTheme(k, e.target.value)}>
-      {OPTIONS[k].map((o) => <option key={o}>{o}</option>)}
+      {OPTIONS[k].filter((o) => o !== 'custom' || th.font_file).map((o) => <option key={o}>{o}</option>)}
     </Select>
   );
 }
@@ -848,7 +848,7 @@ function Presets({ ctx }) {
         const active = Object.entries(p.theme).every(([k, v]) => th[k] === v);
         return (
           <button key={p.id} type="button" className="cz-preset" aria-pressed={active} title={p.name}
-            onClick={() => setDraft((d) => ({ ...d, theme: { ...p.theme, ...(d.theme.bg_image ? { bg_image: d.theme.bg_image } : {}) } }))}>
+            onClick={() => setDraft((d) => ({ ...d, theme: { ...p.theme, ...(d.theme.bg_image ? { bg_image: d.theme.bg_image } : {}), ...(d.theme.font_file ? { font_file: d.theme.font_file } : {}) } }))}>
             <span className="cz-preset-tile" style={{ background: p.theme.bg_color }}>
               <span className="cz-pv-card" style={{ background: p.theme.card_color }}>
                 <span className="cz-pv-line" style={{ background: p.theme.text_color }} />
@@ -891,6 +891,35 @@ function BackgroundSection({ ctx }) {
   );
 }
 
+function FontSection({ ctx }) {
+  const { draft, setDraft, run, busy } = ctx;
+  const path = draft.theme.font_file;
+  // a font uploaded during this edit session (not the saved one) is deleted as soon as it is replaced or removed
+  const dropOld = (old) => { if (old && old !== draft.origFont) media.deleteFont(old).catch(() => {}); };
+  const remove = () => {
+    dropOld(path);
+    setDraft((d) => {
+      const t = { ...d.theme }; delete t.font_file;
+      if (t.font === 'custom') t.font = THEME_DEFAULTS.font;
+      if (t.name_font === 'custom') t.name_font = THEME_DEFAULTS.name_font;
+      return { ...d, theme: t };
+    });
+  };
+  return (
+    <Section title="Custom font" icon={TextAa} defaultOpen={!!path}>
+      {path && <FileChip icon={TextAa} removeLabel="Remove custom font" onRemove={remove}>Custom font added</FileChip>}
+      <FilePick accept=".woff2,.woff,.otf,.ttf,font/woff2,font/woff,font/otf,font/ttf" icon={TextAa} disabled={busy} block
+        onFiles={(fs) => run(async () => {
+          const old = draft.theme.font_file;
+          const p = await media.uploadFont(fs[0]);
+          dropOld(old);
+          setDraft((d) => ({ ...d, theme: { ...d.theme, font_file: p, font: 'custom' } }));
+        })}>{path ? 'Replace font' : 'Upload font'}</FilePick>
+      <p className="cz-hint">.woff2, .woff, .otf or .ttf, up to 300 KB. Applies to your body text right away. To use it for your name too, set <code>Name font</code> to custom under Type. Only upload fonts you have the right to use.</p>
+    </Section>
+  );
+}
+
 function ShapePreview({ r: [r1, r2, r3] }) {
   return (
     <div className="cz-radii">
@@ -925,6 +954,7 @@ function ThemeTab({ ctx }) {
       <ThemeGroup name="Shape" icon={Shapes} ctx={ctx} intro={<ShapePreview r={r} />} />
       <ThemeGroup name="Surface" icon={Stack} ctx={ctx} />
       <ThemeGroup name="Type" icon={TextAa} ctx={ctx} />
+      <FontSection ctx={ctx} />
 
       <Section title="Fine-tune" icon={SlidersHorizontal} defaultOpen={false} meta={draft.css.length ? `${draft.css.length}` : undefined}
         hint="Style any part of your page. Only safe values are offered: no scripts, no outside images, nothing that can break the page.">
@@ -1093,6 +1123,8 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
   const cancel = () => {
     const b = draft.theme.bg_image;
     if (b && b !== draft.origBg) media.deleteImage(b).catch(() => {});
+    const f = draft.theme.font_file;
+    if (f && f !== draft.origFont) media.deleteFont(f).catch(() => {});
     const o = draft.origMusic || {}, n = draft.fields.music || {};
     if (n.cover && n.cover !== o.cover) media.deleteImage(n.cover).catch(() => {});
     if (n.audio && n.audio !== o.audio) media.deleteAudio(n.audio).catch(() => {});
@@ -1105,6 +1137,7 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
     await profiles.updateMyProfile({ ...draft.fields, theme: draft.theme, custom_css: draft.css });
     await friends.setTopFriends(draft.top);
     if (draft.origBg && draft.origBg !== draft.theme.bg_image) media.deleteImage(draft.origBg).catch(() => {});
+    if (draft.origFont && draft.origFont !== draft.theme.font_file) media.deleteFont(draft.origFont).catch(() => {});
     { // files replaced or removed while editing are deleted now
       const o = draft.origMusic || {}, n = draft.fields.music || {};
       if (o.cover && o.cover !== n.cover) media.deleteImage(o.cover).catch(() => {});

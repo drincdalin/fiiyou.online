@@ -4,6 +4,7 @@ export const FONT_STACKS = {
   sans: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif', serif: 'Georgia, "Times New Roman", serif',
   mono: '"Ubuntu Sans Mono", ui-monospace, Menlo, Consolas, monospace', pixel: '"Courier New", monospace',
   verdana: 'Verdana, Geneva, sans-serif', comic: '"Comic Sans MS", "Comic Neue", cursive',
+  custom: 'var(--ui-font)',   // the person's uploaded font (theme.font_file). themeStyle() swaps in the real family; this is only the fallback.
 };
 export const OPTIONS = {
   radius: ['0', '8', '12', '16', '24', '32'], step: ['4', '8', '12', '16'], border_width: ['0', '1', '2', '3', '4'],
@@ -27,8 +28,10 @@ export const THEME_DEFAULTS = {
 // Nested radii: every level inside another subtracts `step` (24 -> 16 -> 8 by default).
 export const radii = (t) => { const m = { ...THEME_DEFAULTS, ...t }, r = +m.radius, s = +m.step;
   return [r, Math.max(0, r - s), Math.max(0, r - 2 * s)]; };
-export function themeStyle(t = {}, bgUrl = null) {
+/** fontFamily = CSS family name returned by loadFont() for theme.font_file (null while loading or if it failed). */
+export function themeStyle(t = {}, bgUrl = null, fontFamily = null) {
   const m = { ...THEME_DEFAULTS, ...t };
+  const stack = (k) => (k === 'custom' ? (fontFamily ? `"${fontFamily}", ${FONT_STACKS.default}` : FONT_STACKS.default) : FONT_STACKS[k]);
   return {
     '--accent': m.accent_color, '--on-accent': onColor(m.accent_color), '--border': m.border_color, '--card': m.card_color, '--text': m.text_color, '--link': m.link_color,
     '--r1': m.radius + 'px', '--step': m.step + 'px', '--bw': m.border_width + 'px', '--bs': m.border_style,
@@ -37,7 +40,7 @@ export function themeStyle(t = {}, bgUrl = null) {
     '--shadow': { none: 'none', soft: '0 10px 30px rgba(0,0,0,.45)', hard: '6px 6px 0 var(--border)' }[m.shadow],
     '--blur': m.blur + 'px', '--overlay': m.overlay / 100, '--fs': m.font_size + 'px', '--sidebar': m.sidebar + 'px',
     '--gap': m.card_gap + 'px', '--ncase': m.name_case === 'upper' ? 'uppercase' : 'none',
-    '--font': FONT_STACKS[m.font], '--name-font': FONT_STACKS[m.name_font], cursor: m.cursor, backgroundColor: m.bg_color,
+    '--font': stack(m.font), '--name-font': stack(m.name_font), cursor: m.cursor, backgroundColor: m.bg_color,
     backgroundAttachment: m.bg_fixed,
     ...(bgUrl ? { backgroundImage: `url(${bgUrl})`, backgroundRepeat: m.bg_repeat === 'cover' ? 'no-repeat' : m.bg_repeat,
                   backgroundSize: m.bg_repeat === 'cover' ? 'cover' : 'auto', backgroundPosition: 'center' } : {}),
