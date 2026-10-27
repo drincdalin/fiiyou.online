@@ -1,6 +1,7 @@
 import { Component } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.jsx';
+import { DialogHost, installDialogs } from './dialog.jsx';
 import { bootRouter } from './router.jsx';
 import './styles.css';
 import './design.css';
@@ -14,4 +15,5 @@ class Boundary extends Component {
 }
 
 bootRouter();
-createRoot(document.getElementById('root')).render(<Boundary><App /></Boundary>);
+installDialogs();   // any leftover window.alert() shows the in-app card too
+createRoot(document.getElementById('root')).render(<Boundary><App /><DialogHost /></Boundary>);

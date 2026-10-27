@@ -41,14 +41,24 @@ export const deletePlace = async (id) => unwrap(await supabase.from('places').de
 
 // ---------- chat (friends only) ----------
 export const conversations = async () => unwrap(await supabase.rpc('conversations'));
+// reply_to points at the message being answered. `reply` ({id, sender_id, body} or null) is attached here instead of with a
+// PostgREST self-join, which is ambiguous on a self-referencing table and came back as an empty array for every message.
+const MSG_COLS = 'id, sender_id, body, created_at, reply_to';
+async function withReplies(rows) {
+  const known = new Map(rows.map((r) => [r.id, r]));
+  const missing = [...new Set(rows.map((r) => r.reply_to).filter((id) => id && !known.has(id)))];   // quoted messages older than the loaded window
+  if (missing.length) unwrap(await supabase.from('messages').select('id, sender_id, body').in('id', missing)).forEach((r) => known.set(r.id, r));
+  return rows.map((r) => ({ ...r, reply: r.reply_to ? known.get(r.reply_to) || null : null }));
+}
 export async function thread(peerId, limit = 100) {
   const me = await uid();
-  const rows = unwrap(await supabase.from('messages').select('id, sender_id, body, created_at')
+  const rows = unwrap(await supabase.from('messages').select(MSG_COLS)
     .or(`and(sender_id.eq.${me},recipient_id.eq.${peerId}),and(sender_id.eq.${peerId},recipient_id.eq.${me})`).order('created_at', { ascending: false }).limit(limit));
-  return rows.reverse();
+  return withReplies(rows.reverse());
 }
-export async function sendMessage(peerId, body) {
-  return unwrap(await supabase.from('messages').insert({ sender_id: await uid(), recipient_id: peerId, body }).select('id, sender_id, body, created_at').single());
+export async function sendMessage(peerId, body, replyTo = null) {
+  const m = unwrap(await supabase.from('messages').insert({ sender_id: await uid(), recipient_id: peerId, body, reply_to: replyTo || null }).select(MSG_COLS).single());
+  return (await withReplies([m]))[0];
 }
 export const markRead = async (peerId) => unwrap(await supabase.rpc('mark_read', { p_peer: peerId }));
 export const unreadCount = async () => Number(unwrap(await supabase.rpc('unread_count')));

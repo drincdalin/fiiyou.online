@@ -2,28 +2,31 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { auth, admin as adminApi, profiles, cards as cardsApi, friends, wall, social, safety, media, errorCode } from '../index.js';
 import { useImages, Boot, Avatar, Rich } from './shared.jsx';
 import { toCss } from './customCss.js';
-import { Lightbox, ReportModal, Verified, NavIcon } from './parts.jsx';
+import { Lightbox, ReportModal, Verified, NavIcon, spamMessage } from './parts.jsx';
 import ImportModal from './ImportModal.jsx';
 import { buildThemeExport, download } from './themeFile.js';
 import { HomeView, MapView, MessagesView, PeopleView } from './views.jsx';
 import AdminView from './Admin.jsx';
 import { themeStyle } from './theme.js';
+import { useCustomFont } from './fonts.js';
 import { applyAppTheme } from './appTheme.js';
 import Player from './Player.jsx';
 import Customizer from './Customizer.jsx';
-import { renderStory, shareStory } from './storyImage.js';
+import { ask } from './dialog.jsx';
+import ShareSheet from './ShareSheet.jsx';
 import { Eye, EyeSlash, Check, DownloadSimple, Heart, PencilSimple, ShareNetwork, SignOut, Trash, UploadSimple, User } from '@phosphor-icons/react';
 
 const BASE = import.meta.env.BASE_URL;
 function Auth() {
-  const [mode, setMode] = useState('in'); const [f, setF] = useState({ email: '', password: '', username: '', displayName: '' }); const [agree, setAgree] = useState(false);
+  const [mode, setMode] = useState('in'); const [f, setF] = useState({ email: '', password: '', username: '', displayName: '' }); const [agree, setAgree] = useState(false); const [banned, setBanned] = useState(false);
   const [msg, setMsg] = useState(''); const [ok, setOk] = useState(false); const [busy, setBusy] = useState(false); const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const say = (m, good = false) => { setMsg(m); setOk(good); };
   const go = async (e) => { e.preventDefault(); say(''); setBusy(true);
     try { if (mode === 'in') await auth.signIn(f); else { const r = await auth.signUp(f); if (!r.session) say('Check your email to confirm your account.', true); } }
-    catch (er) { say(er.message === 'username_taken' ? 'That username is taken.' : er.message); } setBusy(false); };
+    catch (er) { if (er.message === 'banned') setBanned(true); else say(er.message === 'username_taken' ? 'That username is taken.' : er.message); } setBusy(false); };
   const forgot = async () => { if (!f.email) return say('Type your email first.'); try { await auth.resetPassword(f.email); say('If that email has an account, a reset link is on its way.', true); } catch (er) { say(er.message); } };
   const up = mode === 'up'; const [showPw, setShowPw] = useState(false);
+  if (banned) return <Banned onBack={() => setBanned(false)} />;
   return (
     <div className="authwrap">
       <form className="authcard" onSubmit={go}>
@@ -47,6 +50,15 @@ function Auth() {
   );
 }
 
+/** Shown when the email belongs to an account the operator banned (the database refuses it at sign-up, see spam_and_bans.sql). */
+function Banned({ onBack }) {
+  return (<div className="authwrap"><div className="authcard" role="alert"><header className="authhead"><h1 className="brand">fiiyou</h1></header>
+    <h2>You are banned</h2>
+    <p className="muted">Your account was removed by the operator, and this email address can no longer be used to sign up or sign in.</p>
+    <p className="muted">If you think this is a mistake, contact the operator of this site.</p>
+    <button className="ghost wide" onClick={onBack}>Back</button></div></div>);
+}
+
 function NewPassword({ onDone }) {
   const [pw, setPw] = useState(''); const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
   const save = async (e) => { e.preventDefault(); setBusy(true); try { await auth.updatePassword(pw); onDone(); } catch (er) { setMsg(er.message); setBusy(false); } };
@@ -60,7 +72,7 @@ function Guestbook({ profileId, go, own, meName, notify }) {
   const load = () => wall.listWall(profileId).then(setRows); useEffect(() => { load(); }, [profileId]);
   const img = useImages(rows.map((r) => r.author.avatar_path));
   const send = async (e) => { e.preventDefault(); setErr('');
-    try { await wall.postOnWall(profileId, body); setBody(''); load(); } catch (er) { setErr(errorCode(er) === 'rate_limit' ? 'Slow down a bit.' : 'Cannot post here.'); } };
+    try { await wall.postOnWall(profileId, body); setBody(''); load(); } catch (er) { setErr(spamMessage(er) || (errorCode(er) === 'rate_limit' ? 'Slow down a bit.' : 'Cannot post here.')); } };
   return (<>
     <form className="inline" onSubmit={send}><input value={body} maxLength={500} onChange={(e) => setBody(e.target.value)} placeholder="Write something…" />
       <button className="primary" disabled={!body.trim()}>Send</button></form>
@@ -104,17 +116,18 @@ function Sticker({ c, k, src, edit, selected, onSelect, onChange }) {
     {src && <img src={src} alt="" draggable={false} />}{edit && selected && <b className="grip" onPointerDown={(e) => drag(e, 'size')} />}</div>);
 }
 
-const makeDraft = (d) => { const profile = d.profile; return { theme: { ...profile.theme }, origBg: profile.theme.bg_image, cards: d.cards.map((c) => ({ ...c })), top: d.topFriends.map((f) => f.id), origMusic: profile.music || {}, css: profile.custom_css || [],
+const makeDraft = (d) => { const profile = d.profile; return { theme: { ...profile.theme }, origBg: profile.theme.bg_image, origFont: profile.theme.font_file, cards: d.cards.map((c) => ({ ...c })), top: d.topFriends.map((f) => f.id), origMusic: profile.music || {}, css: profile.custom_css || [],
   fields: { display_name: profile.display_name, headline: profile.headline, locality_id: profile.locality_id, wall_policy: profile.wall_policy, show_on_map: profile.show_on_map, music: profile.music || {} } }; };
 
 function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
   const [d, setD] = useState(null); const [draft, setDraft] = useState(null); const [sel, setSel] = useState(null); const [k, setK] = useState(1);
-  const [collapsed, setCollapsed] = useState(false); const [lb, setLb] = useState(null); const [rep, setRep] = useState(false); const frame = useRef(); const pageRef = useRef(); const [sharing, setSharing] = useState(false);
+  const [collapsed, setCollapsed] = useState(false); const [lb, setLb] = useState(null); const [rep, setRep] = useState(false); const frame = useRef(); const pageRef = useRef(); const [sharing, setSharing] = useState(false); const [shareData, setShareData] = useState(null);
   const load = useCallback(() => profiles.getFullProfile(username).then(setD).catch((e) => notify(e.message, 'err')), [username]);
   useEffect(() => { setD(null); setDraft(null); setSel(null); setLb(null); load(); }, [load]);
   useEffect(() => { const el = frame.current; if (!el) return; const ro = new ResizeObserver(() => setK(Math.min(1, el.clientWidth / 1210) || 1)); ro.observe(el); return () => ro.disconnect(); }, [d]);
   const shown = draft ? draft.cards : d?.cards; const theme = draft ? draft.theme : d?.profile.theme; const music = (draft ? draft.fields.music : d?.profile.music) || {};
   const img = useImages(d ? [d.profile.avatar_path, theme.bg_image, music.cover, ...shown.flatMap((c) => c.content.images || []), ...d.photos.map((p) => p.path), ...d.topFriends.map((f) => f.avatar_path)] : []);
+  const fontFamily = useCustomFont(theme?.font_file);   // registers the uploaded font (draft or saved) so the page can use it
   const [audioUrl, setAudioUrl] = useState(null);
   useEffect(() => { if (autoEdit && d && d.relationship.status === 'self' && !draft) { setCollapsed(false); setDraft(makeDraft(d)); history.replaceState(null, '', `${location.pathname}${location.search}#/me`); } }, [d, autoEdit]);   // "Edit my profile" on Home opens the editor straight away
   useEffect(() => { let on = true; setAudioUrl(null); if (music.audio) media.signedUrl(music.audio, 'audio').then((u) => on && setAudioUrl(u)).catch(() => {}); return () => { on = false; }; }, [music.audio]);
@@ -127,18 +140,27 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
     pending_received: ['Accept request', () => friends.acceptRequest(rel.id), 'You are now friends'], friends: ['Friends', () => friends.removeFriend(profile.id), 'Friend removed'] }[rel.status];
   const name = draft?.fields.display_name ?? profile.display_name; const headline = draft?.fields.headline ?? profile.headline;
   const items = d.photos.map((p) => ({ id: p.id, src: img[p.path], caption: p.caption, likes: p.like_count, liked: p.liked }));
-  const shareImage = async () => { if (sharing) return; setSharing(true);
+  const openShare = async () => { if (sharing) return; setSharing(true);
     try {
-      const interests = shown.filter((c) => c.type === 'interests' && c.visible).flatMap((c) => c.content.interests || []);
-      const canvas = await renderStory({ profile: { username: profile.username, display_name: name, headline, locality: profile.locality?.name, verified: !!profile.is_official, friends: d.friendCount },
-        theme, avatarSrc: img[profile.avatar_path], bgSrc: img[theme.bg_image], music: (music.title || music.artist) ? { title: music.title, artist: music.artist, coverSrc: img[music.cover] } : null, interests });
-      const r = await shareStory(canvas, profile.username); if (r === 'downloaded') notify('Image saved');
-    } catch (e) { notify('Could not create the image', 'err'); } finally { setSharing(false); } };
+      const flowCards = shown.filter((c) => c.visible && c.type !== 'music' && c.type !== 'sticker');
+      const stickers = shown.filter((c) => c.type === 'sticker' && c.visible).map((c) => ({ src: img[c.content.images?.[0]], x: c.x, y: c.y, w: c.w, h: c.h, rotation: c.rotation || 0, z: c.z || 0 }));
+      const gb = await wall.listWall(profile.id).catch(() => []);          // always loaded: the "Left on my wall" card needs it even if the guestbook card is hidden
+      setShareData({
+        slug: profile.username,
+        profile: { username: profile.username, display_name: name, headline, locality: profile.locality?.name, verified: !!profile.is_official, friends: d.friendCount, views: d.views },
+        theme, fontFamily, avatarSrc: img[profile.avatar_path], bgSrc: img[theme.bg_image],
+        music: (music.title || music.artist) ? { title: music.title, artist: music.artist, coverSrc: img[music.cover] } : null,
+        cards: flowCards.map(({ id, type, title, content }) => ({ id, type, title, content })),
+        photos: d.photos.map((p) => ({ src: img[p.path] })),
+        topFriends: d.topFriends.map((f) => ({ name: f.display_name, username: f.username, src: img[f.avatar_path] })),
+        guestbook: gb.slice(0, 10).map((r) => ({ name: r.author.display_name, username: r.author.username, body: r.body })),
+        stickers });
+    } catch (e) { notify('Could not open sharing', 'err'); } finally { setSharing(false); } };
   const likePhoto = async (it) => { const on = !it.liked; const upd = (liked, n) => setD((x) => ({ ...x, photos: x.photos.map((p) => (p.id === it.id ? { ...p, liked, like_count: p.like_count + n } : p)) }));
     upd(on, on ? 1 : -1); try { await social.setPhotoLike(it.id, on); } catch (e) { upd(!on, on ? -1 : 1); notify(e.message, 'err'); } };
   return (
     <>
-    <div ref={pageRef} className={`page view${draft ? ' editing' : ''}${draft && collapsed ? ' collapsed' : ''}`} style={themeStyle(theme, img[theme.bg_image])} onPointerDown={() => draft && setSel(null)}>
+    <div ref={pageRef} className={`page view${draft ? ' editing' : ''}${draft && collapsed ? ' collapsed' : ''}`} style={themeStyle(theme, img[theme.bg_image], fontFamily)} onPointerDown={() => draft && setSel(null)}>
       <style>{toCss(draft ? draft.css : profile.custom_css)}</style>
       <div className="dim" />
       <main className="frame" ref={frame} data-layout={theme.layout || 'side-left'}>
@@ -148,16 +170,16 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
             <small className="views">{d.friendCount} friend{d.friendCount === 1 ? '' : 's'} · {d.views} view{d.views === 1 ? '' : 's'}</small></div>
           {headline && <p className="headline">{headline}</p>}
           {(audioUrl || music.url) && <Player key={music.audio || music.url} src={audioUrl || music.url} title={music.title} artist={music.artist} cover={img[music.cover]} />}
-          {own ? (!draft ? <><button className="primary wide" onClick={startEdit}><PencilSimple size={18} weight="bold" aria-hidden="true" />Customize profile</button><button className="ghost wide" disabled={sharing} onClick={shareImage}><ShareNetwork size={18} weight="bold" aria-hidden="true" />{sharing ? 'Making image…' : 'Share as image'}</button></>
+          {own ? (!draft ? <><button className="primary wide" onClick={startEdit}><PencilSimple size={18} weight="bold" aria-hidden="true" />Customize profile</button><button className="ghost wide" disabled={sharing} onClick={openShare}><ShareNetwork size={18} weight="bold" aria-hidden="true" />{sharing ? 'Loading…' : 'Share profile'}</button></>
             : <div className="actions preview" aria-hidden="true"><div className="arow"><button className="primary" tabIndex={-1} disabled>Message</button><button className="ghost" tabIndex={-1} disabled>Friends</button></div>
               <div className="safe"><span>Report</span><span>·</span><span>Block</span></div></div>) : <div className="actions">
             {rel.status === 'friends' ? <div className="arow">
               <button className="primary" onClick={() => go('messages', null, profile.id)}>Message</button>
-              <button className="ghost" title="Click to remove this friend" onClick={() => confirm('Remove this friend?') && act(friendBtn[1], friendBtn[2])}><Check size={16} weight="bold" aria-hidden="true" />{friendBtn[0]}</button></div>
+              <button className="ghost" title="Click to remove this friend" onClick={async () => (await ask({ title: 'Remove this friend?', message: `${name} will be removed from your friends.`, confirmLabel: 'Remove', danger: true })) && act(friendBtn[1], friendBtn[2])}><Check size={16} weight="bold" aria-hidden="true" />{friendBtn[0]}</button></div>
               : friendBtn && <button className="primary wide" onClick={() => act(friendBtn[1], friendBtn[2])}>{friendBtn[0]}</button>}
             <div className="safe">
               <button className="link" onClick={() => setRep(true)}>Report</button><span aria-hidden="true">·</span>
-              <button className="link" onClick={() => confirm('Block this person?') && safety.blockUser(profile.id).then(() => go('people'))}>Block</button></div></div>}
+              <button className="link" onClick={async () => (await ask({ title: 'Block this person?', message: `${name} will no longer be able to interact with you.`, confirmLabel: 'Block', danger: true })) && safety.blockUser(profile.id).then(() => go('people')).catch((e) => notify(e.message || 'Could not block', 'err'))}>Block</button></div></div>}
         </aside>
         <div className="divider" />
         <div className="cards">{shown.filter((c) => c.visible && c.type !== 'music' && c.type !== 'sticker').map((c) => <CardView key={c.id} c={c} d={d} img={img} go={go} openPhoto={setLb} own={own} meName={meName} notify={notify} />)}</div>
@@ -167,12 +189,15 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
     </div>
     {draft && <Customizer draft={draft} setDraft={setDraft} onClose={() => setDraft(null)} reload={async () => { await load(); refreshMe(); }} sel={sel} setSel={setSel} notify={notify} photos={d.photos} img={img} collapsed={collapsed} setCollapsed={setCollapsed} />}
     {rep && <ReportModal target={{ type: 'profile', id: profile.id }} onClose={() => setRep(false)} notify={notify} />}
+    {shareData && <ShareSheet data={shareData} onClose={() => setShareData(null)} />}
     {lb != null && <Lightbox items={items} index={lb} onClose={() => setLb(null)} onIndex={setLb} onLike={own ? undefined : likePhoto} />}
     </>
   );
 }
 
 function parseHash() {
+  const path = decodeURIComponent(location.pathname.replace(/^\/+|\/+$/g, ''));   // short links: app.fiiyou.online/<username>
+  if (!location.hash && path && !path.includes('/') && path !== 'index.html') return { v: 'profile', username: path.toLowerCase() };
   const [a, b] = location.hash.replace(/^#\/?/, '').split('/');
   if (a === 'u' && b) return { v: 'profile', username: decodeURIComponent(b).toLowerCase() };
   if (a === 'chat') return { v: 'messages', peer: b };
@@ -187,7 +212,19 @@ export default function App() {
   const refreshMe = useCallback(() => profiles.getMyProfile().then(setMe).catch(() => {}), []);
   const myImg = useImages([me?.avatar_path]);
   const refreshUnread = useCallback(() => social.unreadCount().then(setUnread).catch(() => {}), []);
-  useEffect(() => { auth.getSession().then(setSession); return auth.onAuthChange((sess, ev) => { setSession(sess); if (ev === 'PASSWORD_RECOVERY') setRecovery(true); }); }, []);
+  useEffect(() => {
+    auth.getSession().then(setSession);
+    return auth.onAuthChange((sess, ev) => {
+      // Keeps the last 30 auth events in localStorage so an unexpected logout leaves evidence (read: localStorage.getItem('auth_log')).
+      try {
+        const log = JSON.parse(localStorage.getItem('auth_log') || '[]');
+        log.push({ t: new Date().toISOString(), ev, has: !!sess });
+        localStorage.setItem('auth_log', JSON.stringify(log.slice(-30)));
+      } catch {}
+      setSession(sess);
+      if (ev === 'PASSWORD_RECOVERY') setRecovery(true);
+    });
+  }, []);
   useEffect(() => { const h = () => setRoute(parseHash()); addEventListener('hashchange', h); return () => removeEventListener('hashchange', h); }, []);
   useEffect(() => { const t = { home: 'Home', profile: route.username ? `@${route.username}` : 'Me', map: 'Map', messages: 'Chat', people: 'People', admin: 'Admin' }[route.v]; document.title = `fiiyou · ${t}`; }, [route]);
   useEffect(() => { if (session) profiles.getMyProfile().then(setMe).catch(() => {}); else setMe(null); }, [session]);
@@ -220,7 +257,7 @@ export default function App() {
         <button role="menuitem" onClick={() => { setMenu(false); auth.exportMyData().then((j) => { download('fiiyou-data.json', j); notify('Data exported'); }).catch((e) => notify(e.message, 'err')); }}><DownloadSimple size={18} weight="bold" aria-hidden="true" />Export my data</button>
         <hr className="msep" />
         <button role="menuitem" onClick={() => { setMenu(false); auth.signOut(); }}><SignOut size={18} weight="bold" aria-hidden="true" />Sign out</button>
-        <button role="menuitem" className="danger" onClick={() => { setMenu(false); confirm('Delete your account and everything in it? This cannot be undone.') && auth.deleteAccount(); }}><Trash size={18} weight="bold" aria-hidden="true" />Delete account</button></div>}</div></nav>
+        <button role="menuitem" className="danger" onClick={async () => { setMenu(false); if (await ask({ title: 'Delete your account?', message: 'Your account and everything in it will be deleted. This cannot be undone.', confirmLabel: 'Delete account', danger: true })) auth.deleteAccount(); }}><Trash size={18} weight="bold" aria-hidden="true" />Delete account</button></div>}</div></nav>
     {route.v === 'home' && <HomeView me={me} go={go} notify={notify} unread={unread} />}
     {route.v === 'map' && <MapView me={me} go={go} notify={notify} />}
     {route.v === 'messages' && <MessagesView key={route.peer || 'all'} me={me} peer={route.peer} go={go} notify={notify} refreshUnread={refreshUnread} />}

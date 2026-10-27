@@ -9,6 +9,7 @@ export function sanitizeTheme(t) {
   t = { ...t, font: t.font === 'endless' ? 'ubuntu' : t.font, name_font: t.name_font === 'endless' ? 'ubuntu' : t.name_font };   // themes exported before the font change
   for (const k of COLOR_KEYS) if (HEX.test(t[k])) out[k] = t[k];            // bg_image is never imported: that file lives in another account
   for (const [k, opts] of Object.entries(OPTIONS)) if (opts.includes(String(t[k]))) out[k] = String(t[k]);
+  for (const k of ['font', 'name_font']) if (out[k] === 'custom') out[k] = 'ubuntu';   // font_file is never imported/exported (the file lives in one account), so 'custom' would point at nothing
   return out;
 }
 export function sanitizeCss(rules) {
