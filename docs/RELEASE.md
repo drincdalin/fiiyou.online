@@ -9,7 +9,7 @@ These pages are a plain-language template that matches what the app really does.
 Put the Ubuntu Sans font files in `public/fonts/` (see the README.txt there) together with the font's licence file. Ubuntu Sans is an open-source family, but include the licence text that comes with your download.
 
 ## 1. Supabase (production settings)
-1. SQL Editor: make sure migrations `0001` to `0015` and `seed.sql` have all been run (in order, once each). Add `lat`/`lng` to your localities.
+1. SQL Editor: make sure migrations `0001` to `0018` and `seed.sql` have all been run (in order, once each). Add `lat`/`lng` to your localities.
 2. Authentication → URL Configuration: set **Site URL** to your final address (for example `https://fiiyou.online`) and add the same address to **Redirect URLs** (keep `http://localhost:5173` there too for local work). Password-reset and confirmation links depend on this.
 3. Authentication → Email: turn **Confirm email** back on. Set up your **own SMTP provider** before inviting people: Supabase's built-in email sender is meant for testing and is heavily limited (it may only deliver to your own team's addresses). Check Supabase's current docs for the exact limits.
 4. Authentication → Attack protection / password settings: use the strongest options your plan offers. Do **not** enable CAPTCHA yet: the sign-up form does not send a CAPTCHA token, so sign-ups would fail.

@@ -1,4 +1,4 @@
--- 0012: safe custom styling. Profiles store a LIST OF RULES, never CSS text: each rule is
+-- 0013: safe custom styling. Profiles store a LIST OF RULES, never CSS text: each rule is
 -- {"s": <whitelisted element key>, "p": {<whitelisted property>: <value matching a strict pattern>}}.
 -- No url(), @import, expression(), escapes, positioning, z-index or free text can ever be stored.
 create or replace function public.is_valid_custom_css(r jsonb) returns boolean

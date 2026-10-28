@@ -1,4 +1,4 @@
--- 0013: the data export now covers everything the app stores about you (photos, messages, places, likes too).
+-- 0014: the data export now covers everything the app stores about you (photos, messages, places, likes too).
 create or replace function public.export_my_data() returns jsonb
 language plpgsql stable security definer set search_path = public as $$
 declare me uuid := auth.uid();
