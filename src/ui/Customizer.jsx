@@ -13,19 +13,22 @@
  * Requires: @phosphor-icons/react
  */
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowLineDown, ArrowLineUp, ArrowDown, ArrowUp, BookOpenText, Cards, CaretDoubleRight,
-  CaretDown, CaretLeft, CaretRight, Check, CircleNotch, DotsSixVertical, Eye, EyeSlash,
+  CaretDown, CaretLeft, CaretRight, Check, CircleNotch, DotsSixVertical, DownloadSimple, Eye, EyeSlash,
   FloppyDisk, Hash, Heart, IdentificationCard, Image as ImageIcon, ImageSquare, Images, Layout,
   LinkSimple, MusicNote, MusicNotes, Palette, PencilSimple, Plus, Shapes, ShieldCheck,
   SlidersHorizontal, Sparkle, Stack, Sticker, TextAa, TextAlignLeft, Trash, UploadSimple,
   UserCircle, UsersThree, WarningCircle, X,
 } from '@phosphor-icons/react';
-import { profiles, cards as cardsApi, media, discover, friends, social } from '../index.js';
+import { auth, profiles, cards as cardsApi, media, discover, friends, social } from '../index.js';
 import { THEME_DEFAULTS, OPTIONS, COLOR_KEYS, GROUPS, radii } from './theme.js';
 import { SELECTORS, PROPS } from './customCss.js';
 import { PRESETS } from './themes.js';
 import { stickerModel, withModel, pinTo } from './stickerAnchor.js';
+import { buildThemeExport, download } from './themeFile.js';
+import ImportModal from './ImportModal.jsx';
 
 // ═══ 1. CONSTANTS & HELPERS ═════════════════════════════════════════════════
 
@@ -816,6 +819,13 @@ function ProfileTab({ ctx }) {
       <Section title="Privacy" icon={ShieldCheck}>
         <Segmented label="Who can write on my wall" value={draft.fields.wall_policy} options={['everyone', 'friends', 'nobody']} onChange={(v) => setField('wall_policy', v)} />
         <Switch checked={!!draft.fields.show_on_map} onChange={(v) => setField('show_on_map', v)}>Show me on my friends’ map</Switch>
+        <Group label="Your data">
+          <button type="button" className="cz-btn cz-btn--block" disabled={busy}
+            onClick={() => run(async () => { download('fiiyou-data.json', await auth.exportMyData()); notify('Data exported'); })}>
+            <DownloadSimple size={16} weight="bold" aria-hidden="true" />Export my data
+          </button>
+          <p className="cz-hint">A copy of everything you have on fiiyou, as one file.</p>
+        </Group>
       </Section>
 
       <TopFriends ctx={ctx} />
@@ -936,6 +946,24 @@ function ShapePreview({ r: [r1, r2, r3] }) {
   );
 }
 
+/** Save the theme to a file or load one. Export uses the last saved version; import replaces the theme and closes the editor. */
+function ThemeFileSection({ ctx }) {
+  const { run, reload, notify, onClose, busy } = ctx;
+  const [importing, setImporting] = useState(false);
+  const exportTheme = () => run(async () => { download('fiiyou-theme.json', buildThemeExport(await profiles.getMyProfile(), await cardsApi.listMine())); notify('Theme exported'); });
+  return (
+    <Section title="Export & import" icon={DownloadSimple} defaultOpen={false}
+      hint="Save your theme to a file, or load one. Export uses your last saved version. Importing replaces your current theme and closes this editor, so save or discard your changes first.">
+      <div className="cz-grid2">
+        <button type="button" className="cz-btn" disabled={busy} onClick={exportTheme}><DownloadSimple size={16} weight="bold" aria-hidden="true" />Export</button>
+        <button type="button" className="cz-btn" disabled={busy} onClick={() => setImporting(true)}><UploadSimple size={16} weight="bold" aria-hidden="true" />Import</button>
+      </div>
+      {importing && createPortal(
+        <ImportModal onClose={() => setImporting(false)} notify={notify} onDone={async () => { setImporting(false); await reload(); onClose(); }} />, document.body)}
+    </Section>
+  );
+}
+
 /** How does it look — easiest controls first, most advanced last. */
 function ThemeTab({ ctx }) {
   const { draft, setDraft, th, setTheme, r, setRule } = ctx;
@@ -967,6 +995,8 @@ function ThemeTab({ ctx }) {
           <Plus size={16} weight="bold" aria-hidden="true" />Add a style rule
         </button>
       </Section>
+
+      <ThemeFileSection ctx={ctx} />
     </>
   );
 }
@@ -1188,7 +1218,7 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
   const ctx = {
     draft, setDraft, th, r, stickers, s, sel, setSel, topZ, photos, img, fl, locs, busy,
     setTheme, setField, setMusic, setCard, drop, move, moveTop, setRule, setProp, dropProp,
-    run, reload, notify, addCard, addSticker, movePhoto, goTab: setTab,
+    run, reload, notify, addCard, addSticker, movePhoto, goTab: setTab, onClose,
   };
 
   // ── tabs: arrow keys move between them ─────────────────────────────────

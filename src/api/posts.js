@@ -33,6 +33,8 @@ export async function setLike(postId, on) {
   if (on) unwrap(await supabase.from('post_likes').insert({ post_id: postId, user_id }));
   else unwrap(await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', user_id));
 }
+/** Who liked MY post, newest first (the database returns rows only to the post's author). See 0016_likers_and_views.sql. */
+export const listLikers = async (postId) => unwrap(await supabase.rpc('post_likers', { p_post: postId })) || [];
 export async function listComments(postId) {
   return unwrap(await supabase.from('post_comments')
     .select('id, body, created_at, author:profiles!post_comments_author_id_fkey(id, username, display_name, avatar_path)').eq('post_id', postId).order('created_at'));

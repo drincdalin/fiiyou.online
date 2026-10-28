@@ -19,6 +19,26 @@ export async function setPhotoLike(photoId, on) {
   if (on) unwrap(await supabase.from('photo_likes').insert({ photo_id: photoId, user_id }));
   else unwrap(await supabase.from('photo_likes').delete().eq('photo_id', photoId).eq('user_id', user_id));
 }
+/** Who liked MY photo, newest first (the database returns rows only to the photo's owner). */
+export const listPhotoLikers = async (photoId) => unwrap(await supabase.rpc('photo_likers', { p_photo: photoId })) || [];
+
+// ---------- notifications (rows are written by database triggers, see 0017_notifications.sql) ----------
+export const listNotifications = async (limit = 50) => unwrap(await supabase.from('notifications')
+  .select('id, type, post_id, photo_id, read, created_at, actor:profiles!notifications_actor_id_fkey(id, username, display_name, avatar_path, is_official)')
+  .order('created_at', { ascending: false }).limit(limit));
+export async function unreadNotifications() {
+  const r = await supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('read', false);
+  if (r.error) throw r.error; return r.count || 0;
+}
+export const markNotificationsRead = async () => unwrap(await supabase.from('notifications').update({ read: true }).eq('read', false));
+/** Live new notifications for me. Never throws; the bell also polls as a fallback. */
+export function onNotification(myId, cb) {
+  try {
+    const ch = supabase.channel(`nt-${myId}-${Math.random().toString(36).slice(2)}`).on('postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${myId}` }, cb).subscribe();
+    return () => { try { supabase.removeChannel(ch); } catch { /* ignore */ } };
+  } catch { return () => {}; }
+}
 
 // ---------- places ----------
 export const listPlaces = async () => unwrap(await supabase.rpc('places_overview'));

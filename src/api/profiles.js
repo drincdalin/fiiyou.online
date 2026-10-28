@@ -14,8 +14,6 @@ export async function getFullProfile(username) {
   const profile = unwrap(await supabase.from('profiles')
     .select('*, locality:localities(id, name, slug)').eq('username', username.toLowerCase()).maybeSingle());
   if (!profile) return null;
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user.id !== profile.id) await supabase.rpc('record_profile_view', { p_profile: profile.id });   // own views never count
   const [cards, top, friendCount, relationship, photos, views] = await Promise.all([
     supabase.from('profile_cards').select('*').eq('profile_id', profile.id).eq('visible', true).order('y').order('z'),
     supabase.from('top_friends')
@@ -36,6 +34,10 @@ export async function getFullProfile(username) {
     views: Number(unwrap(views)),
   };
 }
+
+/** Registers one visit to someone else's profile (every visit counts). The database ignores your own profile and blocked pairs.
+ *  Call it once when the profile page opens, NOT from getFullProfile: that one re-runs after every friend / like action. */
+export const recordView = async (profileId) => { await supabase.rpc('record_profile_view', { p_profile: profileId }); };
 
 /** 'self' | 'friends' | 'pending_sent' | 'pending_received' | 'none' (+ request id when pending) */
 export async function relationshipWith(otherId) {

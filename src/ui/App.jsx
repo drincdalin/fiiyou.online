@@ -2,9 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { auth, admin as adminApi, profiles, cards as cardsApi, friends, wall, social, safety, media, errorCode } from '../index.js';
 import { useImages, Boot, Avatar, Rich } from './shared.jsx';
 import { toCss } from './customCss.js';
-import { Lightbox, ReportModal, Verified, NavIcon, spamMessage } from './parts.jsx';
-import ImportModal from './ImportModal.jsx';
-import { buildThemeExport, download } from './themeFile.js';
+import { Lightbox, LikersModal, ReportModal, Verified, NavIcon, spamMessage } from './parts.jsx';
 import { HomeView, MapView, MessagesView, PeopleView, PostView } from './views.jsx';
 import AdminView from './Admin.jsx';
 import { themeStyle } from './theme.js';
@@ -15,7 +13,8 @@ import { stickerModel, stickerStyle, withModel, reanchor, nearestAnchor, settleS
 import Customizer from './Customizer.jsx';
 import { ask } from './dialog.jsx';
 import ShareSheet from './ShareSheet.jsx';
-import { Eye, EyeSlash, Check, DownloadSimple, Heart, PencilSimple, ShareNetwork, SignOut, Trash, UploadSimple, User } from '@phosphor-icons/react';
+import NotificationList, { useNotifCount } from './Notifications.jsx';
+import { Eye, EyeSlash, Check, Heart, PencilSimple, ShareNetwork, SignOut, Trash } from '@phosphor-icons/react';
 
 const BASE = import.meta.env.BASE_URL;
 function Auth() {
@@ -127,9 +126,14 @@ const makeDraft = (d) => { const profile = d.profile; return { theme: { ...profi
 
 function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
   const [d, setD] = useState(null); const [draft, setDraft] = useState(null); const [sel, setSel] = useState(null); const [colW, setColW] = useState(920); const [avW, setAvW] = useState(190); const cardsRef = useRef(); const avRef = useRef();
-  const [collapsed, setCollapsed] = useState(false); const [lb, setLb] = useState(null); const [rep, setRep] = useState(false); const frame = useRef(); const pageRef = useRef(); const [sharing, setSharing] = useState(false); const [shareData, setShareData] = useState(null);
+  const [collapsed, setCollapsed] = useState(false); const [lb, setLb] = useState(null); const [rep, setRep] = useState(false); const frame = useRef(); const pageRef = useRef(); const [sharing, setSharing] = useState(false); const [shareData, setShareData] = useState(null); const [likers, setLikers] = useState(null);
   const load = useCallback(() => profiles.getFullProfile(username).then(setD).catch((e) => notify(e.message, 'err')), [username]);
   useEffect(() => { setD(null); setDraft(null); setSel(null); setLb(null); load(); }, [load]);
+  const viewed = useRef(null);
+  useEffect(() => {   // one visit = one view: recorded once per profile page open (not on reloads after friend / wall actions), then the shown count is refreshed
+    if (!d || d.relationship.status === 'self' || viewed.current === d.profile.id) return; const id = d.profile.id; viewed.current = id;
+    profiles.recordView(id).then(() => profiles.myViews(id)).then((n) => setD((x) => (x && x.profile.id === id ? { ...x, views: n } : x))).catch(() => {});
+  }, [d]);
   useEffect(() => { const c = cardsRef.current, a = avRef.current; if (!c) return; const upd = () => { setColW(c.clientWidth || 920); setAvW((a && a.clientWidth) || 190); }; const ro = new ResizeObserver(upd); ro.observe(c); if (a) ro.observe(a); upd(); return () => ro.disconnect(); }, [d]);   // widths the sticker units are measured against (cards column, avatar)
   const shown = draft ? draft.cards : d?.cards; const theme = draft ? draft.theme : d?.profile.theme; const music = (draft ? draft.fields.music : d?.profile.music) || {};
   const img = useImages(d ? [d.profile.avatar_path, theme.bg_image, music.cover, ...shown.flatMap((c) => c.content.images || []), ...d.photos.map((p) => p.path), ...d.topFriends.map((f) => f.avatar_path)] : []);
@@ -226,7 +230,8 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
     {draft && <Customizer draft={draft} setDraft={setDraft} onClose={() => setDraft(null)} reload={async () => { await load(); refreshMe(); }} sel={sel} setSel={setSel} notify={notify} photos={d.photos} img={img} collapsed={collapsed} setCollapsed={setCollapsed} />}
     {rep && <ReportModal target={{ type: 'profile', id: profile.id }} onClose={() => setRep(false)} notify={notify} />}
     {shareData && <ShareSheet data={shareData} onClose={() => setShareData(null)} />}
-    {lb != null && <Lightbox items={items} index={lb} onClose={() => setLb(null)} onIndex={setLb} onLike={own ? undefined : likePhoto} />}
+    {lb != null && <Lightbox items={items} index={lb} onClose={() => setLb(null)} onIndex={setLb} onLike={own ? undefined : likePhoto} onLikers={own ? (it) => setLikers(it) : undefined} />}
+    {likers && <LikersModal load={() => social.listPhotoLikers(likers.id)} go={go} onClose={() => setLikers(null)} />}
     </>
   );
 }
@@ -244,8 +249,8 @@ function parseHash() {
 
 export default function App() {
   const [session, setSession] = useState(undefined); const [me, setMe] = useState(null); const [route, setRoute] = useState(parseHash);
-  const [isAdmin, setIsAdmin] = useState(false); const [recovery, setRecovery] = useState(false); const [importing, setImporting] = useState(false);
-  const [menu, setMenu] = useState(false); const [toast, setToast] = useState(null); const [unread, setUnread] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false); const [recovery, setRecovery] = useState(false);
+  const [menu, setMenu] = useState(false); const { n: nCount, setN: setNCount, tick: nTick } = useNotifCount(me?.id); const [toast, setToast] = useState(null); const [unread, setUnread] = useState(0);
   const refreshMe = useCallback(() => profiles.getMyProfile().then(setMe).catch(() => {}), []);
   const myImg = useImages([me?.avatar_path]);
   const refreshUnread = useCallback(() => social.unreadCount().then(setUnread).catch(() => {}), []);
@@ -282,16 +287,13 @@ export default function App() {
     setMenu(false); window.scrollTo(0, 0); if (location.hash === h) setRoute(parseHash()); else location.hash = h; };
   const NAV = [['home', 'Home'], ['profile', 'Me'], ['map', 'Map'], ['messages', 'Chat'], ['people', 'People'], ...(isAdmin ? [['admin', 'Admin']] : [])];
   const active = (v) => (v === 'profile' ? route.v === 'profile' && (!route.username || route.username === me.username) : route.v === v);
-  const exportTheme = async () => { try { download('fiiyou-theme.json', buildThemeExport(await profiles.getMyProfile(), await cardsApi.listMine())); notify('Theme exported'); } catch (e) { notify(e.message, 'err'); } };
   return (<div className="app">
     <nav className="nav"><button className="logo" onClick={() => go('home')}>fiiyou</button>
       <div className="navlinks">{NAV.map(([v, l]) => <button key={v} className={active(v) ? 'on' : ''} aria-label={l} title={l} aria-current={active(v) ? 'page' : undefined} onClick={() => go(v)}><NavIcon name={v} active={active(v)} />{v === 'messages' && unread > 0 && <em className="dotb">{unread > 99 ? '99+' : unread}</em>}</button>)}</div>
-      <div className="more" ref={menuRef}><button className="avbtn" onClick={() => setMenu(!menu)} aria-label="Account menu"><Avatar src={myImg[me.avatar_path]} size={34} /></button>{menu && <div className="menu" role="menu">
+      <div className="more" ref={menuRef}><button className="avbtn" onClick={() => setMenu(!menu)} aria-label={nCount > 0 ? `Account menu (${nCount} new notifications)` : 'Account menu'} aria-expanded={menu}><Avatar src={myImg[me.avatar_path]} size={34} />{nCount > 0 && <em className="dotb avdot" aria-hidden="true">{nCount > 9 ? '9+' : nCount}</em>}</button>{menu && <div className="menu" role="menu">
         <button className="mhead" role="menuitem" onClick={() => go('profile')}><Avatar src={myImg[me.avatar_path]} size={44} /><span><b>{me.display_name || me.username}</b><small>@{me.username}</small></span></button>
         <hr className="msep" />
-        <button role="menuitem" onClick={() => { setMenu(false); exportTheme(); }}><DownloadSimple size={18} weight="bold" aria-hidden="true" />Export theme</button>
-        <button role="menuitem" onClick={() => { setMenu(false); setImporting(true); }}><UploadSimple size={18} weight="bold" aria-hidden="true" />Import theme</button>
-        <button role="menuitem" onClick={() => { setMenu(false); auth.exportMyData().then((j) => { download('fiiyou-data.json', j); notify('Data exported'); }).catch((e) => notify(e.message, 'err')); }}><DownloadSimple size={18} weight="bold" aria-hidden="true" />Export my data</button>
+        <NotificationList go={go} notify={notify} tick={nTick} onRead={() => setNCount(0)} />
         <hr className="msep" />
         <button role="menuitem" onClick={() => { setMenu(false); auth.signOut(); }}><SignOut size={18} weight="bold" aria-hidden="true" />Sign out</button>
         <button role="menuitem" className="danger" onClick={async () => { setMenu(false); if (await ask({ title: 'Delete your account?', message: 'Your account and everything in it will be deleted. This cannot be undone.', confirmLabel: 'Delete account', danger: true })) auth.deleteAccount(); }}><Trash size={18} weight="bold" aria-hidden="true" />Delete account</button></div>}</div></nav>
@@ -302,7 +304,6 @@ export default function App() {
     {route.v === 'people' && <PeopleView me={me} go={go} notify={notify} />}
     {route.v === 'post' && <PostView key={route.id} id={route.id} me={me} go={go} notify={notify} />}
     {route.v === 'profile' && <ProfileView key={route.username || me.username} username={route.username || me.username} go={go} notify={notify} refreshMe={refreshMe} meName={me.username} autoEdit={!!route.edit} />}
-    {importing && <ImportModal onClose={() => setImporting(false)} notify={notify} onDone={() => { setImporting(false); refreshMe(); go('profile'); setRoute(parseHash()); }} />}
     {toast && <div className={`toast ${toast.type}`} role="status">{toast.msg}</div>}
   </div>);
 }

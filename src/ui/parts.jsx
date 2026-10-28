@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
-import { House, User, MapPin, ChatCircle, UsersThree, ShieldCheck, Heart, X, CaretLeft, CaretRight, Flag, PencilSimple, Trash, PaperPlaneRight, ImageSquare, CalendarBlank, ShareNetwork } from '@phosphor-icons/react';
+import { useEffect, useRef, useState } from 'react';
+import { House, User, MapPin, ChatCircle, UsersThree, ShieldCheck, Heart, X, CaretLeft, CaretRight, Flag, PencilSimple, Trash, PaperPlaneRight, ImageSquare, CalendarBlank, ShareNetwork, DotsThree } from '@phosphor-icons/react';
 import PostShareModal from './PostShare.jsx';
 import { posts, safety } from '../index.js';
-import { Avatar, ago, Rich } from './shared.jsx';
+import { Avatar, ago, Rich, useImages } from './shared.jsx';
 import { ask } from './dialog.jsx';
 
 /** Friendly text for the database's spam-guard errors (see spam_and_bans.sql). Returns null for any other error. */
@@ -22,7 +22,7 @@ export function Verified() {
 }
 
 /** Pop-up viewer. items: [{id, src, caption, likes, liked}]. Pass onLike to show the like button. */
-export function Lightbox({ items, index, onClose, onIndex, onLike }) {
+export function Lightbox({ items, index, onClose, onIndex, onLike, onLikers }) {
   const it = items[index]; const n = items.length;
   useEffect(() => {
     const key = (e) => { if (e.key === 'Escape') onClose(); if (e.key === 'ArrowRight') onIndex((index + 1) % n); if (e.key === 'ArrowLeft') onIndex((index - 1 + n) % n); };
@@ -36,13 +36,13 @@ export function Lightbox({ items, index, onClose, onIndex, onLike }) {
       {it.src ? <img src={it.src} alt={it.caption || ''} /> : <div className="boot">…</div>}
       {n > 1 && <button className="arrow r" onClick={() => onIndex((index + 1) % n)} aria-label="Next"><CaretRight size={22} weight="bold" aria-hidden="true" /></button>}</div>
     <div className="lbfoot">{it.caption && <p>{it.caption}</p>}
-      <div className="lbbar">{onLike && <button className={`like${it.liked ? ' on' : ''}`} onClick={() => onLike(it)}><Heart size={16} weight={it.liked ? 'fill' : 'bold'} aria-hidden="true" />{it.likes}</button>}<small>{index + 1} / {n}</small></div></div>
+      <div className="lbbar">{onLike && <button className={`like${it.liked ? ' on' : ''}`} onClick={() => onLike(it)}><Heart size={16} weight={it.liked ? 'fill' : 'bold'} aria-hidden="true" />{it.likes}</button>}{!onLike && onLikers && it.likes > 0 && <button className="like" onClick={() => onLikers(it)} aria-label={`See who liked (${it.likes})`}><Heart size={16} weight="fill" aria-hidden="true" />{it.likes}</button>}<small>{index + 1} / {n}</small></div></div>
   </div></div>);
 }
 
 export function PostCard({ p, me, img, go, onChange, onDelete, notify }) {
   const [edit, setEdit] = useState(false); const [body, setBody] = useState(p.body); const [title, setTitle] = useState(p.title || '');
-  const [open, setOpen] = useState(false); const [cs, setCs] = useState(null); const [txt, setTxt] = useState(''); const [zoom, setZoom] = useState(false); const [rep, setRep] = useState(false); const [shr, setShr] = useState(false);
+  const [open, setOpen] = useState(false); const [cs, setCs] = useState(null); const [txt, setTxt] = useState(''); const [zoom, setZoom] = useState(false); const [rep, setRep] = useState(false); const [shr, setShr] = useState(false); const [menu, setMenu] = useState(false);
   const own = p.author_id === me.id; const fail = (e) => notify(spamMessage(e) || e.message || 'Something went wrong', 'err');
   const like = async () => { const on = !p.liked; onChange({ ...p, liked: on, like_count: p.like_count + (on ? 1 : -1) }); try { await posts.setLike(p.id, on); } catch (e) { onChange(p); fail(e); } };
   const save = async () => { try { const r = await posts.updatePost(p.id, { body, title: p.kind === 'event' ? title : undefined }); onChange({ ...p, body: r.body, title: r.title, edited_at: r.edited_at }); setEdit(false); notify('Post updated'); } catch (e) { fail(e); } };
@@ -54,8 +54,11 @@ export function PostCard({ p, me, img, go, onChange, onDelete, notify }) {
   return (<article className={`post${p.author_official ? ' official' : ''}`}>
     <header><button className="who" onClick={() => go('profile', p.author_username)}><Avatar src={img[p.author_avatar_path]} />
       <span><b>{p.author_display_name}{p.author_official && <Verified />}</b><small>@{p.author_username} · {ago(p.created_at)}{p.edited_at && ' · edited'}</small></span></button>
-      {!own && <span className="pa"><button className="ghost sm" onClick={() => setRep(true)}><Flag size={14} weight="bold" aria-hidden="true" />Report</button></span>}
-      {own && !edit && <span className="pa"><button className="ghost sm" onClick={() => setEdit(true)}><PencilSimple size={14} weight="bold" aria-hidden="true" />Edit</button><button className="ghost sm danger" onClick={del}><Trash size={14} weight="bold" aria-hidden="true" />Delete</button></span>}</header>
+      {!edit && <div className="pmenuwrap"><button className="ghost pmore" onClick={() => setMenu(!menu)} aria-label="More options" aria-expanded={menu}><DotsThree size={24} weight="bold" aria-hidden="true" /></button>
+        {menu && <><div className="pmenuback" onClick={() => setMenu(false)} /><div className="pmenu" role="menu">
+          {own ? <><button role="menuitem" onClick={() => { setMenu(false); setEdit(true); }}><PencilSimple size={18} weight="bold" aria-hidden="true" />Edit</button>
+            <button role="menuitem" className="danger" onClick={() => { setMenu(false); del(); }}><Trash size={18} weight="bold" aria-hidden="true" />Delete</button></>
+            : <button role="menuitem" onClick={() => { setMenu(false); setRep(true); }}><Flag size={18} weight="bold" aria-hidden="true" />Report</button>}</div></>}</div>}</header>
     <div className={`pmain${p.image_path && src ? ' has' : ''}`}>
       {p.image_path && src && <button className="pimg" style={{ '--bgimg': `url("${src}")` }} onClick={() => setZoom(true)} aria-label="Open photo"><img src={src} alt="" loading="lazy" /></button>}
       <div className="ptext">
@@ -68,9 +71,9 @@ export function PostCard({ p, me, img, go, onChange, onDelete, notify }) {
           : <>{p.title && <h3>{p.title}</h3>}<p className="pre"><Rich text={p.body} onUser={(u) => go('profile', u)} /></p></>}
       </div>
     </div>
-    <footer><button className={`like${p.liked ? ' on' : ''}`} onClick={like}><Heart size={16} weight={p.liked ? 'fill' : 'bold'} aria-hidden="true" />{p.like_count}</button>
-      <button className="ghost sm" onClick={toggle}><ChatCircle size={14} weight="bold" aria-hidden="true" />Comments {p.comment_count}</button>
-      {p.visibility !== 'friends' && <button className="ghost sm" onClick={() => setShr(true)}><ShareNetwork size={14} weight="bold" aria-hidden="true" />Share</button>}</footer>
+    <footer><button className={`like${p.liked ? ' on' : ''}`} onClick={like} aria-label={p.liked ? 'Unlike' : 'Like'}><Heart size={16} weight={p.liked ? 'fill' : 'bold'} aria-hidden="true" />{p.like_count}</button>
+      <button className="ghost sm" onClick={toggle} aria-label="Comments"><ChatCircle size={16} weight="bold" aria-hidden="true" /><span className="lbl">Comments </span>{p.comment_count}</button>
+      {p.visibility !== 'friends' && <button className="ghost sm pshare" onClick={() => setShr(true)} aria-label="Share"><ShareNetwork size={16} weight="bold" aria-hidden="true" /><span className="lbl">Share</span></button>}</footer>
     {open && <div className="comments">{(cs || []).map((c) => (<div key={c.id} className="cm"><span><button className="ulink" onClick={() => go('profile', c.author.username)}><b>{c.author.display_name}</b></button> <Rich text={c.body} onUser={(u) => go('profile', u)} /></span>
       {(c.author.id === me.id || own) && <button className="ghost sm danger" aria-label="Delete comment" onClick={async () => { try { await posts.deleteComment(c.id); setCs(cs.filter((x) => x.id !== c.id)); onChange({ ...p, comment_count: p.comment_count - 1 }); } catch (e) { fail(e); } }}><X size={14} weight="bold" aria-hidden="true" /></button>}</div>))}
       <form className="inline" onSubmit={send}><input value={txt} maxLength={500} placeholder="Write a comment…" onChange={(e) => setTxt(e.target.value)} /><button className="primary sm" disabled={!txt.trim()}><PaperPlaneRight size={14} weight="bold" aria-hidden="true" />Send</button></form></div>}
@@ -78,6 +81,30 @@ export function PostCard({ p, me, img, go, onChange, onDelete, notify }) {
     {rep && <ReportModal target={{ type: 'post', id: p.id }} onClose={() => setRep(false)} notify={notify} />}
     {shr && <PostShareModal p={p} img={img} onClose={() => setShr(false)} notify={notify} />}
   </article>);
+}
+
+/** Likes list: a bottom sheet on phones (swipe down or tap outside to close), a small centred card on desktop.
+ *  load() -> [{ id, username, display_name, avatar_path, is_official }], newest like first. Only the owner of the content gets to open it. */
+export function LikersModal({ load, go, onClose }) {
+  const [rows, setRows] = useState(null); const [err, setErr] = useState(''); const [dy, setDy] = useState(0); const y0 = useRef(null);
+  useEffect(() => { let on = true; load().then((r) => on && setRows(r || [])).catch((e) => on && setErr(e.message || 'Could not load the list')); return () => { on = false; }; }, []);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {   // Esc closes only this sheet (not the photo viewer behind it); the viewer's arrow keys are paused while it is open
+    const key = (e) => { if (e.key === 'Escape') onClose(); if (['Escape', 'ArrowLeft', 'ArrowRight'].includes(e.key)) { e.stopImmediatePropagation(); e.preventDefault(); } };
+    const prev = document.body.style.overflow; addEventListener('keydown', key, true); document.body.style.overflow = 'hidden';
+    return () => { removeEventListener('keydown', key, true); document.body.style.overflow = prev; };
+  }, []);   // eslint-disable-line react-hooks/exhaustive-deps
+  const img = useImages((rows || []).map((r) => r.avatar_path));
+  const down = (e) => { y0.current = e.touches[0].clientY; };
+  const move = (e) => { if (y0.current != null) setDy(Math.max(0, e.touches[0].clientY - y0.current)); };
+  const up = () => { y0.current = null; if (dy > 90) onClose(); else setDy(0); };
+  return (<div className="modal likesheet" onClick={onClose}><div className="panel likepanel" role="dialog" aria-modal="true" aria-label="Likes" onClick={(e) => e.stopPropagation()} style={dy ? { transform: `translateY(${dy}px)`, transition: 'none' } : undefined}>
+    <div className="likehead" onTouchStart={down} onTouchMove={move} onTouchEnd={up}><i className="grab" aria-hidden="true" />
+      <h3>Likes{rows && rows.length > 0 && <small>{rows.length}</small>}</h3>
+      <button className="ghost likex" onClick={onClose} aria-label="Close"><X size={18} weight="bold" aria-hidden="true" /></button></div>
+    {err ? <p className="err likemsg">{err}</p> : !rows ? <div className="boot">…</div> : !rows.length ? <p className="muted likemsg">No likes yet.</p>
+      : <ul className="likelist">{rows.map((r) => (<li key={r.id}><button className="likerow" onClick={() => { onClose(); go('profile', r.username); }}><Avatar src={img[r.avatar_path]} size={44} />
+        <span><b>{r.display_name}{r.is_official && <Verified />}</b><small>@{r.username}</small></span></button></li>))}</ul>}
+  </div></div>);
 }
 
 export function ReportModal({ target, onClose, notify }) {
