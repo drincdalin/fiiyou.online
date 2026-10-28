@@ -120,15 +120,59 @@ export async function renderPostImage(p, { avatarUrl, imageUrl }) {
   return new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('Could not create the image'))), 'image/png'));
 }
 
-/** The message a friend receives in chat. It links to the author's profile (the short link already routes there). */
-export function postChatText(p, note = '') {
-  const snippet = (p.title ? `${p.title}\n` : '') + String(p.body || '');
-  const short = snippet.length > 280 ? `${snippet.slice(0, 277)}…` : snippet;
-  return `${note ? `${note.trim()}\n\n` : ''}Shared a post by @${p.author_username}:\n“${short}”\n${location.origin}/${p.author_username}`;
+// ---------------------------------------------------------------------------------------------
+// A shared post travels as an ordinary chat message (messages.body, max 1000 chars):
+//   fiiyou:post:{"v":1,...compact post data...}\n<optional note>
+// The chat (views.jsx) recognises the prefix and draws a card instead of text. Anything else is a normal message.
+// ---------------------------------------------------------------------------------------------
+const PREFIX = 'fiiyou:post:';
+const PATH = /^[0-9a-f-]{36}\/[0-9a-f-]{36}\.(webp|gif)$/i;   // only real media paths are ever turned into image URLs
+const okPath = (s) => (typeof s === 'string' && PATH.test(s) ? s : null);
+
+export function encodeSharedPost(p, note = '') {
+  const n = String(note || '').trim().slice(0, 200);
+  const base = { v: 1, id: p.id, u: p.author_username, n: p.author_display_name || p.author_username, a: p.author_avatar_path || null,
+    t: p.title || null, i: p.image_path || null, k: p.kind };
+  if (p.kind === 'event' && p.event_at) { base.e = p.event_at; if (p.event_place) base.ep = p.event_place; }
+  const full = String(p.body || '');
+  for (let len = 300; ; len -= 20) {   // shrink the excerpt until the whole message fits the 1000 character limit
+    const b = full.length > len ? `${full.slice(0, Math.max(0, len - 1)).trimEnd()}…` : full;
+    const s = PREFIX + JSON.stringify({ ...base, b }) + (n ? `\n${n}` : '');
+    if (s.length <= 1000 || len <= 0) return s;
+  }
+}
+
+/** { data, note } for a shared-post message, or null for any other message. */
+export function decodeSharedPost(body) {
+  if (typeof body !== 'string' || !body.startsWith(PREFIX)) return null;
+  const nl = body.indexOf('\n');
+  try {
+    const d = JSON.parse(nl < 0 ? body.slice(PREFIX.length) : body.slice(PREFIX.length, nl));
+    if (!d || d.v !== 1 || typeof d.u !== 'string') return null;
+    return { data: d, note: nl < 0 ? '' : body.slice(nl + 1).trim() };
+  } catch { return null; }
+}
+
+/** Short text for places that cannot draw a card (conversation list, reply quotes). */
+export const previewText = (body) => { const s = decodeSharedPost(body); return s ? `Shared a post by @${s.data.u}` : body; };
+
+/** The card shown inside a chat bubble. Everything in `data` is untrusted text from another user: it is only ever rendered as text. */
+export function SharedPostCard({ data, go }) {
+  const img = useImages([okPath(data.a), okPath(data.i)]);
+  const src = img[data.i], av = img[data.a];
+  const when = data.e ? new Date(data.e).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' }) + (data.ep ? ` · ${data.ep}` : '') : '';
+  const open = () => (/^[0-9a-f-]{36}$/i.test(data.id || '') ? go('post', data.id.toLowerCase()) : go('profile', data.u));   // bad or missing id: fall back to the author's profile
+  return (<button type="button" className="sp" onClick={open} aria-label={`Shared post by @${data.u}. Open post`}>
+    <span className="sphead"><Avatar src={av} size={30} /><span className="spname"><b>{data.n}</b><small>@{data.u}</small></span></span>
+    {when && <small className="spev">{when}</small>}
+    {data.t && <b className="sptitle">{data.t}</b>}
+    {data.b && <span className="spbody">{data.b}</span>}
+    {src && <img className="spimg" src={src} alt="" loading="lazy" />}
+    <small className="spcta">Open post</small></button>);
 }
 
 export default function PostShareModal({ p, img, onClose, notify }) {
-  const [tab, setTab] = useState('image');
+  const [tab, setTab] = useState('chat');
   const [blob, setBlob] = useState(null); const [url, setUrl] = useState(null); const [err, setErr] = useState('');
   const [list, setList] = useState(null); const [q, setQ] = useState(''); const [note, setNote] = useState(''); const [sent, setSent] = useState({}); const [busy, setBusy] = useState(null);
   const urlRef = useRef(null);
@@ -157,7 +201,7 @@ export default function PostShareModal({ p, img, onClose, notify }) {
   };
   const send = async (f) => {
     setBusy(f.id);
-    try { await sendChat(f.id, postChatText(p, note)); setSent((s) => ({ ...s, [f.id]: true })); notify(`Sent to ${f.display_name || f.username}`); }
+    try { await sendChat(f.id, encodeSharedPost(p, note)); setSent((s) => ({ ...s, [f.id]: true })); notify(`Sent to ${f.display_name || f.username}`); }
     catch (e) { notify(e?.message?.includes('rate_limit') ? 'Slow down a bit.' : e?.message || 'Could not send', 'err'); }
     setBusy(null);
   };
@@ -165,8 +209,8 @@ export default function PostShareModal({ p, img, onClose, notify }) {
   return (<div className="modal" onClick={onClose}><div className="panel mform pshare" role="dialog" aria-modal="true" aria-label="Share post" onClick={(e) => e.stopPropagation()}>
     <header className="pshead"><h3>Share post</h3><button className="ghost" onClick={onClose} aria-label="Close"><X size={16} weight="bold" aria-hidden="true" /></button></header>
     <div className="tabs" role="tablist">
-      <button role="tab" aria-selected={tab === 'image'} className={tab === 'image' ? 'on' : ''} onClick={() => setTab('image')}><ImageSquare size={16} weight="bold" aria-hidden="true" />Story image</button>
-      <button role="tab" aria-selected={tab === 'chat'} className={tab === 'chat' ? 'on' : ''} onClick={() => setTab('chat')}><ChatCircle size={16} weight="bold" aria-hidden="true" />Send in chat</button></div>
+      <button role="tab" aria-selected={tab === 'chat'} className={tab === 'chat' ? 'on' : ''} onClick={() => setTab('chat')}><ChatCircle size={16} weight="bold" aria-hidden="true" />Send in chat</button>
+      <button role="tab" aria-selected={tab === 'image'} className={tab === 'image' ? 'on' : ''} onClick={() => setTab('image')}><ImageSquare size={16} weight="bold" aria-hidden="true" />Story image</button></div>
 
     {tab === 'image' && <>
       <div className="psprev">{err ? <p className="err" role="alert">{err}</p> : url ? <img src={url} alt="Preview of the story image" /> : <div className="boot">Making the image…</div>}</div>

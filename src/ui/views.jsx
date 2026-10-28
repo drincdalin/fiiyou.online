@@ -4,6 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import { posts, social, friends, discover, profiles } from '../index.js';
 import { useImages, Avatar, ago } from './shared.jsx';
 import { PostCard, Composer, Lightbox } from './parts.jsx';
+import { SharedPostCard, decodeSharedPost, previewText } from './PostShare.jsx';
 import { ask } from './dialog.jsx';
 import { ArrowBendUpLeft, PaperPlaneRight, X } from '@phosphor-icons/react';
 
@@ -22,6 +23,17 @@ const List = ({ f, me, go, notify, empty }) => !f.rows ? <div className="boot">L
   {!f.rows.length && <p className="empty">{empty}</p>}
   {f.rows.map((p) => <PostCard key={p.id} p={p} me={me} img={f.img} go={go} onChange={f.change} onDelete={f.drop} notify={notify} />)}
   {f.more && <button className="ghost wide" onClick={() => f.load(true, f.rows)}>Load more</button>}</>);
+
+/* ---------------- Single post (opened from a shared-post card in chat: #/post/<id>) ---------------- */
+export function PostView({ id, me, go, notify }) {
+  const [p, setP] = useState(undefined);   // undefined = loading, null = missing or not visible to this person
+  useEffect(() => { setP(undefined); posts.getPost(id).then(setP).catch(() => setP(null)); }, [id]);
+  const img = useImages(p ? [p.image_path, p.author_avatar_path] : []);
+  if (p === undefined) return <div className="boot">Loading…</div>;
+  return (<div className="plain view"><div className="phead"><button className="ghost sm" onClick={() => (history.length > 1 ? history.back() : go('home'))}>‹ Back</button></div>
+    {p ? <PostCard p={p} me={me} img={img} go={go} onChange={setP} onDelete={() => go('home')} notify={notify} />
+      : <p className="empty">This post is not available. It may have been deleted, or it is only visible to friends.</p>}</div>);
+}
 
 /* ---------------- Home ---------------- */
 function Snapshot({ go, unread }) {
@@ -156,16 +168,17 @@ export function MessagesView({ me, peer, go, notify, refreshUnread }) {
       {!convs.length && !fresh.length && <p className="empty">Add friends to start chatting.</p>}
       {convs.map((c) => (<button key={c.id} className={`crow2${cur === c.id ? ' on' : ''}${c.unread > 0 ? ' unread' : ''}`} onClick={() => setCur(c.id)}><Avatar src={img[c.avatar_path]} size={44} />
         <span className="ctext"><span className="cl1"><b>{c.display_name}</b><small>{ago(c.last_at)}</small></span>
-          <span className="cl2"><small className="prev">{c.last_mine ? 'You: ' : ''}{c.last_body}</small>{c.unread > 0 && <em className="dotb">{c.unread}</em>}</span></span></button>))}</aside>
+          <span className="cl2"><small className="prev">{c.last_mine ? 'You: ' : ''}{previewText(c.last_body)}</small>{c.unread > 0 && <em className="dotb">{c.unread}</em>}</span></span></button>))}</aside>
     <section className="cthread">{cur && who ? (<>
       <header><button className="ghost sm back" onClick={() => setCur(null)}>‹</button><Avatar src={img[who.avatar_path]} size={34} /><button className="link" onClick={() => go('profile', who.username)}><b>{who.display_name}</b><small>@{who.username}</small></button></header>
       <div className="msgs">{msgs ? (msgs.length ? msgs.map((m, i) => { const mine = m.sender_id === me.id; const newDay = i === 0 || new Date(m.created_at).toDateString() !== new Date(msgs[i - 1].created_at).toDateString();
         const nx = msgs[i + 1]; const first = newDay || msgs[i - 1].sender_id !== m.sender_id;   // first / last bubble of a run from the same person
         const tail = !nx || nx.sender_id !== m.sender_id || new Date(nx.created_at).toDateString() !== new Date(m.created_at).toDateString();
         const q = m.reply_to ? (byId.get(m.reply_to) || (m.reply?.id ? m.reply : null)) : null;
+        const sp = decodeSharedPost(m.body);   // a shared post: drawn as a card instead of text
         return (<Fragment key={m.id}>{newDay && <div className="dsep">{dayLabel(m.created_at)}</div>}<div className={`brow${mine ? ' mine' : ''}${first ? ' first' : ''}${tail ? ' tail' : ''}`} id={`m-${m.id}`}>{!mine && (tail ? <Avatar src={img[who.avatar_path]} size={26} /> : <span className="avsp" />)}{mine && replyBtn(m)}
-          <div className="bcol">{q && <button type="button" className="rq" onClick={() => jump(q.id)} aria-label="Go to the original message"><span className="rqlab"><ArrowBendUpLeft size={12} weight="bold" aria-hidden="true" />{replyLabel(m, q)}</span><span className="rqtxt">{q.body}</span></button>}<div className={`bub${mine ? ' mine' : ''}`}><p>{m.body}</p><small>{new Date(m.created_at).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}</small></div></div>{!mine && replyBtn(m)}</div></Fragment>); }) : <p className="empty">Say hi.</p>) : <div className="boot">…</div>}<div ref={end} /></div>
-      {replyTo && <div className="replybar"><ArrowBendUpLeft className="ric" size={18} weight="bold" aria-hidden="true" /><div><b>Replying to {nameOf(replyTo)}</b><span>{replyTo.body}</span></div><button type="button" aria-label="Cancel reply" title="Cancel reply" onClick={() => setReplyTo(null)}><X size={16} weight="bold" aria-hidden="true" /></button></div>}
+          <div className="bcol">{q && <button type="button" className="rq" onClick={() => jump(q.id)} aria-label="Go to the original message"><span className="rqlab"><ArrowBendUpLeft size={12} weight="bold" aria-hidden="true" />{replyLabel(m, q)}</span><span className="rqtxt">{previewText(q.body)}</span></button>}<div className={`bub${mine ? ' mine' : ''}${sp ? ' hasshare' : ''}`}>{sp ? <><SharedPostCard data={sp.data} go={go} />{sp.note && <p>{sp.note}</p>}</> : <p>{m.body}</p>}<small>{new Date(m.created_at).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}</small></div></div>{!mine && replyBtn(m)}</div></Fragment>); }) : <p className="empty">Say hi.</p>) : <div className="boot">…</div>}<div ref={end} /></div>
+      {replyTo && <div className="replybar"><ArrowBendUpLeft className="ric" size={18} weight="bold" aria-hidden="true" /><div><b>Replying to {nameOf(replyTo)}</b><span>{previewText(replyTo.body)}</span></div><button type="button" aria-label="Cancel reply" title="Cancel reply" onClick={() => setReplyTo(null)}><X size={16} weight="bold" aria-hidden="true" /></button></div>}
       <form className="inline" onSubmit={send}><input ref={inp} value={txt} maxLength={1000} placeholder="Write a message…" onChange={(e) => setTxt(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && replyTo && setReplyTo(null)} autoFocus /><button className="primary sendbtn" aria-label="Send" title="Send" disabled={!txt.trim()}><PaperPlaneRight size={20} weight="fill" aria-hidden="true" /></button></form></>)
       : <p className="empty">Pick a conversation.</p>}</section></div>);
 }

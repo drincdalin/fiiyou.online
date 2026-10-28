@@ -5,7 +5,7 @@ import { toCss } from './customCss.js';
 import { Lightbox, ReportModal, Verified, NavIcon, spamMessage } from './parts.jsx';
 import ImportModal from './ImportModal.jsx';
 import { buildThemeExport, download } from './themeFile.js';
-import { HomeView, MapView, MessagesView, PeopleView } from './views.jsx';
+import { HomeView, MapView, MessagesView, PeopleView, PostView } from './views.jsx';
 import AdminView from './Admin.jsx';
 import { themeStyle } from './theme.js';
 import { useCustomFont } from './fonts.js';
@@ -236,6 +236,7 @@ function parseHash() {
   if (!location.hash && path && !path.includes('/') && path !== 'index.html') return { v: 'profile', username: path.toLowerCase() };
   const [a, b] = location.hash.replace(/^#\/?/, '').split('/');
   if (a === 'u' && b) return { v: 'profile', username: decodeURIComponent(b).toLowerCase() };
+  if (a === 'post' && b) return { v: 'post', id: decodeURIComponent(b) };
   if (a === 'chat') return { v: 'messages', peer: b };
   if (a === 'me') return { v: 'profile', edit: b === 'edit' };
   return { v: ['home', 'map', 'people', 'admin'].includes(a) ? a : 'home' };
@@ -262,7 +263,7 @@ export default function App() {
     });
   }, []);
   useEffect(() => { const h = () => setRoute(parseHash()); addEventListener('hashchange', h); return () => removeEventListener('hashchange', h); }, []);
-  useEffect(() => { const t = { home: 'Home', profile: route.username ? `@${route.username}` : 'Me', map: 'Map', messages: 'Chat', people: 'People', admin: 'Admin' }[route.v]; document.title = `fiiyou · ${t}`; }, [route]);
+  useEffect(() => { const t = { home: 'Home', profile: route.username ? `@${route.username}` : 'Me', map: 'Map', messages: 'Chat', people: 'People', admin: 'Admin', post: 'Post' }[route.v]; document.title = `fiiyou · ${t}`; }, [route]);
   useEffect(() => { if (session) profiles.getMyProfile().then(setMe).catch(() => {}); else setMe(null); }, [session]);
   useEffect(() => { if (!me) return; refreshUnread(); const t = setInterval(refreshUnread, 30000); const off = social.onMessage(me.id, refreshUnread); return () => { clearInterval(t); off(); }; }, [me?.id]);
   useEffect(() => { if (me?.id) adminApi.isAdmin().then(setIsAdmin).catch(() => setIsAdmin(false)); else setIsAdmin(false); }, [me?.id]);   // display only: the database re-checks every admin call
@@ -277,7 +278,7 @@ export default function App() {
   if (!session) return <Auth />;
   if (!me) return <Boot />;
   const notify = (msg, type = 'ok') => setToast({ msg, type });
-  const go = (v, username, peer, edit) => { const h = v === 'profile' ? (username && username !== me.username ? `#/u/${encodeURIComponent(username)}` : edit ? '#/me/edit' : '#/me') : v === 'messages' ? (peer ? `#/chat/${peer}` : '#/chat') : `#/${v}`;
+  const go = (v, username, peer, edit) => { const h = v === 'profile' ? (username && username !== me.username ? `#/u/${encodeURIComponent(username)}` : edit ? '#/me/edit' : '#/me') : v === 'messages' ? (peer ? `#/chat/${peer}` : '#/chat') : v === 'post' ? `#/post/${encodeURIComponent(username)}` : `#/${v}`;   // go('post', postId)
     setMenu(false); window.scrollTo(0, 0); if (location.hash === h) setRoute(parseHash()); else location.hash = h; };
   const NAV = [['home', 'Home'], ['profile', 'Me'], ['map', 'Map'], ['messages', 'Chat'], ['people', 'People'], ...(isAdmin ? [['admin', 'Admin']] : [])];
   const active = (v) => (v === 'profile' ? route.v === 'profile' && (!route.username || route.username === me.username) : route.v === v);
@@ -299,6 +300,7 @@ export default function App() {
     {route.v === 'messages' && <MessagesView key={route.peer || 'all'} me={me} peer={route.peer} go={go} notify={notify} refreshUnread={refreshUnread} />}
     {route.v === 'admin' && isAdmin && <AdminView go={go} notify={notify} />}
     {route.v === 'people' && <PeopleView me={me} go={go} notify={notify} />}
+    {route.v === 'post' && <PostView key={route.id} id={route.id} me={me} go={go} notify={notify} />}
     {route.v === 'profile' && <ProfileView key={route.username || me.username} username={route.username || me.username} go={go} notify={notify} refreshMe={refreshMe} meName={me.username} autoEdit={!!route.edit} />}
     {importing && <ImportModal onClose={() => setImporting(false)} notify={notify} onDone={() => { setImporting(false); refreshMe(); go('profile'); setRoute(parseHash()); }} />}
     {toast && <div className={`toast ${toast.type}`} role="status">{toast.msg}</div>}

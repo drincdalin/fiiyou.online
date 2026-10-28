@@ -41,3 +41,9 @@ export async function addComment(postId, body) {
   return unwrap(await supabase.from('post_comments').insert({ post_id: postId, author_id: await uid(), body }).select().single());
 }
 export async function deleteComment(id) { unwrap(await supabase.from('post_comments').delete().eq('id', id)); }
+
+/** One post in the same shape as feed() rows, or null when it does not exist or this person may not see it (see 0015_get_post.sql). */
+export async function getPost(id) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id))) return null;
+  return unwrap(await supabase.rpc('get_post', { p_id: id }))[0] || null;
+}
