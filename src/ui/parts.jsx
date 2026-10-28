@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { House, User, MapPin, ChatCircle, UsersThree, ShieldCheck, Heart, X, CaretLeft, CaretRight, Flag, PencilSimple, Trash, PaperPlaneRight, ImageSquare, CalendarBlank } from '@phosphor-icons/react';
+import { House, User, MapPin, ChatCircle, UsersThree, ShieldCheck, Heart, X, CaretLeft, CaretRight, Flag, PencilSimple, Trash, PaperPlaneRight, ImageSquare, CalendarBlank, ShareNetwork } from '@phosphor-icons/react';
+import PostShareModal from './PostShare.jsx';
 import { posts, safety } from '../index.js';
 import { Avatar, ago, Rich } from './shared.jsx';
 import { ask } from './dialog.jsx';
@@ -41,7 +42,7 @@ export function Lightbox({ items, index, onClose, onIndex, onLike }) {
 
 export function PostCard({ p, me, img, go, onChange, onDelete, notify }) {
   const [edit, setEdit] = useState(false); const [body, setBody] = useState(p.body); const [title, setTitle] = useState(p.title || '');
-  const [open, setOpen] = useState(false); const [cs, setCs] = useState(null); const [txt, setTxt] = useState(''); const [zoom, setZoom] = useState(false); const [rep, setRep] = useState(false);
+  const [open, setOpen] = useState(false); const [cs, setCs] = useState(null); const [txt, setTxt] = useState(''); const [zoom, setZoom] = useState(false); const [rep, setRep] = useState(false); const [shr, setShr] = useState(false);
   const own = p.author_id === me.id; const fail = (e) => notify(spamMessage(e) || e.message || 'Something went wrong', 'err');
   const like = async () => { const on = !p.liked; onChange({ ...p, liked: on, like_count: p.like_count + (on ? 1 : -1) }); try { await posts.setLike(p.id, on); } catch (e) { onChange(p); fail(e); } };
   const save = async () => { try { const r = await posts.updatePost(p.id, { body, title: p.kind === 'event' ? title : undefined }); onChange({ ...p, body: r.body, title: r.title, edited_at: r.edited_at }); setEdit(false); notify('Post updated'); } catch (e) { fail(e); } };
@@ -68,12 +69,14 @@ export function PostCard({ p, me, img, go, onChange, onDelete, notify }) {
       </div>
     </div>
     <footer><button className={`like${p.liked ? ' on' : ''}`} onClick={like}><Heart size={16} weight={p.liked ? 'fill' : 'bold'} aria-hidden="true" />{p.like_count}</button>
-      <button className="ghost sm" onClick={toggle}><ChatCircle size={14} weight="bold" aria-hidden="true" />Comments {p.comment_count}</button></footer>
+      <button className="ghost sm" onClick={toggle}><ChatCircle size={14} weight="bold" aria-hidden="true" />Comments {p.comment_count}</button>
+      {p.visibility !== 'friends' && <button className="ghost sm" onClick={() => setShr(true)}><ShareNetwork size={14} weight="bold" aria-hidden="true" />Share</button>}</footer>
     {open && <div className="comments">{(cs || []).map((c) => (<div key={c.id} className="cm"><span><button className="ulink" onClick={() => go('profile', c.author.username)}><b>{c.author.display_name}</b></button> <Rich text={c.body} onUser={(u) => go('profile', u)} /></span>
       {(c.author.id === me.id || own) && <button className="ghost sm danger" aria-label="Delete comment" onClick={async () => { try { await posts.deleteComment(c.id); setCs(cs.filter((x) => x.id !== c.id)); onChange({ ...p, comment_count: p.comment_count - 1 }); } catch (e) { fail(e); } }}><X size={14} weight="bold" aria-hidden="true" /></button>}</div>))}
       <form className="inline" onSubmit={send}><input value={txt} maxLength={500} placeholder="Write a comment…" onChange={(e) => setTxt(e.target.value)} /><button className="primary sm" disabled={!txt.trim()}><PaperPlaneRight size={14} weight="bold" aria-hidden="true" />Send</button></form></div>}
     {zoom && <Lightbox items={[{ id: p.id, src, caption: p.body }]} index={0} onClose={() => setZoom(false)} onIndex={() => {}} />}
     {rep && <ReportModal target={{ type: 'post', id: p.id }} onClose={() => setRep(false)} notify={notify} />}
+    {shr && <PostShareModal p={p} img={img} onClose={() => setShr(false)} notify={notify} />}
   </article>);
 }
 

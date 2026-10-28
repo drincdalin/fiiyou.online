@@ -1,0 +1,15 @@
+.pshare { width: min(440px, 100%); max-height: 90vh; overflow: auto; }
+.pshead { display: flex; align-items: center; justify-content: space-between; }
+.pshead h3 { margin: 0; }
+.pshead .ghost { width: 36px; height: 36px; min-height: 0; padding: 0; }
+.pshare .tabs { padding-bottom: 0; }
+.pshare .tabs button { flex: 1; justify-content: center; }
+.psprev { display: grid; place-items: center; min-height: 120px; background: var(--g0); border: 1px solid var(--g3); border-radius: var(--rad-l); padding: 8px; }
+.psprev img { display: block; width: auto; max-width: 100%; max-height: 52vh; border-radius: var(--rad-m); }
+.pswrap { display: grid; grid-template-columns: 1fr 1fr; }
+.pswrap > button:only-child { grid-column: 1 / -1; }
+.pslist { display: grid; gap: 8px; max-height: 44vh; overflow: auto; overscroll-behavior: contain; }
+.pslist .row { display: flex; align-items: center; gap: 10px; padding: .45rem .6rem; background: var(--g1); border: 1px solid var(--g3); border-radius: var(--rad-l); }
+.pslist .row .link { flex: 1; min-width: 0; display: grid; }
+.pslist .row .link > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 700px) { .psprev img { max-height: 46vh; } }
