@@ -290,7 +290,7 @@ export default function App() {
   return (<div className="app">
     <nav className="nav"><button className="logo" onClick={() => go('home')}>fiiyou</button>
       <div className="navlinks">{NAV.map(([v, l]) => <button key={v} className={active(v) ? 'on' : ''} aria-label={l} title={l} aria-current={active(v) ? 'page' : undefined} onClick={() => go(v)}><NavIcon name={v} active={active(v)} />{v === 'messages' && unread > 0 && <em className="dotb">{unread > 99 ? '99+' : unread}</em>}</button>)}</div>
-      <div className="more" ref={menuRef}><button className="avbtn" onClick={() => setMenu(!menu)} aria-label={nCount > 0 ? `Account menu (${nCount} new notifications)` : 'Account menu'} aria-expanded={menu}><Avatar src={myImg[me.avatar_path]} size={34} />{nCount > 0 && <em className="dotb avdot" aria-hidden="true">{nCount > 9 ? '9+' : nCount}</em>}</button>{menu && <div className="menu" role="menu">
+      <div className="more" ref={menuRef}><button className="avbtn" onClick={() => setMenu(!menu)} aria-label={nCount > 0 ? `Account menu (${nCount} new notifications)` : 'Account menu'} aria-expanded={menu}><Avatar src={myImg[me.avatar_path]} size={34} /></button>{nCount > 0 && <em className="avdot" aria-hidden="true">{nCount > 9 ? '9+' : nCount}</em>}{menu && <div className="menu" role="menu">
         <button className="mhead" role="menuitem" onClick={() => go('profile')}><Avatar src={myImg[me.avatar_path]} size={44} /><span><b>{me.display_name || me.username}</b><small>@{me.username}</small></span></button>
         <hr className="msep" />
         <NotificationList go={go} notify={notify} tick={nTick} onRead={() => setNCount(0)} />

@@ -234,7 +234,7 @@ input[type=file]::file-selector-button { border-radius: var(--rad-s); }
 /* Notifications: a badge on the avatar + the list lives inside the account menu */
 .nav .more { position: relative; }
 .nav .more > .avbtn { position: relative; }
-.avdot { position: absolute; top: -5px; right: -5px; min-width: 20px; height: 20px; padding: 0 5px; box-sizing: border-box; border: 2px solid var(--g1); border-radius: 10px; font-size: .68rem; font-style: normal; font-weight: 850; line-height: 16px; text-align: center; background: var(--accent); color: var(--on-accent); }
+.avdot { position: absolute; top: -4px; right: -4px; z-index: 2; pointer-events: none; display: grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; box-sizing: border-box; border: 2px solid var(--g1); border-radius: 10px; font-size: .68rem; font-style: normal; font-weight: 850; line-height: 1; background: var(--accent); color: var(--on-accent); }
 .menu { width: min(340px, calc(100vw - 24px)); }
 .nsec { display: flex; flex-direction: column; }
 .nhead { display: flex; align-items: center; gap: 8px; margin: 0; padding: 6px 10px 6px; font-size: .8rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
