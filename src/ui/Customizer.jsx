@@ -25,6 +25,7 @@ import { profiles, cards as cardsApi, media, discover, friends, social } from '.
 import { THEME_DEFAULTS, OPTIONS, COLOR_KEYS, GROUPS, radii } from './theme.js';
 import { SELECTORS, PROPS } from './customCss.js';
 import { PRESETS } from './themes.js';
+import { stickerModel, withModel, pinTo } from './stickerAnchor.js';
 
 // ═══ 1. CONSTANTS & HELPERS ═════════════════════════════════════════════════
 
@@ -1008,7 +1009,9 @@ function ContentTab({ ctx }) {
 }
 
 function StickersSection({ ctx }) {
-  const { stickers, s, sel, setSel, setCard, drop, topZ, img, run, busy, addSticker } = ctx;
+  const { stickers, s, sel, setSel, setCard, drop, topZ, img, run, busy, addSticker, th, draft } = ctx;
+  const anchors = [['avatar', 'Avatar'], ['nameplate', 'Name box'], ['player', 'Music player'], ['actions', 'Buttons (Message / Report)'], ['frame', 'Page (outside the border)'], ...draft.cards.filter((x) => x.visible && isFlow(x)).map((x) => [x.id, x.title || x.type])];
+  const m = s ? stickerModel(s, th) : null;
   return (
     // key re-opens this section whenever a sticker gets selected on the page
     <Section key={sel ? 'sel' : 'idle'} title="Stickers" icon={Sticker} meta={stickers.length || undefined}>
@@ -1016,7 +1019,7 @@ function StickersSection({ ctx }) {
       {stickers.length === 0 && <Empty icon={Sticker}>Stickers are small images you can place anywhere on your profile.</Empty>}
       {stickers.length > 0 && (
         <>
-          <p className="cz-hint">Drag a sticker on the page to move it. Drag its corner dot to resize.</p>
+          <p className="cz-hint">Drag a sticker to move it, drag its corner dot to resize. It gets pinned to the card or avatar highlighted while you drag, so it keeps its spot on phones and laptops.</p>
           <div className="cz-thumbs">
             {stickers.map((c, n) => (
               <button key={c.id} type="button" className="cz-thumb" aria-pressed={c.id === sel} aria-label={`Select sticker ${n + 1}`} onClick={() => setSel(c.id)}>
@@ -1028,8 +1031,12 @@ function StickersSection({ ctx }) {
       )}
       {s ? (
         <div className="cz-item">
+          <Select label="Pinned to" value={m.card && anchors.some(([id]) => id === m.card) ? m.card : ''} onChange={(e) => { const at = e.target.value && pinTo(s, e.target.value, th); if (at) setCard(s.id, withModel(s, th, at)); }}>
+            {!(m.card && anchors.some(([id]) => id === m.card)) && <option value="">Top of the cards</option>}
+            {anchors.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+          </Select>
           <Range label="Rotate" display={`${s.rotation}°`} min={-180} max={180} value={s.rotation} onChange={(n) => setCard(s.id, { rotation: n })} />
-          <Range label="Size" display={`${s.w}px`} min={40} max={600} value={s.w} onChange={(n) => setCard(s.id, { w: n, h: Math.round((n * s.h) / s.w) })} />
+          <Range label="Size" display={`${Math.round(m.w / 10)}%`} min={40} max={600} value={m.w} onChange={(n) => setCard(s.id, withModel(s, th, { w: n, h: Math.round((n * m.h) / m.w) }))} />
           <div className="cz-item-bar">
             <span className="cz-actions">
               <button type="button" className="cz-btn cz-btn--sm" onClick={() => setCard(s.id, { z: topZ + 1 })}><ArrowLineUp size={14} weight="bold" aria-hidden="true" />Front</button>
@@ -1145,7 +1152,7 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
     }
     const flow = draft.cards.filter((c) => c.type !== 'sticker');
     const res = await Promise.allSettled(draft.cards.map((c) => (c.type === 'sticker'
-      ? cardsApi.updateCard(c.id, { x: c.x, y: c.y, w: c.w, h: c.h, z: c.z, rotation: c.rotation, visible: c.visible })
+      ? cardsApi.updateCard(c.id, { x: c.x, y: c.y, w: c.w, h: c.h, z: c.z, rotation: c.rotation, visible: c.visible, content: c.content })
       : cardsApi.updateCard(c.id, {
         y: flow.indexOf(c) * 10,
         title: c.title,
@@ -1164,9 +1171,10 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
   });
   const addSticker = (file) => run(async () => {
     const bmp = await createImageBitmap(file);
-    const h = clamp(Math.round((140 * bmp.height) / bmp.width), 40, 2000);
+    const w = 150, h = clamp(Math.round((w * bmp.height) / bmp.width), 40, 2000);   // units: 150 = 15% of the cards column
+    const first = draft.cards.find((x) => x.visible && isFlow(x));                  // new stickers start pinned to the first card
     const path = await media.uploadImage(file, 'sticker');
-    const c = await cardsApi.createCard({ type: 'sticker', content: { images: [path] }, x: 40, y: 40, w: 140, h, z: topZ + 1 });
+    const c = await cardsApi.createCard({ type: 'sticker', content: { images: [path], at: { card: first?.id || null, v: 't' } }, x: 40, y: 40, w, h, z: topZ + 1 });
     setDraft((d) => ({ ...d, cards: [...d.cards, c] }));
     setSel(c.id);
   });

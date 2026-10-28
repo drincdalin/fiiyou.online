@@ -592,3 +592,74 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   .lbimg img { max-height: 62vh; }
   .mapview.open { grid-template-rows: 1fr; grid-template-columns: minmax(0, 1fr) 320px; }
 }
+
+/* ======================================================================
+   v19: STICKERS FOLLOW THEIR CARD / AVATAR, AND A PHONE-READY MUSIC PLAYER
+   Keep this block last.
+   Stickers sit inside the card (or the avatar) they are pinned to and are sized in multiples of
+   --u-cards / --u-avatar (px per sticker unit, measured in JS), so they scale with what they sit on.
+   ====================================================================== */
+.cards { position: relative; }                           /* stickers with no card sit in the cards column, NOT in the whole frame */
+.cw { position: relative; min-width: 0; }               /* no z-index: a sticker keeps its own z-index in the page stack */
+.avatar { position: relative; overflow: visible; }      /* stickers may hang over the photo's edge; the photo clips itself */
+.avatar img, .avatar i { border-radius: inherit; }
+.sticker { position: absolute; }
+.anchor-hot { outline: 2px dashed var(--accent); outline-offset: 4px; }   /* while dragging: what the sticker will be pinned to */
+@media (min-width: 1001px) {                            /* editing shows what visitors get at any width; the frame just makes room for the panel */
+  .page.editing .frame { min-width: 0; }
+}
+
+/* music player: the cover is a square; for YouTube the video takes its place */
+.player .pcover { position: relative; width: 100%; aspect-ratio: 1; border-radius: var(--r3); overflow: hidden; background: color-mix(in srgb, var(--card) 60%, #000); }
+.player .pcover > .cover { width: 100%; height: 100%; aspect-ratio: auto; object-fit: cover; border-radius: 0; display: block; }
+.player .pplay { position: absolute; inset: 0; display: block; width: 100%; height: 100%; padding: 0; border: 0; background: none; color: #fff; cursor: pointer; }
+.player .pplay .cover { width: 100%; height: 100%; aspect-ratio: auto; object-fit: cover; border-radius: 0; display: block; }
+.player .pplay .cover.ph { display: block; background: color-mix(in srgb, var(--accent) 35%, #000); }
+.player .pbadge { position: absolute; inset: 0; display: grid; place-items: center; background: linear-gradient(transparent 50%, #0007); }
+.player .pbadge .ico { width: 3rem; height: 3rem; padding: .8rem; border-radius: 50%; background: #000a; box-sizing: border-box; transition: transform .15s; }
+.player .pplay:hover .pbadge .ico, .player .pplay:focus-visible .pbadge .ico { transform: scale(1.08); }
+.player .pyt { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #000; }
+
+/* tablet + phone: cover on the left next to title and buttons, seek bar full width underneath */
+@media (max-width: 1000px) {
+  .player { grid-template-columns: clamp(88px, 24vw, 132px) minmax(0, 1fr); column-gap: 14px; row-gap: 6px; align-items: center;
+    grid-template-areas: "cover title" "cover ctrl" "seek seek" "times times" "vol vol"; }
+  .player .pcover { grid-area: cover; align-self: start; }
+  .player .ptitle { grid-area: title; text-align: left; align-self: end; }
+  .player .ctrl { grid-area: ctrl; justify-content: flex-start; align-self: start; gap: 6px; }
+  .player .seek { grid-area: seek; width: 100%; }
+  .player .times { grid-area: times; margin-top: 0; }
+  .player .volrow { grid-area: vol; }
+  .player.nocover { grid-template-columns: minmax(0, 1fr); grid-template-areas: "title" "ctrl" "seek" "times" "vol"; }
+  .player.nocover .ptitle { text-align: center; align-self: auto; }
+  .player.nocover .ctrl { justify-content: center; }
+  /* YouTube playing: the square video needs real room */
+  .player.live { grid-template-columns: minmax(0, 1fr); grid-template-areas: "cover" "title" "ctrl"; }
+  .player.live .pcover { width: min(100%, 420px); justify-self: center; align-self: auto; }
+  .player.live .ptitle { text-align: center; align-self: auto; }
+  .player.live .ctrl { justify-content: center; }
+}
+@media (max-width: 700px) {
+  .player .volrow { display: none; }                    /* phones use the hardware volume buttons */
+  .player .ctrl button { min-width: 44px; min-height: 44px; }
+}
+
+/* v20: sidebar anchors. Stickers can be pinned to the name box, the music player and the button block as well, so a sticker
+   placed between them keeps its place next to them when the sidebar turns into a stack on a phone. */
+.nameplate, .player { position: relative; }
+.acw { position: relative; min-width: 0; grid-column: 1 / -1; }
+.acw.own { display: grid; gap: max(var(--step), 14px); }
+
+/* v21: a sticker's left edge comes from --sx (set per sticker). On tablets and phones there is no margin around the frame,
+   so a sticker that sat outside the border on a desktop is held at the edge instead of falling off the screen. */
+.sticker { left: var(--sx); }
+@media (max-width: 1000px) {
+  .sticker { left: clamp(calc(var(--sw) * -.25), var(--sx), calc(100% - var(--sw) * .75)); }
+}
+
+/* v22: a sticker hung OUTSIDE its anchor (centre past its edge, i.e. out in the page margin on a desktop) has no margin to
+   sit in on a phone. It is not dragged back over the content: only a thin sliver stays visible at the edge, like the part
+   of it that would still be on screen. */
+@media (max-width: 1000px) {
+  .sticker[data-edge] { left: clamp(calc(var(--sw) * -1 + 10px), var(--sx), calc(100% - 10px)); }
+}

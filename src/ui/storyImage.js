@@ -28,7 +28,6 @@ const W = 1080, H = 1920;
 const SAFE_TOP = 190, SAFE_BOT = 1730;
 const SIDE = 48;                    // gap between canvas edge and frame
 const FW = W - SIDE * 2;            // frame width
-const WEB_FRAME_W = 1210;           // width of the profile frame in the web app (sticker coordinates live in this space)
 
 export const SHARE_ORIGIN = 'https://app.fiiyou.online';
 /** Short profile links: app.fiiyou.online/<username>. App.jsx parseHash() understands this path (the host must serve index.html for unknown paths). */
@@ -120,7 +119,7 @@ function checkBadge(g, cx, cy, r) {
  * @param photos    [{ src }]            gallery photos (first 8 are drawn)
  * @param topFriends [{ name, src }]     top friends (first 8 are drawn)
  * @param guestbook [{ name, username, body }]  latest guestbook entries (first 3 are drawn)
- * @param stickers  [{ src, x, y, w, h, rotation, z }]  in the web frame's coordinate space
+ * @param stickers  [{ src, card, v, x, y, w, h, rotation, z }]  pinned to a card id, in units of 1/1000 of the cards width (see stickerAnchor.js)
  * @param music     { title, artist, coverSrc } | null
  * @param interests legacy fallback, only used when `cards` is empty
  * @param fontFamily CSS family of the person's uploaded font (from useCustomFont / loadFont), used when theme.font / name_font is 'custom'
@@ -355,6 +354,7 @@ export async function renderStory({
       const flip = t.layout === 'side-right';
       const ax = flip ? x + w - AVW : x, ay = y + Math.round((h - AVH) / 2);
       const nx = flip ? (hasMusic ? x + PW + GAP : x) : x + AVW + GAP, mx = flip ? x : nx + nw + GAP;
+      spots.set('avatar', { x: ax, y: ay, w: AVW, h: AVH });   // stickers pinned to the avatar
       g.save(); rr(g, ax, ay, AVW, AVH, r2); g.clip();
       if (avatar) drawCover(g, avatar, ax, ay, AVW, AVH); else { g.fillStyle = rgba(t.accent_color, 0.2); g.fillRect(ax, ay, AVW, AVH); }
       g.restore();
@@ -382,7 +382,7 @@ export async function renderStory({
   const header = makeHeader();
   const flowCards = cards.length ? cards : (interests.length ? [{ id: 'interests', type: 'interests', title: 'Interests', content: { interests } }] : []);
   const RANK = { guestbook: 1, links: 2, top_friends: 3, interests: 4, gallery: 5, text: 6, about: 7 };   // higher = kept longer when space runs out
-  let blocks = flowCards.map((c) => { const m = makers[c.type]?.(c); return m && { ...m, rank: RANK[c.type] ?? 0 }; }).filter(Boolean);
+  let blocks = flowCards.map((c) => { const m = makers[c.type]?.(c); return m && { ...m, rank: RANK[c.type] ?? 0, id: c.id }; }).filter(Boolean);
   let lv = blocks.map((b) => b.levels - 1), built = blocks.map((b, i) => b.make(lv[i]));
   const fixedH = header.h;
   const contentH = () => fixedH + built.reduce((a, b) => a + cardGap + b.h, 0);
@@ -402,13 +402,17 @@ export async function renderStory({
   panel(FX, FY, FW, frameH, r1, t.frame_color, frameAlpha); outline(FX, FY, FW, frameH, r1, t.border_color);
 
   let y = FY + fpad; const x = FX + fpad;
+  const spots = new Map();                                  // anchors for stickers: the avatar and every card that made it onto the story
   header.draw(x, y, CW); y += header.h + cardGap;
-  for (const b of built) { b.draw(x, y, CW); y += b.h + cardGap; }
+  const colTop = y;
+  built.forEach((b, i) => { spots.set(blocks[i].id, { x, y, w: CW, h: b.h }); b.draw(x, y, CW); y += b.h + cardGap; });
 
-  /* ---- stickers sit on top of the frame, in the web frame's coordinate space scaled to the story ---- */
-  const k = FW / WEB_FRAME_W;
+  /* ---- stickers sit on top of the frame, pinned to their avatar / card exactly like on the web page (1 unit = 1/1000 of the anchor's width) ---- */
   stickers.map((s, i) => ({ s, im: stickerImgs[i] })).filter((o) => o.im).sort((a, b) => (a.s.z || 0) - (b.s.z || 0)).forEach(({ s, im }) => {
-    const sw = s.w * k, sh = s.h * k, sx = FX + s.x * k, sy = FY + s.y * k, cx0 = sx + sw / 2, cy0 = sy + sh / 2;
+    const sp = spots.get(s.card), ux = (sp ? sp.w : CW) / 1000, sw = s.w * ux, sh = s.h * ux, sx = (sp ? sp.x : x) + s.x * ux;
+    const sy = sp ? (s.v === 'b' ? sp.y + sp.h - s.y * ux - sh : sp.y + s.y * ux)               // pinned to an anchor that is on the story
+      : (s.v === 'b' ? FY + frameH - fpad - s.y * ux - sh : colTop + s.y * ux);                   // anchor not on the story: fall back to the cards column
+    const cx0 = sx + sw / 2, cy0 = sy + sh / 2;
     if (cx0 < 0 || cx0 > W || cy0 < SAFE_TOP - 60 || cy0 > SAFE_BOT + 60) return;
     g.save(); g.translate(cx0, cy0); g.rotate(((s.rotation || 0) * Math.PI) / 180); drawContain(g, im, -sw / 2, -sh / 2, sw, sh); g.restore();
   });

@@ -1,6 +1,8 @@
 import { FONT_STACKS, THEME_DEFAULTS } from './theme.js';
 import { onColor, VERIFIED_BLUE } from './appTheme.js';
-import { profileUrl, renderStory } from './storyImage.js';
+import { profileUrl } from './storyImage.js';
+import { renderDesktop } from './desktopImage.js';
+import { createCss, createFx, createTextStyler } from './customCssRender.js';
 
 /* ======================================================================
    promoImage.js: share cards (1080 x 1920).
@@ -10,13 +12,21 @@ import { profileUrl, renderStory } from './storyImage.js';
    radius, shadow, glass blur, fonts) and the same call-to-action pill as
    the full profile export. Nothing here is a separate "marketing" look.
 
+   The profile's "Fine-tune" rules (customCss) are drawn on every card:
+   frame, avatar, name plate (and the stat tiles), music player and cards get
+   their colours, borders, radius, padding, opacity, tilt, shadow and filter;
+   text gets font, size, weight, case and letter-spacing; "Whole page" applies
+   its filter / opacity to the whole image. Padding, radius and borders are
+   scaled up the same way the theme's own values are for a story.
+
    Templates:
      card  - avatar (exact 220:250 ratio), name plate, stats, music, guestbook
      top8  - the top friends card, 2 x 4 slots, open slots are dashed
      vibe  - the music player, big, plus who is listening
      wall  - one guestbook entry as it appears on the wall
-     full  - the whole profile. Delegates to renderStory so the output is
-             identical to the profile story export (stickers included).
+     full  - the whole profile, laid out exactly like the desktop page
+             (desktopImage.js: sidebar + cards, stickers included). It is as
+             tall as the profile is, not 1080 x 1920.
    ====================================================================== */
 
 const UI_STACK =
@@ -43,9 +53,9 @@ const FW = W - SIDE * 2;
 const CTA_H = 104;
 const CTA_GAP = 32;
 
-// The profile avatar is always a 220 x 250 box. Never stretch or re-crop it.
-const AVATAR_W = 220;
-const AVATAR_H = 250;
+// The profile avatar is always a 5:6 box (same as .avatar on the page). Never stretch or re-crop it.
+const AVATAR_W = 5;
+const AVATAR_H = 6;
 const avatarHeightFor = (width) => Math.round((width * AVATAR_H) / AVATAR_W);
 
 const TEMPLATE_IDS = ['card', 'top8', 'vibe', 'wall', 'full'];
@@ -80,7 +90,7 @@ export const PROMO_TEMPLATES = [
   {
     id: 'full',
     label: 'Full profile',
-    hint: 'Your whole profile, exactly as it looks on fiiyou.',
+    hint: 'Your whole profile, laid out exactly like the desktop page.',
     needs: () => true,
   },
 ];
@@ -455,6 +465,7 @@ export async function renderPromo({ template = 'card', ...args }) {
     topFriends = [],
     guestbook = [],
     stickers = [],
+    customCss = [],
     guestIndex,
     slug = args.profile?.username,
     fontFamily = null,
@@ -468,10 +479,10 @@ export async function renderPromo({ template = 'card', ...args }) {
     throw new Error(`Unknown promo template: ${template}`);
   }
 
-  /* ---- full profile: exactly the story export ------------------------ */
+  /* ---- full profile: the desktop page, as an image ------------------- */
 
   if (template === 'full') {
-    return renderStory({
+    return renderDesktop({
       profile,
       theme,
       avatarSrc,
@@ -483,6 +494,7 @@ export async function renderPromo({ template = 'card', ...args }) {
       topFriends,
       guestbook,
       stickers,
+      customCss,
       slug,
       fontFamily,
     });
@@ -490,17 +502,26 @@ export async function renderPromo({ template = 'card', ...args }) {
 
   const t = { ...THEME_DEFAULTS, ...(theme || {}) };
 
+  const css = createCss(customCss);
   const nameStack = canvasStack(t.name_font, fontFamily);
   const bodyStack = canvasStack(t.font, fontFamily);
+  const styler = createTextStyler({ bodyStack, nameStack });
 
   try {
     await document.fonts.ready;
 
-    await Promise.all(
-      [400, 500, 600, 700, 800]
-        .map((weight) => document.fonts.load(`${weight} 30px ${bodyStack}`))
-        .concat(document.fonts.load(`800 52px ${nameStack}`))
-    );
+    const loads = [400, 500, 600, 700, 800]
+      .map((weight) => document.fonts.load(`${weight} 30px ${bodyStack}`))
+      .concat(document.fonts.load(`800 52px ${nameStack}`));
+
+    // fonts picked in Fine-tune
+    for (const stack of css.families()) {
+      for (const weight of [400, 500, 600, 700, 800]) {
+        loads.push(document.fonts.load(`${weight} 30px ${stack}`));
+      }
+    }
+
+    await Promise.all(loads);
   } catch {
     // Font loading is best-effort.
   }
@@ -539,7 +560,7 @@ export async function renderPromo({ template = 'card', ...args }) {
   ]);
 
   const out = mk(W, H);
-  const g = out.getContext('2d');
+  let g = styler.patch(out.getContext('2d')); // `let`: Fine-tune effects draw on a layer, then swap back
 
   g.imageSmoothingEnabled = true;
   g.imageSmoothingQuality = 'high';
@@ -562,14 +583,42 @@ export async function renderPromo({ template = 'card', ...args }) {
   const blurPx = num(t.blur, 0);
   const overlay = clamp(num(t.overlay, 0) / 100, 0, 1);
 
-  const fpad = clamp(Math.round(step * 3 * 1.3), 24, 40);
-  const cpad = clamp(Math.round(step * 2 * 1.4), 20, 32);
+  /* ---- Fine-tune: what each rule target ends up with ----
+     The page's px values are scaled the way the theme's own are for a story:
+     radius x1.5, border width x1.8, padding x1.4. */
 
-  const IW = FW - fpad * 2; // width inside the frame
-  const CIW = IW - cpad * 2; // width inside a card
+  const edgeFor = (sel) => {
+    const base = {
+      frame: { bw: lw, color: t.border_color, r: r1, pad: clamp(Math.round(step * 3 * 1.3), 24, 40), bg: [t.frame_color, frameAlpha] },
+      card: { bw: lw, color: t.border_color, r: r2, pad: clamp(Math.round(step * 2 * 1.4), 20, 32), bg: [t.card_color, cardAlpha] },
+      avatar: { bw: lw, color: t.accent_color, r: r2, pad: 0, bg: null },
+    };
+
+    base.nameplate = base.card;
+    base.player = base.card;
+
+    const d = base[sel];
+    const b = css.box(sel);
+
+    return {
+      b,
+      bw: b.borderWidth != null ? (b.borderWidth === 0 ? 0 : Math.max(2, Math.round(b.borderWidth * 1.8))) : d.bw,
+      style: b.borderStyle || t.border_style || 'solid',
+      color: b.borderColor || d.color,
+      r: b.radius != null ? clamp(b.radius * 1.5, 0, 64) : d.r,
+      pad: b.padding != null ? clamp(Math.round(b.padding * 1.4), 0, 64) : d.pad,
+      bg: b.bg ? [b.bg.hex, b.bg.a] : d.bg,
+    };
+  };
+
+  const fpad = edgeFor('frame').pad;
+  const cpad = edgeFor('card').pad;
+
+  let IW = FW - fpad * 2; // width inside the frame (changes with the fill scale, see the layout step)
+  let CIW = IW - cpad * 2; // width inside a card
   const GAP = 18; // gap between cards
 
-  const ink = t.text_color;
+  let ink = t.text_color; // changes per region when Fine-tune sets a text colour (see setText)
   const soft = rgba(t.text_color, 0.62);
   const faint = rgba(t.text_color, 0.4);
 
@@ -667,6 +716,50 @@ export async function renderPromo({ template = 'card', ...args }) {
       ? shrinkBlur(baseBg, clamp(blurPx * 0.9 + 2, 3, 24))
       : null;
 
+  /* ---- Fine-tune text: the rules of one region (card, name plate, player) become the active text style ---- */
+
+  const themeFs = num(t.font_size, 15);
+
+  function setText(sel) {
+    if (!sel || !css.has) {
+      styler.set(null);
+      ink = t.text_color;
+      return;
+    }
+
+    const x = css.text(sel);
+
+    ink = x.color ? rgba(x.color.hex, x.color.a) : t.text_color;
+
+    styler.set({
+      family: x.family,
+      weight: x.weight,
+      tt: x.tt,
+      ls: x.ls * 1.7,
+      scale: x.size ? clamp(x.size / themeFs, 0.75, 1.35) : 1, // the layout is fixed, so sizes can only grow or shrink a little
+    });
+  }
+
+  const mkLayer = (width, height) => {
+    const canvas = mk(width, height);
+    const getContext = canvas.getContext.bind(canvas);
+
+    canvas.getContext = (...args) => styler.patch(getContext(...args));
+
+    return canvas;
+  };
+
+  const fx = createFx({
+    getG: () => g,
+    setG: (value) => {
+      g = value;
+    },
+    mk: mkLayer,
+    colors: { border: t.border_color, accent: t.accent_color },
+    unit: 2, // story px per page px for shadow and blur sizes
+    full: true, // panel() draws the full-canvas glass with the transform reset, so layers cover the whole canvas
+  });
+
   /* ---- drawing primitives -------------------------------------------- */
 
   function panel(x, y, w, h, radius, color, alpha) {
@@ -674,17 +767,21 @@ export async function renderPromo({ template = 'card', ...args }) {
     rr(g, x, y, w, h, radius);
     g.clip();
 
-    if (glass) g.drawImage(glass, 0, 0, W, H);
+    if (glass) {
+      const m = g.getTransform();
+
+      g.setTransform(1, 0, 0, 1, 0, 0); // the glass is a full-canvas picture, so it ignores the fill scale
+      g.drawImage(glass, 0, 0, W, H);
+      g.setTransform(m);
+    }
 
     g.fillStyle = rgba(color, alpha);
     g.fillRect(x, y, w, h);
     g.restore();
   }
 
-  function outline(x, y, w, h, radius, color, width = lw) {
+  function outline(x, y, w, h, radius, color, width = lw, style = t.border_style || 'solid') {
     if (!width) return;
-
-    const style = t.border_style || 'solid';
 
     g.save();
     g.strokeStyle = color;
@@ -723,51 +820,21 @@ export async function renderPromo({ template = 'card', ...args }) {
     g.restore();
   }
 
-  /** Box shadow outside the frame only, so the glass underneath stays clean. */
-  function frameShadow(x, y, w, h, radius) {
-    if (!t.shadow || t.shadow === 'none') return;
-
-    const OFF = 4000;
-
-    g.save();
-    g.beginPath();
-    g.rect(0, 0, W, H);
-    rrp(g, x, y, w, h, radius);
-    g.clip('evenodd');
-
-    g.beginPath();
-    rrp(g, x - OFF, y, w, h, radius);
-
-    if (t.shadow === 'hard') {
-      g.shadowColor = t.border_color;
-      g.shadowBlur = 0;
-      g.shadowOffsetX = OFF + 12;
-      g.shadowOffsetY = 12;
-    } else {
-      g.shadowColor = 'rgba(0,0,0,0.45)';
-      g.shadowBlur = 60;
-      g.shadowOffsetX = OFF;
-      g.shadowOffsetY = 22;
-    }
-
-    g.fillStyle = '#000';
-    g.fill();
-    g.restore();
-  }
-
   const capCache = new Map();
 
   const capOf = (font) => {
-    if (!capCache.has(font)) {
+    const key = `${font}|${styler.key()}`;
+
+    if (!capCache.has(key)) {
       g.font = font;
 
       const measured = g.measureText('H').actualBoundingBoxAscent;
-      const px = parseFloat(/(\d+(?:\.\d+)?)px/.exec(font)?.[1]) || 30;
+      const px = parseFloat(/(\d+(?:\.\d+)?)px/.exec(g.font)?.[1]) || 30;
 
-      capCache.set(font, measured || px * 0.7);
+      capCache.set(key, measured || px * 0.7);
     }
 
-    return capCache.get(font);
+    return capCache.get(key);
   };
 
   /** Draws text with its capital-letter height centred on cy. */
@@ -859,19 +926,15 @@ export async function renderPromo({ template = 'card', ...args }) {
     outline(x, y, w, h, radius, edge, edgeWidth);
   }
 
-  /** The profile owner's avatar: always the 220:250 box, accent outline. */
-  const ownerAvatar = (x, y, width) =>
-    pic(
-      avatar,
-      x,
-      y,
-      width,
-      avatarHeightFor(width),
-      r2,
-      initial(dispName),
-      t.accent_color,
-      lw
-    );
+  /** The profile owner's avatar: always the 220:250 box, accent outline (or whatever Fine-tune says). */
+  const ownerAvatar = (x, y, width) => {
+    const E = edgeFor('avatar');
+    const height = avatarHeightFor(width);
+
+    fx.group({ x, y, w: width, h: height, r: E.r }, E.b, () => {
+      pic(avatar, x, y, width, height, E.r, initial(dispName), E.color, E.bw);
+    });
+  };
 
   /** Display name + verified badge, fitted to maxWidth. */
   function fitName(maxWidth, start, min) {
@@ -917,9 +980,32 @@ export async function renderPromo({ template = 'card', ...args }) {
   const TITLE_SIZE = Math.round(base * 1.15);
   const TITLE_H = Math.round(TITLE_SIZE * 1.25) + 10;
 
-  function cardBox(x, y, w, h, title, rightText) {
-    panel(x, y, w, h, r2, t.card_color, cardAlpha);
-    outline(x, y, w, h, r2, t.border_color);
+  // A card's box, then everything drawn until the next card, is one Fine-tune layer (tilt, opacity, filter, shadow).
+  let cardHandle = null;
+  let cardIsOpen = false;
+
+  function closeCard() {
+    if (!cardIsOpen) return;
+
+    fx.end(cardHandle);
+
+    cardHandle = null;
+    cardIsOpen = false;
+  }
+
+  /** kind = which rule target styles this box: 'card' | 'nameplate' | 'player'. */
+  function cardBox(x, y, w, h, title, rightText, kind = 'card') {
+    closeCard();
+
+    const E = edgeFor(kind);
+
+    cardHandle = fx.begin({ x, y, w, h, r: E.r }, E.b, E.b.shadow);
+    cardIsOpen = true;
+
+    setText(kind);
+
+    panel(x, y, w, h, E.r, E.bg[0], E.bg[1]);
+    outline(x, y, w, h, E.r, E.color, E.bw, E.style);
 
     if (!title) return;
 
@@ -946,6 +1032,8 @@ export async function renderPromo({ template = 'card', ...args }) {
      ================================================================== */
 
   function buildCard(maxH) {
+    setText('nameplate');
+
     const side = stats.length > 0 || hasMusic;
 
     // name plate
@@ -977,7 +1065,7 @@ export async function renderPromo({ template = 'card', ...args }) {
     const guestH = cpad * 2 + TITLE_H + inputH;
 
     // avatar width: as big as the budget allows, ratio is fixed
-    let AW = side ? 600 : 640;
+    let AW = Math.round(IW * (side ? 0.58 : 0.7)); // share of the (scaled) frame width
 
     while (
       AW > 360 &&
@@ -1006,7 +1094,8 @@ export async function renderPromo({ template = 'card', ...args }) {
           let musicH = 0;
 
           if (hasMusic) {
-            musicH = AH - stats.length * (baseStatH + GAP);
+            // with music, two stats share one tile so the cover keeps room
+            musicH = AH - Math.min(stats.length, 1) * (baseStatH + GAP);
 
             if (stats.length && musicH < 240) musicH = 0;
           }
@@ -1020,8 +1109,29 @@ export async function renderPromo({ template = 'card', ...args }) {
 
           let yy = y;
 
-          stats.forEach((stat) => {
-            cardBox(sx, yy, sw, statH);
+          const combined = hasMusic && stats.length > 1;
+
+          if (combined) {
+            cardBox(sx, yy, sw, baseStatH, undefined, undefined, 'nameplate');
+
+            const colW = sw / stats.length;
+
+            stats.forEach((stat, n) => {
+              const mid = sx + colW * n + colW / 2;
+              const size = fitSize(stat.n, colW - cpad, 80, 30, 800, nameStack);
+
+              put(stat.n, mid, yy + baseStatH * 0.4, `800 ${size}px ${nameStack}`, ink, 'center');
+              put(stat.l, mid, yy + baseStatH * 0.76, `500 26px ${bodyStack}`, soft, 'center');
+
+              if (n) {
+                g.fillStyle = rgba(t.border_color, 0.9);
+                g.fillRect(sx + colW * n, yy + 28, Math.max(1, Math.min(lw, 2)), baseStatH - 56);
+              }
+            });
+
+            yy += baseStatH + GAP;
+          } else stats.forEach((stat) => {
+            cardBox(sx, yy, sw, statH, undefined, undefined, 'nameplate');
 
             const size = fitSize(
               stat.n,
@@ -1042,7 +1152,7 @@ export async function renderPromo({ template = 'card', ...args }) {
             const my = y + AH - musicH;
             const pad = 16;
 
-            cardBox(sx, my, sw, musicH);
+            cardBox(sx, my, sw, musicH, undefined, undefined, 'player');
 
             const textBlock = 12 + 34 + 30;
             const cs = Math.min(sw - pad * 2, musicH - pad * 2 - textBlock);
@@ -1079,7 +1189,7 @@ export async function renderPromo({ template = 'card', ...args }) {
         /* name plate */
         const py = y + AH + GAP;
 
-        cardBox(x, py, IW, plateH);
+        cardBox(x, py, IW, plateH, undefined, undefined, 'nameplate');
 
         const mid = x + IW / 2;
         const nameCy = py + cpad + nameH / 2;
@@ -1135,115 +1245,115 @@ export async function renderPromo({ template = 'card', ...args }) {
      ================================================================== */
 
   function buildTop8(maxH) {
+    setText('card');
+
     const title = titleOf('top_friends', 'Top 8');
-    const open = Math.max(0, 8 - friends.length);
+    const filled = friends.length;
+    const open = Math.max(0, 8 - filled);
 
-    const cols = 2;
-    const rows = 4;
-    const gx = 24;
-    const gy = 22;
+    // Friends and the first open slot get tall rows; the rest of the open slots are slim, so a short list still looks full.
+    const slimH = 92;
+    const big = filled + (open ? 1 : 0);
+    const avail = maxH - cpad * 2 - TITLE_H;
+    const rowH = clamp(Math.floor((avail - Math.max(0, open - 1) * slimH) / Math.max(1, big)), 112, 200);
 
-    const cellW = Math.floor((CIW - gx) / cols);
+    const rows = [
+      ...friends.map((friend, index) => ({ friend, index, h: rowH })),
+      ...Array.from({ length: open }, (_, j) => ({ friend: null, index: filled + j, h: j === 0 ? rowH : slimH })),
+    ];
 
-    const rowH = clamp(
-      Math.floor((maxH - cpad * 2 - TITLE_H - gy * (rows - 1)) / rows),
-      110,
-      200
-    );
-
-    const h = cpad * 2 + TITLE_H + rows * rowH + gy * (rows - 1);
-
-    const ns = clamp(Math.round(rowH * 0.19), 26, 36);
-    const us = Math.round(ns * 0.78);
-    const tag = clamp(Math.round(rowH * 0.2), 30, 40);
+    const h = cpad * 2 + TITLE_H + rows.reduce((sum, row) => sum + row.h, 0);
 
     return {
       h,
 
       draw(x, y) {
-        cardBox(x, y, IW, h, title, open ? `${open} open` : '');
+        cardBox(x, y, IW, h, title, `${filled}/8`);
 
-        let firstOpen = true;
+        let yy = y + cpad + TITLE_H;
+        const rx = x + cpad;
 
-        for (let index = 0; index < cols * rows; index++) {
-          const col = index % cols;
-          const row = Math.floor(index / cols);
+        rows.forEach((row, n) => {
+          const d = row.h - 28;
+          const cy = yy + row.h / 2;
+          const rankW = 78;
 
-          const cx = x + cpad + col * (cellW + gx);
-          const cy = y + cpad + TITLE_H + row * (rowH + gy);
+          if (n > 0) {
+            g.fillStyle = rgba(t.border_color, 0.9);
+            g.fillRect(rx, yy, CIW, Math.max(1, Math.min(lw, 2)));
+          }
 
-          const tx = cx + rowH + 18;
-          const tw = cellW - rowH - 18;
-          const mid = cy + rowH / 2;
+          // number one gets a soft accent wash
+          if (row.friend && row.index === 0) {
+            rr(g, rx - 8, yy + 6, CIW + 16, row.h - 12, r3);
+            g.fillStyle = rgba(t.accent_color, 0.12);
+            g.fill();
+          }
 
-          const friend = friends[index];
-          const radius = Math.min(r3, rowH / 2);
+          const rankSize = clamp(Math.round(row.h * 0.36), 34, 64);
 
-          if (friend) {
-            pic(
-              friendImgs[index],
-              cx,
-              cy,
-              rowH,
-              rowH,
-              radius,
-              initial(friend.name || friend.username)
-            );
+          put(
+            String(row.index + 1),
+            rx + rankW / 2,
+            cy,
+            `800 ${rankSize}px ${nameStack}`,
+            row.friend ? accentText : faint,
+            'center'
+          );
 
-            // rank tag in the corner of the picture
-            g.fillStyle = t.accent_color;
-            g.fillRect(cx, cy, tag, tag);
+          const ax = rx + rankW + 4;
+          const tx = ax + d + 26;
+          const tw = rx + CIW - tx;
+          const ns = row.h >= 112 && row.friend ? clamp(Math.round(row.h * 0.24), 30, 46) : row.friend ? 34 : clamp(Math.round(row.h * 0.26), 28, 44);
+          const us = Math.round(ns * 0.76);
 
-            put(String(index + 1), cx + tag / 2, cy + tag / 2, `800 ${Math.round(tag * 0.58)}px ${nameStack}`, onAccent, 'center');
+          if (row.friend) {
+            const f = row.friend;
 
-            const nameFont = `600 ${ns}px ${bodyStack}`;
+            pic(friendImgs[row.index], ax, cy - d / 2, d, d, d / 2, initial(f.name || f.username));
+
+            const nameFont = `700 ${ns}px ${bodyStack}`;
 
             g.font = nameFont;
-            put(
-              ellipsize(g, friend.name || friend.username || '', tw),
-              tx,
-              friend.username ? mid - ns * 0.62 : mid,
-              nameFont,
-              ink
-            );
+            put(ellipsize(g, f.name || f.username || '', tw), tx, f.username ? cy - ns * 0.62 : cy, nameFont, ink);
 
-            if (friend.username) {
+            if (f.username) {
               const userFont = `400 ${us}px ${bodyStack}`;
 
               g.font = userFont;
-              put(ellipsize(g, `@${friend.username}`, tw), tx, mid + ns * 0.62, userFont, soft);
+              put(ellipsize(g, `@${f.username}`, tw), tx, cy + ns * 0.62, userFont, soft);
             }
 
-            continue;
+            yy += row.h;
+            return;
           }
 
-          // open slot: dashed tile
+          // open slot: dashed circle
           g.save();
           g.strokeStyle = rgba(t.accent_color, 0.65);
           g.lineWidth = 3;
           g.setLineDash([10, 8]);
-          rr(g, cx + 1.5, cy + 1.5, rowH - 3, rowH - 3, Math.max(0, radius - 1.5));
+          g.beginPath();
+          g.arc(ax + d / 2, cy, d / 2 - 1.5, 0, Math.PI * 2);
           g.stroke();
           g.restore();
 
-          put('+', cx + rowH / 2, cy + rowH / 2, `800 ${Math.round(rowH * 0.36)}px ${nameStack}`, accentText, 'center');
+          put('+', ax + d / 2, cy, `800 ${Math.round(d * 0.4)}px ${nameStack}`, accentText, 'center');
 
-          const isFirst = firstOpen;
-          firstOpen = false;
-
-          const openFont = `600 ${ns}px ${bodyStack}`;
+          const first = row.index === filled;
+          const openFont = `700 ${ns}px ${bodyStack}`;
 
           g.font = openFont;
-          put(
-            ellipsize(g, isFirst ? 'Could be you' : 'Open', tw),
-            tx,
-            mid - ns * 0.62,
-            openFont,
-            isFirst ? accentText : soft
-          );
 
-          put(`#${index + 1}`, tx, mid + ns * 0.62, `400 ${us}px ${bodyStack}`, faint);
-        }
+          if (first) {
+            put(ellipsize(g, 'Could be you', tw), tx, cy - ns * 0.62, openFont, accentText);
+            put('Open slot', tx, cy + ns * 0.62, `400 ${us}px ${bodyStack}`, soft);
+          } else {
+            put('Open', tx, cy, openFont, faint);
+          }
+
+          yy += row.h;
+        });
       },
     };
   }
@@ -1253,6 +1363,8 @@ export async function renderPromo({ template = 'card', ...args }) {
      ================================================================== */
 
   function buildVibe(maxH) {
+    setText('player');
+
     const titleSize = 58;
     const titleLH = 66;
 
@@ -1269,8 +1381,8 @@ export async function renderPromo({ template = 'card', ...args }) {
 
     const gapCover = 30;
     const gapArtist = 8;
-    const gapControls = 34;
-    const controlsH = 84;
+    const gapControls = 40;
+    const controlsH = 150; // progress bar + prev / play / next
 
     const textH = titleLines.length * titleLH;
 
@@ -1294,7 +1406,7 @@ export async function renderPromo({ template = 'card', ...args }) {
       h: playerH + GAP + ownerH,
 
       draw(x, y) {
-        cardBox(x, y, IW, playerH);
+        cardBox(x, y, IW, playerH, undefined, undefined, 'player');
 
         let yy = y + cpad;
 
@@ -1331,39 +1443,62 @@ export async function renderPromo({ template = 'card', ...args }) {
 
         yy += gapControls;
 
-        // controls row: play button + progress, like the real mini player
-        const cy = yy + controlsH / 2;
-        const pr = controlsH / 2;
-        const px = x + cpad + pr;
+        // progress bar, then prev / play / next, like the page's mini player
+        const barY = yy + 8;
 
-        g.beginPath();
-        g.arc(px, cy, pr, 0, Math.PI * 2);
+        rr(g, x + cpad, barY - 6, CIW, 12, 6);
+        g.fillStyle = rgba(t.text_color, 0.18);
+        g.fill();
+
+        rr(g, x + cpad, barY - 6, CIW * 0.38, 12, 6);
         g.fillStyle = t.accent_color;
         g.fill();
 
         g.beginPath();
-        g.moveTo(px - 11 + 3, cy - 18);
-        g.lineTo(px + 19 + 3, cy);
-        g.lineTo(px - 11 + 3, cy + 18);
+        g.arc(x + cpad + CIW * 0.38, barY, 14, 0, Math.PI * 2);
+        g.fillStyle = t.accent_color;
+        g.fill();
+
+        const cy = yy + 24 + 26 + 48;
+        const mx = x + IW / 2;
+
+        g.beginPath();
+        g.arc(mx, cy, 48, 0, Math.PI * 2);
+        g.fillStyle = t.accent_color;
+        g.fill();
+
+        g.beginPath();
+        g.moveTo(mx - 14 + 4, cy - 24);
+        g.lineTo(mx + 24 + 4, cy);
+        g.lineTo(mx - 14 + 4, cy + 24);
         g.closePath();
         g.fillStyle = onAccent;
         g.fill();
 
-        const bx = x + cpad + pr * 2 + 28;
-        const bwid = x + IW - cpad - bx;
+        g.fillStyle = ink;
 
-        rr(g, bx, cy - 5, bwid, 10, 5);
-        g.fillStyle = rgba(t.text_color, 0.18);
+        // previous: bar + triangle pointing left
+        g.beginPath();
+        g.rect(mx - 170 - 20, cy - 18, 6, 36);
+        g.moveTo(mx - 170 + 20, cy - 18);
+        g.lineTo(mx - 170 + 20, cy + 18);
+        g.lineTo(mx - 170 - 14, cy);
+        g.closePath();
         g.fill();
 
-        rr(g, bx, cy - 5, bwid * 0.38, 10, 5);
-        g.fillStyle = t.accent_color;
+        // next: triangle pointing right + bar
+        g.beginPath();
+        g.rect(mx + 170 + 14, cy - 18, 6, 36);
+        g.moveTo(mx + 170 - 20, cy - 18);
+        g.lineTo(mx + 170 - 20, cy + 18);
+        g.lineTo(mx + 170 + 14, cy);
+        g.closePath();
         g.fill();
 
         /* owner */
         const oy = y + playerH + GAP;
 
-        cardBox(x, oy, IW, ownerH);
+        cardBox(x, oy, IW, ownerH, undefined, undefined, 'nameplate');
 
         ownerAvatar(x + 18, oy + 18, oAW);
 
@@ -1389,6 +1524,8 @@ export async function renderPromo({ template = 'card', ...args }) {
      ================================================================== */
 
   function buildWall(maxH) {
+    setText('card');
+
     const body = String(entry.body || '').trim();
     const length = body.length;
 
@@ -1399,7 +1536,10 @@ export async function renderPromo({ template = 'card', ...args }) {
     const oAH = avatarHeightFor(oAW);
     const ownerH = oAH + 36;
 
-    const fixed = cpad * 2 + TITLE_H + AV + authorGap;
+    const inputH = 64;
+    const inputBlock = inputH + 36; // the real "Write something… / Send" row under the message
+
+    const fixed = cpad * 2 + TITLE_H + AV + authorGap + inputBlock;
     const textRoom = maxH - ownerH - GAP - fixed - 10;
 
     const display = length <= 24;
@@ -1478,10 +1618,27 @@ export async function renderPromo({ template = 'card', ...args }) {
           ink
         );
 
+        /* the page's own input: invites the viewer to sign it */
+        const bxw = 150;
+        const iwid = CIW - bxw - 14;
+        const iyy = y + cardH - cpad - inputH;
+
+        g.fillStyle = rgba(t.border_color, 0.9);
+        g.fillRect(ax, iyy - 18, CIW, Math.max(1, Math.min(lw, 2)));
+
+        panel(ax, iyy, iwid, inputH, r3, t.card_color, 0.9);
+        outline(ax, iyy, iwid, inputH, r3, t.border_color, Math.min(lw, 2));
+        put('Write something…', ax + 22, iyy + inputH / 2, `500 ${base}px ${bodyStack}`, faint);
+
+        rr(g, ax + iwid + 14, iyy, bxw, inputH, r3);
+        g.fillStyle = t.accent_color;
+        g.fill();
+        put('Send', ax + iwid + 14 + bxw / 2, iyy + inputH / 2, `700 ${base}px ${bodyStack}`, onAccent, 'center');
+
         /* whose wall it is */
         const oy = y + cardH + GAP;
 
-        cardBox(x, oy, IW, ownerH);
+        cardBox(x, oy, IW, ownerH, undefined, undefined, 'nameplate');
 
         ownerAvatar(x + 18, oy + 18, oAW);
 
@@ -1503,25 +1660,61 @@ export async function renderPromo({ template = 'card', ...args }) {
     };
   }
 
-  /* ---- layout: build, fit, centre in the safe area ------------------- */
+  /* ---- layout: build, scale up to fill the story, centre in the safe area ---- */
 
   const maxContent = SAFE_BOT - SAFE_TOP - CTA_H - CTA_GAP - fpad * 2;
+  const builders = { card: buildCard, top8: buildTop8, vibe: buildVibe, wall: buildWall };
 
-  const built = { card: buildCard, top8: buildTop8, vibe: buildVibe, wall: buildWall }[
-    template
-  ](maxContent);
+  // A short layout (one message, a few friends) is built on a narrower virtual width and drawn scaled up, so
+  // type and pictures grow together and the frame uses the story instead of floating in it.
+  const MAX_FILL = { card: 1.25, top8: 1.3, vibe: 1.2, wall: 1.3 }[template];
 
-  const frameH = Math.min(maxContent + fpad * 2, built.h + fpad * 2);
+  let k = 1;
+  let built;
+
+  for (let i = 0; i < 7; i++) {
+    IW = (FW - fpad * 2) / k;
+    CIW = IW - cpad * 2;
+    built = builders[template](maxContent / k);
+
+    const total = built.h * k;
+
+    if (total > maxContent) {
+      k = Math.max(0.5, k * (maxContent / total) * 0.985);
+    } else if (total < maxContent * 0.9 && k < MAX_FILL - 0.01) {
+      k = Math.min(MAX_FILL, k * (maxContent / total));
+    } else {
+      break;
+    }
+  }
+
+  const frameH = Math.min(maxContent + fpad * 2, built.h * k + fpad * 2);
   const groupH = frameH + CTA_GAP + CTA_H;
 
   const FX = SIDE;
   const FY = Math.round(SAFE_TOP + (SAFE_BOT - SAFE_TOP - groupH) / 2);
 
-  frameShadow(FX, FY, FW, frameH, r1);
-  panel(FX, FY, FW, frameH, r1, t.frame_color, frameAlpha);
-  outline(FX, FY, FW, frameH, r1, t.border_color);
+  setText(null);
 
-  built.draw(FX + fpad, FY + fpad);
+  // The frame and everything in it share one layer, so the frame's tilt / filter / opacity apply to all of it.
+  const FRE = edgeFor('frame');
+  const frameHandle = fx.begin({ x: FX, y: FY, w: FW, h: frameH, r: FRE.r }, FRE.b, FRE.b.shadow ?? t.shadow);
+
+  panel(FX, FY, FW, frameH, FRE.r, FRE.bg[0], FRE.bg[1]);
+  outline(FX, FY, FW, frameH, FRE.r, FRE.color, FRE.bw, FRE.style);
+
+  g.save();
+  g.translate(FX + fpad, FY + fpad);
+  g.scale(k, k);
+  built.draw(0, 0);
+  closeCard();
+  g.restore();
+
+  fx.end(frameHandle);
+
+  // "Whole page": filter / opacity cover everything drawn so far (the call-to-action below is not part of the profile).
+  fx.wholeCanvas(css.box('page'));
+  setText(null);
 
   /* ---- call to action: same quiet pill as the full profile export ---- */
 

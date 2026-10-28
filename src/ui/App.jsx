@@ -11,6 +11,7 @@ import { themeStyle } from './theme.js';
 import { useCustomFont } from './fonts.js';
 import { applyAppTheme } from './appTheme.js';
 import Player from './Player.jsx';
+import { stickerModel, stickerStyle, withModel, reanchor, nearestAnchor, settleSticker, pinStray, rehome, unitsOf, spansOf } from './stickerAnchor.js';
 import Customizer from './Customizer.jsx';
 import { ask } from './dialog.jsx';
 import ShareSheet from './ShareSheet.jsx';
@@ -83,7 +84,7 @@ function Guestbook({ profileId, go, own, meName, notify }) {
   </>);
 }
 
-function CardView({ c, d, img, go, openPhoto, own, meName, notify }) {
+function CardView({ c, d, img, go, openPhoto, own, meName, notify, children }) {
   const body = {
     about: () => <p className="pre"><Rich text={c.content.body} onUser={(u) => go('profile', u)} /></p>, text: () => <p className="pre"><Rich text={c.content.body} onUser={(u) => go('profile', u)} /></p>,
     gallery: () => d.photos.length ? <div className="gal">{d.photos.map((p, i) => img[p.path] && (
@@ -97,22 +98,27 @@ function CardView({ c, d, img, go, openPhoto, own, meName, notify }) {
       : <p className="muted">No top friends yet.</p>,
     guestbook: () => <Guestbook profileId={d.profile.id} go={go} own={own} meName={meName} notify={notify} />,
   }[c.type];
-  return body ? <section className="card"><h2>{c.title}</h2>{body()}</section> : null;
+  return body ? <div className="cw" data-cid={c.id}><section className="card"><h2>{c.title}</h2>{body()}</section>{children}</div> : null;   // children = the stickers pinned to this card
 }
 
 const cl = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-function Sticker({ c, k, src, edit, selected, onSelect, onChange }) {
+function Sticker({ c, m, unit, edge, getRoot, src, edit, selected, onSelect, onChange }) {
+  // m = { card, v, x, y, w, h } in units (1 unit = 1/1000 of the cards column width), unit = px per unit right now.
+  const el = useRef();
   const drag = (e, mode) => {
     if (!edit) return; e.preventDefault(); e.stopPropagation(); onSelect(c.id);
-    const sx = e.clientX, sy = e.clientY, o = { x: c.x, y: c.y, w: c.w }, ar = c.w / c.h;
-    const mv = (ev) => { const dx = (ev.clientX - sx) / k, dy = (ev.clientY - sy) / k;
-      if (mode === 'move') onChange({ x: cl(Math.round(o.x + dx), -500, 5000), y: cl(Math.round(o.y + dy), -500, 5000) });
+    const sx = e.clientX, sy = e.clientY, o = m, ar = m.w / m.h, dir = m.v === 'b' ? -1 : 1;
+    let hot = null; const light = (n) => { if (hot !== n) { hot?.classList.remove('anchor-hot'); n?.classList.add('anchor-hot'); hot = n; } };   // outline the card / avatar it will be pinned to
+    const mv = (ev) => { const dx = (ev.clientX - sx) / unit, dy = (ev.clientY - sy) / unit;
+      if (mode === 'move') requestAnimationFrame(() => { const root = getRoot(); if (el.current && root) light(nearestAnchor(el.current, root)?.n || null); });
+      if (mode === 'move') onChange({ x: cl(Math.round(o.x + dx), -30000, 30000), y: cl(Math.round(o.y + dir * dy), -30000, 30000) });
       else { const w = cl(Math.round(o.w + dx), 40, 1200); onChange({ w, h: cl(Math.round(w / ar), 40, 2000) }); } };
-    const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); };
+    const up = () => { light(null); removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
+      // dropped: pin it to the card it now sits on, so it follows that card on every screen size
+      if (mode === 'move') requestAnimationFrame(() => { const root = getRoot(); const at = el.current && root && reanchor(el.current, root, o, unit); if (at) onChange(at); }); };
     addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up);
   };
-  return (<div className={`sticker${edit ? ' edit' : ''}${selected ? ' sel' : ''}`} onPointerDown={(e) => drag(e, 'move')}
-    style={{ left: c.x * k, top: c.y * k, width: c.w * k, height: c.h * k, zIndex: 100 + c.z, transform: `rotate(${c.rotation}deg)` }}>
+  return (<div ref={el} data-sid={c.id} data-edge={edge ? '' : undefined} className={`sticker${edit ? ' edit' : ''}${selected ? ' sel' : ''}`} onPointerDown={(e) => drag(e, 'move')} style={stickerStyle(c, m, unit)}>
     {src && <img src={src} alt="" draggable={false} />}{edit && selected && <b className="grip" onPointerDown={(e) => drag(e, 'size')} />}</div>);
 }
 
@@ -120,35 +126,65 @@ const makeDraft = (d) => { const profile = d.profile; return { theme: { ...profi
   fields: { display_name: profile.display_name, headline: profile.headline, locality_id: profile.locality_id, wall_policy: profile.wall_policy, show_on_map: profile.show_on_map, music: profile.music || {} } }; };
 
 function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
-  const [d, setD] = useState(null); const [draft, setDraft] = useState(null); const [sel, setSel] = useState(null); const [k, setK] = useState(1);
+  const [d, setD] = useState(null); const [draft, setDraft] = useState(null); const [sel, setSel] = useState(null); const [colW, setColW] = useState(920); const [avW, setAvW] = useState(190); const cardsRef = useRef(); const avRef = useRef();
   const [collapsed, setCollapsed] = useState(false); const [lb, setLb] = useState(null); const [rep, setRep] = useState(false); const frame = useRef(); const pageRef = useRef(); const [sharing, setSharing] = useState(false); const [shareData, setShareData] = useState(null);
   const load = useCallback(() => profiles.getFullProfile(username).then(setD).catch((e) => notify(e.message, 'err')), [username]);
   useEffect(() => { setD(null); setDraft(null); setSel(null); setLb(null); load(); }, [load]);
-  useEffect(() => { const el = frame.current; if (!el) return; const ro = new ResizeObserver(() => setK(Math.min(1, el.clientWidth / 1210) || 1)); ro.observe(el); return () => ro.disconnect(); }, [d]);
+  useEffect(() => { const c = cardsRef.current, a = avRef.current; if (!c) return; const upd = () => { setColW(c.clientWidth || 920); setAvW((a && a.clientWidth) || 190); }; const ro = new ResizeObserver(upd); ro.observe(c); if (a) ro.observe(a); upd(); return () => ro.disconnect(); }, [d]);   // widths the sticker units are measured against (cards column, avatar)
   const shown = draft ? draft.cards : d?.cards; const theme = draft ? draft.theme : d?.profile.theme; const music = (draft ? draft.fields.music : d?.profile.music) || {};
   const img = useImages(d ? [d.profile.avatar_path, theme.bg_image, music.cover, ...shown.flatMap((c) => c.content.images || []), ...d.photos.map((p) => p.path), ...d.topFriends.map((f) => f.avatar_path)] : []);
   const fontFamily = useCustomFont(theme?.font_file);   // registers the uploaded font (draft or saved) so the page can use it
   const [audioUrl, setAudioUrl] = useState(null);
+  const [spans, setSpans] = useState({});   // width of each anchor in its own units
+  const [units, setUnits] = useState({});   // px per sticker unit of every anchor (cards, avatar, name box, player, buttons), re-measured whenever one resizes
+  useEffect(() => { const root = frame.current; if (!root) return; const nodes = [root, ...root.querySelectorAll('[data-cid]')];
+    const read = () => { const sp = spansOf(root); setSpans((p) => (JSON.stringify(p) === JSON.stringify(sp) ? p : sp)); const n = unitsOf(root); setUnits((p) => { const k = Object.keys(n); return k.length === Object.keys(p).length && k.every((i) => Math.abs((p[i] ?? -1) - n[i]) < 0.0005) ? p : n; }); };
+    const ro = new ResizeObserver(read); nodes.forEach((e) => ro.observe(e)); read(); return () => ro.disconnect(); });
+  useEffect(() => {   // when editing starts, re-pin every sticker to the card / avatar it visually sits on (what you see is what gets pinned). Skipped on phones: there the layout is not the one it was placed in.
+    if (!draft || innerWidth <= 700) return;
+    const t = setTimeout(() => { const root = frame.current; if (!root) return; const fix = {};
+      for (const c of draft.cards) if (c.type === 'sticker') { const at = settleSticker(c, draft.theme, root); if (at) fix[c.id] = at; }
+      if (Object.keys(fix).length) setDraft((x) => ({ ...x, cards: x.cards.map((c) => (fix[c.id] ? { ...c, ...withModel(c, x.theme, fix[c.id]) } : c)) })); }, 400);
+    return () => clearTimeout(t);
+  }, [!!draft]);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {   // one-time repair, owner on a desktop screen: stickers that were never pinned to a card get pinned to the card they sit on, and saved
+    if (!d || draft || d.relationship.status !== 'self' || innerWidth <= 1000) return;
+    const t = setTimeout(async () => { const root = frame.current; if (!root) return; const fix = [];
+      for (const c of d.cards) if (c.type === 'sticker' && c.visible) { const at = (!c.content?.at?.card && pinStray(c, d.profile.theme, root)) || rehome(c, d.profile.theme, root); if (at) fix.push([c, withModel(c, d.profile.theme, at)]); }
+      if (!fix.length) return;
+      const res = await Promise.allSettled(fix.map(([c, p]) => cardsApi.updateCard(c.id, p)));
+      const ok = new Map(fix.filter((_, i) => res[i].status === 'fulfilled').map(([c, p]) => [c.id, p]));
+      if (ok.size) setD((x) => ({ ...x, cards: x.cards.map((c) => (ok.has(c.id) ? { ...c, ...ok.get(c.id) } : c)) })); }, 1500);
+    return () => clearTimeout(t);
+  }, [d]);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (autoEdit && d && d.relationship.status === 'self' && !draft) { setCollapsed(false); setDraft(makeDraft(d)); history.replaceState(null, '', `${location.pathname}${location.search}#/me`); } }, [d, autoEdit]);   // "Edit my profile" on Home opens the editor straight away
   useEffect(() => { let on = true; setAudioUrl(null); if (music.audio) media.signedUrl(music.audio, 'audio').then((u) => on && setAudioUrl(u)).catch(() => {}); return () => { on = false; }; }, [music.audio]);
   if (!d) return <Boot />;
   const { profile, relationship: rel } = d; const own = rel.status === 'self';
   const startEdit = () => { setCollapsed(false); setDraft(makeDraft(d)); };
   const patch = (id, p) => setDraft((x) => ({ ...x, cards: x.cards.map((c) => (c.id === id ? { ...c, ...p } : c)) }));
+  const patchSticker = (id, p) => setDraft((x) => ({ ...x, cards: x.cards.map((c) => (c.id === id ? { ...c, ...withModel(c, x.theme, p) } : c)) }));
   const act = (fn, msg) => fn().then(() => { notify(msg); load(); }).catch((e) => notify(e.message, 'err'));
   const friendBtn = { none: ['Add friend', () => friends.sendRequest(profile.id), 'Request sent'], pending_sent: ['Cancel request', () => friends.removeFriend(profile.id), 'Request cancelled'],
     pending_received: ['Accept request', () => friends.acceptRequest(rel.id), 'You are now friends'], friends: ['Friends', () => friends.removeFriend(profile.id), 'Friend removed'] }[rel.status];
   const name = draft?.fields.display_name ?? profile.display_name; const headline = draft?.fields.headline ?? profile.headline;
   const items = d.photos.map((p) => ({ id: p.id, src: img[p.path], caption: p.caption, likes: p.like_count, liked: p.liked }));
+  // Stickers are rendered inside the card they are pinned to (or at the top of the cards column when that card is hidden / gone / they are not pinned yet).
+  const flowShown = shown.filter((c) => c.visible && c.type !== 'music' && c.type !== 'sticker'); const flowIds = new Set(flowShown.map((c) => c.id));
+  const stickerList = shown.filter((c) => c.type === 'sticker' && c.visible).map((c) => ({ c, m: stickerModel(c, theme) }));
+  const hasPlayer = !!(audioUrl || music.url);
+  const rendered = new Set([...flowIds, 'avatar', 'nameplate', 'actions', 'frame', ...(hasPlayer ? ['player'] : [])]);   // anchors that exist on the page; stickers pinned to anything else sit at the top of the cards column
+  const stickersOn = (cardId) => stickerList.filter(({ m }) => (cardId ? m.card === cardId : !rendered.has(m.card))).map(({ c, m }) => (
+    <Sticker key={c.id} c={c} m={m} unit={units[m.card] || colW / 1000} edge={(m.x + m.w / 2 < 0) || (m.x + m.w / 2 > (spans[m.card] ?? 1000))} getRoot={() => frame.current} src={img[c.content.images?.[0]]} edit={!!draft} selected={sel === c.id} onSelect={setSel} onChange={(p) => patchSticker(c.id, p)} />));
   const openShare = async () => { if (sharing) return; setSharing(true);
     try {
       const flowCards = shown.filter((c) => c.visible && c.type !== 'music' && c.type !== 'sticker');
-      const stickers = shown.filter((c) => c.type === 'sticker' && c.visible).map((c) => ({ src: img[c.content.images?.[0]], x: c.x, y: c.y, w: c.w, h: c.h, rotation: c.rotation || 0, z: c.z || 0 }));
+      const stickers = shown.filter((c) => c.type === 'sticker' && c.visible).map((c) => { const m = stickerModel(c, theme); return { src: img[c.content.images?.[0]], card: m.card, v: m.v, x: m.x, y: m.y, w: m.w, h: m.h, rotation: c.rotation || 0, z: c.z || 0 }; });
       const gb = await wall.listWall(profile.id).catch(() => []);          // always loaded: the "Left on my wall" card needs it even if the guestbook card is hidden
       setShareData({
         slug: profile.username,
         profile: { username: profile.username, display_name: name, headline, locality: profile.locality?.name, verified: !!profile.is_official, friends: d.friendCount, views: d.views },
-        theme, fontFamily, avatarSrc: img[profile.avatar_path], bgSrc: img[theme.bg_image],
+        theme, fontFamily, customCss: profile.custom_css || [], avatarSrc: img[profile.avatar_path], bgSrc: img[theme.bg_image],   // customCss = the saved Fine-tune rules, drawn on every share image
         music: (music.title || music.artist) ? { title: music.title, artist: music.artist, coverSrc: img[music.cover] } : null,
         cards: flowCards.map(({ id, type, title, content }) => ({ id, type, title, content })),
         photos: d.photos.map((p) => ({ src: img[p.path] })),
@@ -160,31 +196,31 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
     upd(on, on ? 1 : -1); try { await social.setPhotoLike(it.id, on); } catch (e) { upd(!on, on ? -1 : 1); notify(e.message, 'err'); } };
   return (
     <>
-    <div ref={pageRef} className={`page view${draft ? ' editing' : ''}${draft && collapsed ? ' collapsed' : ''}`} style={themeStyle(theme, img[theme.bg_image], fontFamily)} onPointerDown={() => draft && setSel(null)}>
+    <div ref={pageRef} className={`page view${draft ? ' editing' : ''}${draft && collapsed ? ' collapsed' : ''}`} style={{ ...themeStyle(theme, img[theme.bg_image], fontFamily), '--u-cards': `${colW / 1000}px`, '--u-avatar': `${avW / 1000}px` }} onPointerDown={() => draft && setSel(null)}>
       <style>{toCss(draft ? draft.css : profile.custom_css)}</style>
       <div className="dim" />
-      <main className="frame" ref={frame} data-layout={theme.layout || 'side-left'}>
+      <main className="frame" ref={frame} data-cid="frame" data-layout={theme.layout || 'side-left'}>
         <aside className="side">
-          <div className="avatar">{img[profile.avatar_path] ? <img src={img[profile.avatar_path]} alt="" /> : <i />}</div>
-          <div className="nameplate"><h1>{name}{profile.is_official && <Verified />}</h1><small>@{profile.username}{profile.locality ? ` · ${profile.locality.name}` : ''}</small>
-            <small className="views">{d.friendCount} friend{d.friendCount === 1 ? '' : 's'} · {d.views} view{d.views === 1 ? '' : 's'}</small></div>
+          <div className="avatar" ref={avRef} data-cid="avatar">{img[profile.avatar_path] ? <img src={img[profile.avatar_path]} alt="" /> : <i />}{stickersOn('avatar')}</div>
+          <div className="nameplate" data-cid="nameplate"><h1>{name}{profile.is_official && <Verified />}</h1><small>@{profile.username}{profile.locality ? ` · ${profile.locality.name}` : ''}</small>
+            <small className="views">{d.friendCount} friend{d.friendCount === 1 ? '' : 's'} · {d.views} view{d.views === 1 ? '' : 's'}</small>{stickersOn('nameplate')}</div>
           {headline && <p className="headline">{headline}</p>}
-          {(audioUrl || music.url) && <Player key={music.audio || music.url} src={audioUrl || music.url} title={music.title} artist={music.artist} cover={img[music.cover]} />}
-          {own ? (!draft ? <><button className="primary wide" onClick={startEdit}><PencilSimple size={18} weight="bold" aria-hidden="true" />Customize profile</button><button className="ghost wide" disabled={sharing} onClick={openShare}><ShareNetwork size={18} weight="bold" aria-hidden="true" />{sharing ? 'Loading…' : 'Share profile'}</button></>
-            : <div className="actions preview" aria-hidden="true"><div className="arow"><button className="primary" tabIndex={-1} disabled>Message</button><button className="ghost" tabIndex={-1} disabled>Friends</button></div>
-              <div className="safe"><span>Report</span><span>·</span><span>Block</span></div></div>) : <div className="actions">
+          {(audioUrl || music.url) && <Player key={music.audio || music.url} src={audioUrl || music.url} title={music.title} artist={music.artist} cover={img[music.cover]} cid="player">{stickersOn('player')}</Player>}
+          {own ? (!draft ? <div className="acw own" data-cid="actions"><button className="primary wide" onClick={startEdit}><PencilSimple size={18} weight="bold" aria-hidden="true" />Customize profile</button><button className="ghost wide" disabled={sharing} onClick={openShare}><ShareNetwork size={18} weight="bold" aria-hidden="true" />{sharing ? 'Loading…' : 'Share profile'}</button>{stickersOn('actions')}</div>
+            : <div className="acw" data-cid="actions"><div className="actions preview" aria-hidden="true"><div className="arow"><button className="primary" tabIndex={-1} disabled>Message</button><button className="ghost" tabIndex={-1} disabled>Friends</button></div>
+              <div className="safe"><span>Report</span><span>·</span><span>Block</span></div></div>{stickersOn('actions')}</div>) : <div className="acw" data-cid="actions"><div className="actions">
             {rel.status === 'friends' ? <div className="arow">
               <button className="primary" onClick={() => go('messages', null, profile.id)}>Message</button>
               <button className="ghost" title="Click to remove this friend" onClick={async () => (await ask({ title: 'Remove this friend?', message: `${name} will be removed from your friends.`, confirmLabel: 'Remove', danger: true })) && act(friendBtn[1], friendBtn[2])}><Check size={16} weight="bold" aria-hidden="true" />{friendBtn[0]}</button></div>
               : friendBtn && <button className="primary wide" onClick={() => act(friendBtn[1], friendBtn[2])}>{friendBtn[0]}</button>}
             <div className="safe">
               <button className="link" onClick={() => setRep(true)}>Report</button><span aria-hidden="true">·</span>
-              <button className="link" onClick={async () => (await ask({ title: 'Block this person?', message: `${name} will no longer be able to interact with you.`, confirmLabel: 'Block', danger: true })) && safety.blockUser(profile.id).then(() => go('people')).catch((e) => notify(e.message || 'Could not block', 'err'))}>Block</button></div></div>}
+              <button className="link" onClick={async () => (await ask({ title: 'Block this person?', message: `${name} will no longer be able to interact with you.`, confirmLabel: 'Block', danger: true })) && safety.blockUser(profile.id).then(() => go('people')).catch((e) => notify(e.message || 'Could not block', 'err'))}>Block</button></div></div>{stickersOn('actions')}</div>}
         </aside>
         <div className="divider" />
-        <div className="cards">{shown.filter((c) => c.visible && c.type !== 'music' && c.type !== 'sticker').map((c) => <CardView key={c.id} c={c} d={d} img={img} go={go} openPhoto={setLb} own={own} meName={meName} notify={notify} />)}</div>
-        {shown.filter((c) => c.type === 'sticker' && c.visible).map((c) => (
-          <Sticker key={c.id} c={c} k={k} src={img[c.content.images?.[0]]} edit={!!draft} selected={sel === c.id} onSelect={setSel} onChange={(p) => patch(c.id, p)} />))}
+        <div className="cards" ref={cardsRef}>{flowShown.map((c) => <CardView key={c.id} c={c} d={d} img={img} go={go} openPhoto={setLb} own={own} meName={meName} notify={notify}>{stickersOn(c.id)}</CardView>)}
+          {stickersOn(null)}</div>
+      {stickersOn('frame')}
       </main>
     </div>
     {draft && <Customizer draft={draft} setDraft={setDraft} onClose={() => setDraft(null)} reload={async () => { await load(); refreshMe(); }} sel={sel} setSel={setSel} notify={notify} photos={d.photos} img={img} collapsed={collapsed} setCollapsed={setCollapsed} />}
