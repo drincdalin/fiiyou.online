@@ -4,7 +4,8 @@ A customizable local social network: profiles you can style (colors, fonts, stic
 
 - **Release guide:** [docs/RELEASE.md](docs/RELEASE.md)
 - **Run locally:** `cp .env.example .env`, fill in the Supabase URL and publishable key, `npm i`, `npm run dev`
-- **Database:** `supabase/migrations/0001…0015` in order, then `supabase/seed.sql`. Tests: `npm run test:db` (needs a local Postgres; it uses a mocked Supabase schema).
+- **Local Supabase (Docker, no cloud project needed):** `supabase start` builds the stack and applies every migration plus `seed.sql`; put the printed `API_URL` and `ANON_KEY` into `.env`. Studio: http://127.0.0.1:54323, auth emails (confirm / reset): http://127.0.0.1:54324. `supabase db reset` rebuilds the database from scratch; `supabase stop --no-backup` deletes it. Settings live in `supabase/config.toml`.
+- **Database:** `supabase/migrations/0001…0018` in order, then `supabase/seed.sql`. Each file needs its own numeric prefix — the CLI records one migration version per number. Tests: `npm run test:db` (needs a local Postgres; it uses a mocked Supabase schema).
 - **Fonts:** Ubuntu Sans variable files go in `public/fonts/` (see the README.txt there). Missing files fall back to system fonts.
 - **Branding:** exact colours and type in [docs/BRANDING.md](docs/BRANDING.md).
 

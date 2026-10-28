@@ -1,4 +1,4 @@
--- 0011: places can come from OpenStreetMap search (osm_ref dedupes them), looser place rate limit.
+-- 0012: places can come from OpenStreetMap search (osm_ref dedupes them), looser place rate limit.
 alter table public.places add column osm_ref text check (osm_ref ~ '^(node|way|relation)/[0-9]+$');
 create unique index places_osm_ref_uq on public.places(osm_ref) where osm_ref is not null;
 drop trigger places_rate on public.places;

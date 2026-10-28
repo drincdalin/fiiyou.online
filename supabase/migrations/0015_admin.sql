@@ -1,4 +1,4 @@
--- 0014: admin panel backend. Admin = a CONFIRMED sign-in email listed in public.admin_emails.
+-- 0015: admin panel backend. Admin = a CONFIRMED sign-in email listed in public.admin_emails.
 -- The list is not readable by any client; only the SECURITY DEFINER functions below can see it.
 -- Add yourself once, from the SQL Editor (kept out of the repo on purpose):
 --   insert into public.admin_emails (email) values ('you@example.com');

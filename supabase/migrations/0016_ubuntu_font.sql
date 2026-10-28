@@ -1,4 +1,4 @@
--- 0015: the UI font moves from Endless to the Ubuntu Sans variable fonts. Font key 'endless' becomes 'ubuntu'.
+-- 0016: the UI font moves from Endless to the Ubuntu Sans variable fonts. Font key 'endless' becomes 'ubuntu'.
 -- Step 1: validators accept both keys while data is migrated.
 create or replace function public.is_valid_theme(t jsonb) returns boolean
 language plpgsql immutable as $$
