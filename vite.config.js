@@ -15,11 +15,9 @@ export default defineConfig(({ mode }) => {
   // No canonical / og:url here: index.html is served for every path (/map, /<username>, ...), so a fixed "/" would mark every page as a copy of the home page.
   const seo = site ? `<meta property="og:image" content="${site}/og-image.png"><meta name="twitter:image" content="${site}/og-image.png">` : '';
   const base = env.VITE_BASE || '/';
-  // installable app + push: the manifest and icons are injected here, so index.html does not need to change
+  // The manifest, theme-color and icons (favicon, apple-touch-icon) are declared in index.html, so they are NOT injected again here.
+  // Only the "installed app" meta tags live here.
   const appTags = [
-    { tag: 'link', attrs: { rel: 'manifest', href: `${base}manifest.webmanifest` }, injectTo: 'head' },
-    { tag: 'meta', attrs: { name: 'theme-color', content: '#000000' }, injectTo: 'head' },
-    { tag: 'link', attrs: { rel: 'apple-touch-icon', href: `${base}icons/icon-192.png` }, injectTo: 'head' },
     { tag: 'meta', attrs: { name: 'mobile-web-app-capable', content: 'yes' }, injectTo: 'head' },
     { tag: 'meta', attrs: { name: 'apple-mobile-web-app-capable', content: 'yes' }, injectTo: 'head' },
     { tag: 'meta', attrs: { name: 'apple-mobile-web-app-title', content: 'fiiyou' }, injectTo: 'head' },
