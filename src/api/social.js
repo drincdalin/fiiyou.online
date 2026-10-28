@@ -40,6 +40,11 @@ export function onNotification(myId, cb) {
   } catch { return () => {}; }
 }
 
+// ---------- push (this device's address for system notifications, see 0018_push.sql) ----------
+export const savePushSubscription = async (sub) => unwrap(await supabase.rpc('save_push_subscription',
+  { p_endpoint: sub.endpoint, p_p256dh: sub.keys.p256dh, p_auth: sub.keys.auth, p_ua: String(navigator.userAgent).slice(0, 200) }));
+export const removePushSubscription = async (endpoint) => unwrap(await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint));
+
 // ---------- places ----------
 export const listPlaces = async () => unwrap(await supabase.rpc('places_overview'));
 export async function createPlace({ name, description, lat, lng, localityId, osmRef = null }) {

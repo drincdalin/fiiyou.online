@@ -13,13 +13,23 @@ export default defineConfig(({ mode }) => {
     "media-src 'self' blob: https:", "font-src 'self'", `connect-src 'self' ${sb} ${ws} https://nominatim.openstreetmap.org`, 'frame-src https://www.youtube-nocookie.com',
     "object-src 'none'", "base-uri 'self'", "form-action 'self'"].join('; ');
   const seo = site ? `<link rel="canonical" href="${site}/"><meta property="og:url" content="${site}/"><meta property="og:image" content="${site}/og-image.png"><meta name="twitter:image" content="${site}/og-image.png">` : '';
+  const base = env.VITE_BASE || '/';
+  // installable app + push: the manifest and icons are injected here, so index.html does not need to change
+  const appTags = [
+    { tag: 'link', attrs: { rel: 'manifest', href: `${base}manifest.webmanifest` }, injectTo: 'head' },
+    { tag: 'meta', attrs: { name: 'theme-color', content: '#000000' }, injectTo: 'head' },
+    { tag: 'link', attrs: { rel: 'apple-touch-icon', href: `${base}icons/icon-192.png` }, injectTo: 'head' },
+    { tag: 'meta', attrs: { name: 'mobile-web-app-capable', content: 'yes' }, injectTo: 'head' },
+    { tag: 'meta', attrs: { name: 'apple-mobile-web-app-capable', content: 'yes' }, injectTo: 'head' },
+    { tag: 'meta', attrs: { name: 'apple-mobile-web-app-title', content: 'fiiyou' }, injectTo: 'head' },
+  ];
   return {
-    base: env.VITE_BASE || '/',
+    base,
     plugins: [react(), {
       name: 'fiiyou-html',
       transformIndexHtml(html, ctx) {
         const prod = !ctx.server;
-        return html.replace('<!--CSP-->', prod ? `<meta http-equiv="Content-Security-Policy" content="${csp}">` : '').replace('<!--SEO-->', seo);
+        return { html: html.replace('<!--CSP-->', prod ? `<meta http-equiv="Content-Security-Policy" content="${csp}">` : '').replace('<!--SEO-->', seo), tags: appTags };
       },
     }],
     build: { sourcemap: false, chunkSizeWarningLimit: 700 },

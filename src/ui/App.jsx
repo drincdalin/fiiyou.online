@@ -14,6 +14,8 @@ import Customizer from './Customizer.jsx';
 import { ask } from './dialog.jsx';
 import ShareSheet from './ShareSheet.jsx';
 import NotificationList, { useNotifCount } from './Notifications.jsx';
+import PushToggle from './PushToggle.jsx';
+import { registerSW, forgetDevice } from './push.js';
 import { Eye, EyeSlash, Check, Heart, PencilSimple, ShareNetwork, SignOut, Trash } from '@phosphor-icons/react';
 
 const BASE = import.meta.env.BASE_URL;
@@ -267,6 +269,7 @@ export default function App() {
       if (ev === 'PASSWORD_RECOVERY') setRecovery(true);
     });
   }, []);
+  useEffect(() => { registerSW(); }, []);   // service worker: installable app + push notifications
   useEffect(() => { const h = () => setRoute(parseHash()); addEventListener('hashchange', h); return () => removeEventListener('hashchange', h); }, []);
   useEffect(() => { const t = { home: 'Home', profile: route.username ? `@${route.username}` : 'Me', map: 'Map', messages: 'Chat', people: 'People', admin: 'Admin', post: 'Post' }[route.v]; document.title = `fiiyou · ${t}`; }, [route]);
   useEffect(() => { if (session) profiles.getMyProfile().then(setMe).catch(() => {}); else setMe(null); }, [session]);
@@ -294,8 +297,9 @@ export default function App() {
         <button className="mhead" role="menuitem" onClick={() => go('profile')}><Avatar src={myImg[me.avatar_path]} size={44} /><span><b>{me.display_name || me.username}</b><small>@{me.username}</small></span></button>
         <hr className="msep" />
         <NotificationList go={go} notify={notify} tick={nTick} onRead={() => setNCount(0)} />
+        <PushToggle notify={notify} />
         <hr className="msep" />
-        <button role="menuitem" onClick={() => { setMenu(false); auth.signOut(); }}><SignOut size={18} weight="bold" aria-hidden="true" />Sign out</button>
+        <button role="menuitem" onClick={async () => { setMenu(false); await forgetDevice(); auth.signOut(); }}><SignOut size={18} weight="bold" aria-hidden="true" />Sign out</button>
         <button role="menuitem" className="danger" onClick={async () => { setMenu(false); if (await ask({ title: 'Delete your account?', message: 'Your account and everything in it will be deleted. This cannot be undone.', confirmLabel: 'Delete account', danger: true })) auth.deleteAccount(); }}><Trash size={18} weight="bold" aria-hidden="true" />Delete account</button></div>}</div></nav>
     {route.v === 'home' && <HomeView me={me} go={go} notify={notify} unread={unread} />}
     {route.v === 'map' && <MapView me={me} go={go} notify={notify} />}
