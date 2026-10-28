@@ -1,4 +1,4 @@
--- 0010: places, post edit/likes, events (title + official accounts), photos (captions, likes, order),
+-- 0011: places, post edit/likes, events (title + official accounts), photos (captions, likes, order),
 -- profile views, direct messages. Run after 0001-0009.
 
 -- ---- official accounts: only the dashboard/service role can set is_official ----
