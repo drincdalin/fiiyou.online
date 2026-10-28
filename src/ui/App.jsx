@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { auth, admin as adminApi, profiles, cards as cardsApi, friends, wall, social, safety, media, errorCode } from '../index.js';
 import { useImages, Boot, Avatar, Rich } from './shared.jsx';
 import { toCss } from './customCss.js';
@@ -12,6 +12,7 @@ import Player from './Player.jsx';
 import { stickerModel, stickerStyle, withModel, reanchor, nearestAnchor, settleSticker, pinStray, rehome, unitsOf, spansOf } from './stickerAnchor.js';
 import Customizer from './Customizer.jsx';
 import { ask } from './dialog.jsx';
+import { usePath, parseRoute, navigate, isReserved } from './router.jsx';
 import ShareSheet from './ShareSheet.jsx';
 import NotificationList, { useNotifCount } from './Notifications.jsx';
 import PushToggle from './PushToggle.jsx';
@@ -23,7 +24,7 @@ function Auth() {
   const [mode, setMode] = useState('in'); const [f, setF] = useState({ email: '', password: '', username: '', displayName: '' }); const [agree, setAgree] = useState(false); const [banned, setBanned] = useState(false);
   const [msg, setMsg] = useState(''); const [ok, setOk] = useState(false); const [busy, setBusy] = useState(false); const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const say = (m, good = false) => { setMsg(m); setOk(good); };
-  const go = async (e) => { e.preventDefault(); say(''); setBusy(true);
+  const go = async (e) => { e.preventDefault(); say(''); if (mode === 'up' && isReserved(f.username)) return say('That username is reserved.'); setBusy(true);
     try { if (mode === 'in') await auth.signIn(f); else { const r = await auth.signUp(f); if (!r.session) say('Check your email to confirm your account.', true); } }
     catch (er) { if (er.message === 'banned') setBanned(true); else say(er.message === 'username_taken' ? 'That username is taken.' : er.message); } setBusy(false); };
   const forgot = async () => { if (!f.email) return say('Type your email first.'); try { await auth.resetPassword(f.email); say('If that email has an account, a reset link is on its way.', true); } catch (er) { say(er.message); } };
@@ -163,7 +164,7 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
       if (ok.size) setD((x) => ({ ...x, cards: x.cards.map((c) => (ok.has(c.id) ? { ...c, ...ok.get(c.id) } : c)) })); }, 1500);
     return () => clearTimeout(t);
   }, [d]);   // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (autoEdit && d && d.relationship.status === 'self' && !draft) { setCollapsed(false); setDraft(makeDraft(d)); history.replaceState(null, '', `${location.pathname}${location.search}#/me`); } }, [d, autoEdit]);   // "Edit my profile" on Home opens the editor straight away
+  useEffect(() => { if (autoEdit && d && d.relationship.status === 'self' && !draft) { setCollapsed(false); setDraft(makeDraft(d)); navigate(`/${meName.toLowerCase()}`, { replace: true }); } }, [d, autoEdit]);   // "Edit my profile" on Home opens the editor straight away
   useEffect(() => { let on = true; setAudioUrl(null); if (music.audio) media.signedUrl(music.audio, 'audio').then((u) => on && setAudioUrl(u)).catch(() => {}); return () => { on = false; }; }, [music.audio]);
   if (!d) return <Boot />;
   const { profile, relationship: rel } = d; const own = rel.status === 'self';
@@ -238,19 +239,26 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
   );
 }
 
-function parseHash() {
-  const path = decodeURIComponent(location.pathname.replace(/^\/+|\/+$/g, ''));   // short links: app.fiiyou.online/<username>
-  if (!location.hash && path && !path.includes('/') && path !== 'index.html') return { v: 'profile', username: path.toLowerCase() };
-  const [a, b] = location.hash.replace(/^#\/?/, '').split('/');
-  if (a === 'u' && b) return { v: 'profile', username: decodeURIComponent(b).toLowerCase() };
-  if (a === 'post' && b) return { v: 'post', id: decodeURIComponent(b) };
-  if (a === 'chat') return { v: 'messages', peer: b };
-  if (a === 'me') return { v: 'profile', edit: b === 'edit' };
-  return { v: ['home', 'map', 'people', 'admin'].includes(a) ? a : 'home' };
+/** URL path -> which view to show.
+ *  /  home | /map | /people | /admin | /chat | /chat/<peerId> | /post/<postId>
+ *  /<username>  profile (yours or anyone's) | /<username>/edit  your profile with the editor open
+ *  /me, /me/edit and /u/<username> are old links: they are accepted and rewritten to /<username>. */
+function toRoute(path) {
+  const r = parseRoute(path); const first = (r.rest || [])[0];
+  const dec = (x) => { try { return decodeURIComponent(x); } catch { return x; } };
+  switch (r.page) {
+    case 'map': case 'people': case 'admin': return { v: r.page };
+    case 'chat': return { v: 'messages', peer: first };
+    case 'post': return first ? { v: 'post', id: dec(first) } : { v: 'home' };
+    case 'me': return { v: 'profile', legacyMe: true, edit: first === 'edit' };
+    case 'u': return first ? { v: 'profile', username: dec(first).toLowerCase() } : { v: 'home' };
+    case 'profile': return { v: 'profile', username: r.username.toLowerCase(), edit: first === 'edit' };
+    default: return { v: 'home' };
+  }
 }
 
 export default function App() {
-  const [session, setSession] = useState(undefined); const [me, setMe] = useState(null); const [route, setRoute] = useState(parseHash);
+  const [session, setSession] = useState(undefined); const [me, setMe] = useState(null); const path = usePath(); const route = useMemo(() => toRoute(path), [path]);
   const [isAdmin, setIsAdmin] = useState(false); const [recovery, setRecovery] = useState(false);
   const [menu, setMenu] = useState(false); const { n: nCount, setN: setNCount, tick: nTick } = useNotifCount(me?.id); const [toast, setToast] = useState(null); const [unread, setUnread] = useState(0);
   const refreshMe = useCallback(() => profiles.getMyProfile().then(setMe).catch(() => {}), []);
@@ -270,8 +278,8 @@ export default function App() {
     });
   }, []);
   useEffect(() => { registerSW(); }, []);   // service worker: installable app + push notifications
-  useEffect(() => { const h = () => setRoute(parseHash()); addEventListener('hashchange', h); return () => removeEventListener('hashchange', h); }, []);
   useEffect(() => { const t = { home: 'Home', profile: route.username ? `@${route.username}` : 'Me', map: 'Map', messages: 'Chat', people: 'People', admin: 'Admin', post: 'Post' }[route.v]; document.title = `fiiyou · ${t}`; }, [route]);
+  useEffect(() => { if (route.legacyMe && me) navigate(`/${me.username.toLowerCase()}${route.edit ? '/edit' : ''}`, { replace: true }); }, [route.legacyMe, route.edit, me?.username]);   // old /me -> /<username>
   useEffect(() => { if (session) profiles.getMyProfile().then(setMe).catch(() => {}); else setMe(null); }, [session]);
   useEffect(() => { if (!me) return; refreshUnread(); const t = setInterval(refreshUnread, 30000); const off = social.onMessage(me.id, refreshUnread); return () => { clearInterval(t); off(); }; }, [me?.id]);
   useEffect(() => { if (me?.id) adminApi.isAdmin().then(setIsAdmin).catch(() => setIsAdmin(false)); else setIsAdmin(false); }, [me?.id]);   // display only: the database re-checks every admin call
@@ -286,10 +294,15 @@ export default function App() {
   if (!session) return <Auth />;
   if (!me) return <Boot />;
   const notify = (msg, type = 'ok') => setToast({ msg, type });
-  const go = (v, username, peer, edit) => { const h = v === 'profile' ? (username && username !== me.username ? `#/u/${encodeURIComponent(username)}` : edit ? '#/me/edit' : '#/me') : v === 'messages' ? (peer ? `#/chat/${peer}` : '#/chat') : v === 'post' ? `#/post/${encodeURIComponent(username)}` : `#/${v}`;   // go('post', postId)
-    setMenu(false); window.scrollTo(0, 0); if (location.hash === h) setRoute(parseHash()); else location.hash = h; };
+  const go = (v, username, peer, edit) => {   // go('profile', username?, null, edit?) | go('messages', null, peerId) | go('post', postId)
+    const mine = !username || username.toLowerCase() === me.username.toLowerCase();
+    const to = v === 'profile' ? `/${encodeURIComponent((username || me.username).toLowerCase())}${mine && edit ? '/edit' : ''}`
+      : v === 'messages' ? (peer ? `/chat/${peer}` : '/chat')
+      : v === 'post' ? `/post/${encodeURIComponent(username)}`
+      : v === 'home' ? '/' : `/${v}`;
+    setMenu(false); navigate(to); };
   const NAV = [['home', 'Home'], ['profile', 'Me'], ['map', 'Map'], ['messages', 'Chat'], ['people', 'People'], ...(isAdmin ? [['admin', 'Admin']] : [])];
-  const active = (v) => (v === 'profile' ? route.v === 'profile' && (!route.username || route.username === me.username) : route.v === v);
+  const active = (v) => (v === 'profile' ? route.v === 'profile' && (!route.username || route.username === me.username.toLowerCase()) : route.v === v);
   return (<div className="app">
     <nav className="nav"><button className="logo" onClick={() => go('home')}>fiiyou</button>
       <div className="navlinks">{NAV.map(([v, l]) => <button key={v} className={active(v) ? 'on' : ''} aria-label={l} title={l} aria-current={active(v) ? 'page' : undefined} onClick={() => go(v)}><NavIcon name={v} active={active(v)} />{v === 'messages' && unread > 0 && <em className="dotb">{unread > 99 ? '99+' : unread}</em>}</button>)}</div>

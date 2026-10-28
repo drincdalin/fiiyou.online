@@ -14,6 +14,6 @@ class Boundary extends Component {
     <button className="primary" onClick={() => location.reload()}>Reload</button></div>) : this.props.children; }
 }
 
-bootRouter();
+bootRouter();       // old /#/... links become real paths
 installDialogs();   // any leftover window.alert() shows the in-app card too
 createRoot(document.getElementById('root')).render(<Boundary><App /><DialogHost /></Boundary>);
