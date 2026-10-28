@@ -122,6 +122,18 @@ export function reanchor(el, root, m, unit, only) {
   return pinBox(root, r.left + r.width / 2, r.top + r.height / 2, m.w * unit, m.h * unit, only);
 }
 
+/** True when "what is this sticker visually sitting on?" gives a trustworthy answer: the sidebar is NEXT TO the cards (desktop),
+ *  or the theme is 'single' (always stacked, so always the same). On a tablet or phone the sidebar is stacked above the cards,
+ *  so re-pinning by position there would attach desktop stickers to the wrong anchors and save that. Measured from the DOM,
+ *  not from window.innerWidth, so it also holds when the customizer panel narrows the page. */
+export function layoutIsStable(root, theme) {
+  if ((theme?.layout || 'side-left') === 'single') return true;
+  const side = root.querySelector('.side'), cards = root.querySelector('.cards');
+  if (!side || !cards) return false;
+  const s = side.getBoundingClientRect(), c = cards.getBoundingClientRect();
+  return s.right <= c.left + 2 || c.right <= s.left + 2;
+}
+
 /** True when a sticker is not pinned to anything that is on the page (no card, or its card is hidden / deleted / the music card). */
 export const isStray = (m, root) => m.card !== AVATAR && m.card !== FRAME && !(m.card && root.querySelector(`[data-cid="${CSS.escape(m.card)}"]`));
 
@@ -129,6 +141,7 @@ export const isStray = (m, root) => m.card !== AVATAR && m.card !== FRAME && !(m
  *  why they drifted away from their card on other screen sizes. Work out where such a sticker was drawn on this (desktop)
  *  screen and pin it to the card it sits on. Returns a change for withModel, or null. */
 export function pinStray(c, theme, root) {
+  if (!layoutIsStable(root, theme)) return null;
   const m = stickerModel(c, theme);
   if (!isStray(m, root)) return null;
   const cards = root.querySelector('.cards'); if (!cards) return null;
@@ -149,6 +162,7 @@ export function pinTo(c, targetId, theme) {
 
 /** When editing starts: re-pin a sticker to what it visually sits on (fixes stickers saved against another element). Returns a change or null. */
 export function settleSticker(c, theme, root) {
+  if (!layoutIsStable(root, theme)) return null;
   const el = root.querySelector(`[data-sid="${c.id}"]`); if (!el) return null;
   const m = stickerModel(c, theme), at = reanchor(el, root, m, unitOf(el, root));
   return !at || (c.content?.at && at.card === m.card && at.v === m.v) ? null : at;
@@ -157,6 +171,7 @@ export function settleSticker(c, theme, root) {
 /** A sticker whose centre is no longer over the anchor it is pinned to (it hangs off into empty space, e.g. far below the avatar)
  *  is moved to the nearest anchor, keeping its place and size on screen. Returns a change for withModel, or null. */
 export function rehome(c, theme, root) {
+  if (!layoutIsStable(root, theme)) return null;
   const el = root.querySelector(`[data-sid="${c.id}"]`), cur = el?.closest('[data-cid]'); if (!el || !cur) return null;
   const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, b = cur.getBoundingClientRect();
   if (cx >= b.left && cx <= b.right && cy >= b.top && cy <= b.bottom) return null;

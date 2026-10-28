@@ -663,3 +663,9 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 @media (max-width: 1000px) {
   .sticker[data-edge] { left: clamp(calc(var(--sw) * -1 + 10px), var(--sx), calc(100% - 10px)); }
 }
+
+/* v23: stickers that only showed up after a scroll. Their ancestors use backdrop-filter / an entry animation / overflow clip, and
+   Chrome can skip the first paint of absolutely positioned children that hang outside such a box until something forces a repaint
+   (a scroll). Giving every sticker its own compositor layer makes it paint on the first frame. */
+.sticker { will-change: transform; backface-visibility: hidden; }
+.sticker img { content-visibility: visible; }

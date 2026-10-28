@@ -105,7 +105,7 @@ function CardView({ c, d, img, go, openPhoto, own, meName, notify, children }) {
 }
 
 const cl = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-function Sticker({ c, m, unit, edge, getRoot, src, edit, selected, onSelect, onChange }) {
+function Sticker({ c, m, unit, edge, getRoot, src, edit, selected, onSelect, onChange, onLoad }) {
   // m = { card, v, x, y, w, h } in units (1 unit = 1/1000 of the cards column width), unit = px per unit right now.
   const el = useRef();
   const drag = (e, mode) => {
@@ -122,7 +122,7 @@ function Sticker({ c, m, unit, edge, getRoot, src, edit, selected, onSelect, onC
     addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up);
   };
   return (<div ref={el} data-sid={c.id} data-edge={edge ? '' : undefined} className={`sticker${edit ? ' edit' : ''}${selected ? ' sel' : ''}`} onPointerDown={(e) => drag(e, 'move')} style={stickerStyle(c, m, unit)}>
-    {src && <img src={src} alt="" draggable={false} />}{edit && selected && <b className="grip" onPointerDown={(e) => drag(e, 'size')} />}</div>);
+    {src && <img src={src} alt="" draggable={false} loading="eager" decoding="sync" onLoad={onLoad} />}{edit && selected && <b className="grip" onPointerDown={(e) => drag(e, 'size')} />}</div>);
 }
 
 const makeDraft = (d) => { const profile = d.profile; return { theme: { ...profile.theme }, origBg: profile.theme.bg_image, origFont: profile.theme.font_file, cards: d.cards.map((c) => ({ ...c })), top: d.topFriends.map((f) => f.id), origMusic: profile.music || {}, css: profile.custom_css || [],
@@ -144,12 +144,13 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
   const fontFamily = useCustomFont(theme?.font_file);   // registers the uploaded font (draft or saved) so the page can use it
   const [audioUrl, setAudioUrl] = useState(null);
   const [spans, setSpans] = useState({});   // width of each anchor in its own units
+  const [, bump] = useState(0);   // bumped when a sticker image finishes loading: re-renders, and the measuring effect below runs again
   const [units, setUnits] = useState({});   // px per sticker unit of every anchor (cards, avatar, name box, player, buttons), re-measured whenever one resizes
   useEffect(() => { const root = frame.current; if (!root) return; const nodes = [root, ...root.querySelectorAll('[data-cid]')];
     const read = () => { const sp = spansOf(root); setSpans((p) => (JSON.stringify(p) === JSON.stringify(sp) ? p : sp)); const n = unitsOf(root); setUnits((p) => { const k = Object.keys(n); return k.length === Object.keys(p).length && k.every((i) => Math.abs((p[i] ?? -1) - n[i]) < 0.0005) ? p : n; }); };
     const ro = new ResizeObserver(read); nodes.forEach((e) => ro.observe(e)); read(); return () => ro.disconnect(); });
-  useEffect(() => {   // when editing starts, re-pin every sticker to the card / avatar it visually sits on (what you see is what gets pinned). Skipped on phones: there the layout is not the one it was placed in.
-    if (!draft || innerWidth <= 700) return;
+  useEffect(() => {   // when editing starts, re-pin every sticker to the card / avatar it visually sits on (what you see is what gets pinned). Refused by layoutIsStable() when the sidebar is stacked above the cards (tablet / phone).
+    if (!draft) return;   // settleSticker itself refuses on a stacked (tablet / phone) layout
     const t = setTimeout(() => { const root = frame.current; if (!root) return; const fix = {};
       for (const c of draft.cards) if (c.type === 'sticker') { const at = settleSticker(c, draft.theme, root); if (at) fix[c.id] = at; }
       if (Object.keys(fix).length) setDraft((x) => ({ ...x, cards: x.cards.map((c) => (fix[c.id] ? { ...c, ...withModel(c, x.theme, fix[c.id]) } : c)) })); }, 400);
@@ -183,7 +184,7 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
   const hasPlayer = !!(audioUrl || music.url);
   const rendered = new Set([...flowIds, 'avatar', 'nameplate', 'actions', 'frame', ...(hasPlayer ? ['player'] : [])]);   // anchors that exist on the page; stickers pinned to anything else sit at the top of the cards column
   const stickersOn = (cardId) => stickerList.filter(({ m }) => (cardId ? m.card === cardId : !rendered.has(m.card))).map(({ c, m }) => (
-    <Sticker key={c.id} c={c} m={m} unit={units[m.card] || colW / 1000} edge={(m.x + m.w / 2 < 0) || (m.x + m.w / 2 > (spans[m.card] ?? 1000))} getRoot={() => frame.current} src={img[c.content.images?.[0]]} edit={!!draft} selected={sel === c.id} onSelect={setSel} onChange={(p) => patchSticker(c.id, p)} />));
+    <Sticker key={c.id} c={c} m={m} unit={units[m.card] || colW / 1000} edge={(m.x + m.w / 2 < 0) || (m.x + m.w / 2 > (spans[m.card] ?? 1000))} getRoot={() => frame.current} src={img[c.content.images?.[0]]} edit={!!draft} selected={sel === c.id} onSelect={setSel} onLoad={() => bump((n) => n + 1)} onChange={(p) => patchSticker(c.id, p)} />));
   const openShare = async () => { if (sharing) return; setSharing(true);
     try {
       const flowCards = shown.filter((c) => c.visible && c.type !== 'music' && c.type !== 'sticker');
