@@ -52,7 +52,7 @@ export async function deleteAccount() {
 
 /** Sends a reset link; the page that opens handles the PASSWORD_RECOVERY event (see App.jsx). Never reveals whether the email exists. */
 export async function resetPassword(email) {
-  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${location.origin}${location.pathname}` });
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${location.origin}${import.meta.env?.BASE_URL ?? '/'}` });
   if (error && error.status !== 400) throw error;
 }
 export async function updatePassword(password) { return unwrap(await supabase.auth.updateUser({ password })); }

@@ -238,7 +238,7 @@ begin
   perform t.as_admin();
   perform t.as_user(carol);
   perform record_profile_view(bob); perform record_profile_view(bob);
-  perform t.ok(profile_view_count(bob) = 1, 'view counted once per viewer per day');
+  perform t.ok(profile_view_count(bob) = 2, 'every visit counts (0017: no longer one per viewer per day)');
   perform record_profile_view(carol);
   perform t.ok(profile_view_count(carol) = 0, 'own view not counted');
   perform t.fails(format($q$insert into messages (sender_id, recipient_id, body) values (%L, %L, 'hi')$q$, carol, bob), 'chat blocked for non-friends');

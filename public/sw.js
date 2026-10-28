@@ -13,8 +13,8 @@ self.addEventListener('push', (event) => {
     if (open.some((c) => c.visibilityState === 'visible' && c.focused)) return;
     await self.registration.showNotification(d.title || 'fiiyou', {
       body: d.body || '',
-      icon: `${scope}icons/icon-192.png`,
-      badge: `${scope}icons/icon-192.png`,
+      icon: `${scope}icon-192.png`,
+      badge: `${scope}icon-192.png`,
       tag: d.tag || undefined,          // same tag = replaces the older notification instead of stacking
       renotify: !!d.tag,
       data: { path: typeof d.path === 'string' ? d.path : '' },
@@ -25,7 +25,7 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const path = event.notification.data && event.notification.data.path ? event.notification.data.path : '';
-  const url = new URL(path, self.registration.scope).href;   // e.g. <site>/#/post/<id>
+  const url = new URL(path, self.registration.scope).href;   // e.g. <site>/post/<id>
   event.waitUntil((async () => {
     const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const mine = all.find((c) => c.url.startsWith(self.registration.scope));

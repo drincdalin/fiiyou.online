@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { auth, admin as adminApi, profiles, cards as cardsApi, friends, wall, social, safety, media, errorCode } from '../index.js';
 import { useImages, Boot, Avatar, Rich } from './shared.jsx';
 import { toCss } from './customCss.js';
@@ -10,10 +10,11 @@ import { useCustomFont } from './fonts.js';
 import { applyAppTheme } from './appTheme.js';
 import Player from './Player.jsx';
 import { stickerModel, stickerStyle, withModel, reanchor, nearestAnchor, settleSticker, pinStray, rehome, unitsOf, spansOf } from './stickerAnchor.js';
-import Customizer from './Customizer.jsx';
+// Loaded on demand: the editor and the share-image generators are big and most visits never open them.
+const Customizer = lazy(() => import('./Customizer.jsx'));
 import { ask } from './dialog.jsx';
 import { usePath, parseRoute, navigate, isReserved } from './router.jsx';
-import ShareSheet from './ShareSheet.jsx';
+const ShareSheet = lazy(() => import('./ShareSheet.jsx'));
 import NotificationList, { useNotifCount } from './Notifications.jsx';
 import PushToggle from './PushToggle.jsx';
 import { registerSW, forgetDevice } from './push.js';
@@ -230,9 +231,9 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
       {stickersOn('frame')}
       </main>
     </div>
-    {draft && <Customizer draft={draft} setDraft={setDraft} onClose={() => setDraft(null)} reload={async () => { await load(); refreshMe(); }} sel={sel} setSel={setSel} notify={notify} photos={d.photos} img={img} collapsed={collapsed} setCollapsed={setCollapsed} />}
+    {draft && <Suspense fallback={null}><Customizer draft={draft} setDraft={setDraft} onClose={() => setDraft(null)} reload={async () => { await load(); refreshMe(); }} sel={sel} setSel={setSel} notify={notify} photos={d.photos} img={img} collapsed={collapsed} setCollapsed={setCollapsed} /></Suspense>}
     {rep && <ReportModal target={{ type: 'profile', id: profile.id }} onClose={() => setRep(false)} notify={notify} />}
-    {shareData && <ShareSheet data={shareData} onClose={() => setShareData(null)} />}
+    {shareData && <Suspense fallback={null}><ShareSheet data={shareData} onClose={() => setShareData(null)} /></Suspense>}
     {lb != null && <Lightbox items={items} index={lb} onClose={() => setLb(null)} onIndex={setLb} onLike={own ? undefined : likePhoto} onLikers={own ? (it) => setLikers(it) : undefined} />}
     {likers && <LikersModal load={() => social.listPhotoLikers(likers.id)} go={go} onClose={() => setLikers(null)} />}
     </>

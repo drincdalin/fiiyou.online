@@ -32,8 +32,9 @@ Deno.serve(async (req) => {
   if (!subs.data?.length) return new Response('no devices');
 
   const name = actor.data?.display_name || actor.data?.username || 'Someone';
-  // path is relative to the app's address: the service worker opens it with the right base (works on GitHub Pages sub-paths too)
-  const path = n.post_id ? `#/post/${n.post_id}` : `#/u/${encodeURIComponent(actor.data?.username ?? '')}`;
+  // path is relative to the app's address (no leading slash): the service worker resolves it against its own scope
+  const username = actor.data?.username ? encodeURIComponent(actor.data.username.toLowerCase()) : '';
+  const path = n.post_id ? `post/${n.post_id}` : username;
   const payload = JSON.stringify({
     title: 'fiiyou',
     body: `${name} ${TEXT[n.type ?? ''] ?? 'sent you something'}`,

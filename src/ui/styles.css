@@ -1,7 +1,7 @@
-/* Ubuntu Sans variable fonts: put the files in public/fonts/ (UbuntuSans.ttf, UbuntuSans-Italic.ttf, UbuntuSansMono.ttf). Missing files fall back to system fonts. */
-@font-face { font-family: "Ubuntu Sans"; src: url("/fonts/UbuntuSans.ttf") format("truetype"); font-weight: 100 800; font-style: normal; font-display: swap; }
-@font-face { font-family: "Ubuntu Sans"; src: url("/fonts/UbuntuSans-Italic.ttf") format("truetype"); font-weight: 100 800; font-style: italic; font-display: swap; }
-@font-face { font-family: "Ubuntu Sans Mono"; src: url("/fonts/UbuntuSansMono.ttf") format("truetype"); font-weight: 400 700; font-style: normal; font-display: swap; }
+/* Ubuntu Sans variable fonts (woff2) live in public/fonts/, with their licence (LICENCE.txt). */
+@font-face { font-family: "Ubuntu Sans"; src: url("/fonts/UbuntuSans.woff2") format("woff2"); font-weight: 100 800; font-stretch: 75% 100%; font-style: normal; font-display: swap; }
+@font-face { font-family: "Ubuntu Sans"; src: url("/fonts/UbuntuSans-Italic.woff2") format("woff2"); font-weight: 100 800; font-stretch: 75% 100%; font-style: italic; font-display: swap; }
+@font-face { font-family: "Ubuntu Sans Mono"; src: url("/fonts/UbuntuSansMono.woff2") format("woff2"); font-weight: 200 800; font-style: normal; font-display: swap; }
 
 /* ---------- app chrome: black / white / grey; yellow = notice, red = error ---------- */
 :root { --ui-font: "Ubuntu Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; --ink: #f4f4f4; --g0: #080808; --g1: #101010; --g2: #1a1a1a; --g3: #2c2c2c; --g4: #4a4a4a; --muted: #9a9a9a;

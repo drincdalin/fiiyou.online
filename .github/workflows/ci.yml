@@ -1,0 +1,40 @@
+# Checks every push and pull request: the app must build, and the database migrations + tests must pass.
+# Deployment is NOT done here: Vercel builds and deploys from the repository on its own (see docs/RELEASE.md).
+name: CI
+
+on:
+  push:
+    branches: ['main']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-placeholder
+          SITE_URL: https://example.com
+
+  database:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Postgres
+        run: sudo apt-get update && sudo apt-get install -y postgresql
+      - name: Start Postgres
+        run: sudo service postgresql start
+      - name: Migrations + tests
+        # copied to /tmp so the postgres user can read it
+        run: cp -r supabase /tmp/supabase && sudo -u postgres bash /tmp/supabase/tests/run.sh
