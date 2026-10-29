@@ -12,13 +12,14 @@ export const ago = (iso) => { const s = (Date.now() - new Date(iso)) / 1000;
   if (s < 60) return 'now'; if (s < 3600) return `${Math.floor(s / 60)}m`; if (s < 86400) return `${Math.floor(s / 3600)}h`;
   if (s < 604800) return `${Math.floor(s / 86400)}d`; return new Date(iso).toLocaleDateString('ro-RO'); };
 
-/** Tiny safe markup: **bold**, *italic*, [text](https://link). Everything else is plain text; nothing is ever parsed as HTML. */
-export function Rich({ text = '', onUser }) {
-  const out = []; const re = /\*\*([^*]{1,300})\*\*|\*([^*]{1,300})\*|\[([^\]]{1,80})\]\((https?:\/\/[^\s)]{1,300})\)|(?<![\w@])@([a-z0-9_]{3,24})\b/g; let last = 0, m, k = 0;
+/** Tiny safe markup: **bold**, *italic*, [text](https://link), @user, #tag. Everything else is plain text; nothing is ever parsed as HTML. */
+export function Rich({ text = '', onUser, onTag }) {
+  const out = []; const re = /\*\*([^*]{1,300})\*\*|\*([^*]{1,300})\*|\[([^\]]{1,80})\]\((https?:\/\/[^\s)]{1,300})\)|(?<![\w@])@([a-z0-9_]{3,24})\b|(?<![\p{L}\p{N}_#&/])#([\p{L}\p{N}_]{2,32})/gu; let last = 0, m, k = 0;
   while ((m = re.exec(text))) {
     if (m.index > last) out.push(text.slice(last, m.index)); k++;
     if (m[1]) out.push(<b key={k}>{m[1]}</b>); else if (m[2]) out.push(<em key={k} className="it">{m[2]}</em>);
     else if (m[5]) out.push(onUser ? <button key={k} className="ulink" onClick={() => onUser(m[5])}>@{m[5]}</button> : `@${m[5]}`);
+    else if (m[6]) out.push(/^[\d_]+$/.test(m[6]) ? m[0] : onTag ? <button key={k} type="button" className="tag" onClick={() => onTag(m[6].toLowerCase())}>#{m[6]}</button> : `#${m[6]}`);   // all-digit "#1" stays plain text
     else out.push(<a key={k} href={m[4]} target="_blank" rel="noopener noreferrer nofollow ugc">{m[3]}</a>);
     last = re.lastIndex;
   }

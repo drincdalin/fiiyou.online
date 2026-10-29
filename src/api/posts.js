@@ -49,3 +49,13 @@ export async function getPost(id) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id))) return null;
   return unwrap(await supabase.rpc('get_post', { p_id: id }))[0] || null;
 }
+
+/** Public posts that carry #tag, newest first, in the same shape as feed() rows. The database lists the ids (0026_hashtags.sql);
+ *  each post is then loaded through getPost(), which applies the usual visibility rules. `cursor` pages the next call (pass it as `before`). */
+export async function tagFeed({ tag, before = null, limit = 20 } = {}) {
+  const ids = unwrap(await supabase.rpc('tag_post_ids', { p_tag: tag, p_before: before, p_limit: limit })) || [];
+  const rows = (await Promise.all(ids.map((r) => getPost(r.id).catch(() => null)))).filter(Boolean);
+  return { rows, cursor: ids.length ? ids[ids.length - 1].created_at : null, more: ids.length === limit };
+}
+/** [{ tag, uses }] most used in public posts over the last `days` days. */
+export const trendingTags = async (days = 7, limit = 8) => unwrap(await supabase.rpc('trending_tags', { p_days: days, p_limit: limit })) || [];

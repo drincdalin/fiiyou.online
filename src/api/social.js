@@ -73,7 +73,12 @@ export const deletePlace = async (id) => unwrap(await supabase.from('places').de
 export const conversations = async () => unwrap(await supabase.rpc('conversations'));
 // reply_to points at the message being answered. `reply` ({id, sender_id, body} or null) is attached here instead of with a
 // PostgREST self-join, which is ambiguous on a self-referencing table and came back as an empty array for every message.
-const MSG_COLS = 'id, sender_id, body, created_at, reply_to';
+const MSG_COLS = 'id, sender_id, body, created_at, reply_to, edited_at';
+/** A deleted message keeps its row (so replies that quote it still work) but its text becomes this marker (0027_message_edit_delete.sql). */
+export const DELETED_BODY = '[message deleted]';
+/** Edit the text of MY message. Returns the updated row (body, edited_at). */
+export const editMessage = async (id, body) => unwrap(await supabase.rpc('edit_message', { p_id: id, p_body: body }));
+export const deleteMessage = async (id) => unwrap(await supabase.rpc('delete_message', { p_id: id }));
 async function withReplies(rows) {
   const known = new Map(rows.map((r) => [r.id, r]));
   const missing = [...new Set(rows.map((r) => r.reply_to).filter((id) => id && !known.has(id)))];   // quoted messages older than the loaded window
@@ -92,12 +97,12 @@ export async function sendMessage(peerId, body, replyTo = null) {
 }
 export const markRead = async (peerId) => unwrap(await supabase.rpc('mark_read', { p_peer: peerId }));
 export const unreadCount = async () => Number(unwrap(await supabase.rpc('unread_count')));
-/** Live incoming messages. Each subscription gets its own channel name (a shared name made the second
+/** Live incoming, edited and deleted messages. Each subscription gets its own channel name (a shared name made the second
  *  subscriber throw and blank the page). Never throws; the UI also polls as a fallback. */
 export function onMessage(myId, cb) {
   try {
     const ch = supabase.channel(`dm-${myId}-${Math.random().toString(36).slice(2)}`).on('postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'messages', filter: `recipient_id=eq.${myId}` }, cb).subscribe();
+      { event: '*', schema: 'public', table: 'messages', filter: `recipient_id=eq.${myId}` }, cb).subscribe();
     return () => { try { supabase.removeChannel(ch); } catch { /* ignore */ } };
   } catch { return () => {}; }
 }

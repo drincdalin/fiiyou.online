@@ -3,7 +3,7 @@ import { useSyncExternalStore } from 'react';
 /* Tiny path router (real URLs, no #/hash). No dependencies.
  *   /            home
  *   /<username>  a profile (yours too: app.fiiyou.online/username)
- *   /map /people /chat /chat/<id> /post/<id> /admin   app pages
+ *   /map /people /chat /chat/<id> /post/<id> /tag/<hashtag> /admin   app pages
  * Needs the host to serve index.html for every path (vercel.json rewrite). */
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, ''); // '' on app.fiiyou.online
@@ -11,7 +11,7 @@ const BASE = import.meta.env.BASE_URL.replace(/\/$/, ''); // '' on app.fiiyou.on
 /* Names a username may never take, because /<name> would collide with a real page or file. */
 export const RESERVED = [
   // app pages
-  'home', 'me', 'u', 'map', 'people', 'chat', 'messages', 'post', 'admin', 'notifications', 'invite',
+  'home', 'me', 'u', 'map', 'people', 'chat', 'messages', 'post', 'admin', 'notifications', 'invite', 'tag',
   // auth / meta pages
   'login', 'signup', 'settings', 'about', 'help', 'privacy', 'terms', 'api',
   // static files and folders

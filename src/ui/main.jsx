@@ -7,6 +7,7 @@ import { captureInvite } from '../lib/invite.js';
 import './styles.css';
 import './design.css';
 import './ui-theme.css';
+import './social-ui.css';   // hashtags, comment layout, chat message menu (loads last so it wins)
 
 bootRouter();       // old /#/... links become real paths
 captureInvite({ base: import.meta.env.BASE_URL.replace(/\/$/, '') });   // /invite/<username>: remember who invited you, then show the normal page
