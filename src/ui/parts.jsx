@@ -68,7 +68,7 @@ export function PostCard({ p, me, img, go, onChange, onDelete, notify }) {
           <MentionInput as="textarea" rows="3" maxLength={1000} value={body} onChange={(e) => setBody(e.target.value)} />
           <div className="acts"><button className="primary sm" disabled={!body.trim()} onClick={save}>Save</button><button className="ghost sm" onClick={() => { setEdit(false); setBody(p.body); setTitle(p.title || ''); }}>Cancel</button>
             {p.image_path && <button className="ghost sm" onClick={dropImg}>Remove image</button>}</div></div>)
-          : <>{p.title && <h3>{p.title}</h3>}<p className="pre"><Rich text={p.body} onUser={(u) => go('profile', u)} onTag={(t) => go('tag', t)} /></p></>}
+          : <>{p.title && <h3>{p.title}</h3>}<p className="pre"><Rich plain text={p.body} onUser={(u) => go('profile', u)} onTag={(t) => go('tag', t)} /></p></>}
       </div>
     </div>
     <footer><button className={`like${p.liked ? ' on' : ''}`} onClick={like} aria-label={p.liked ? 'Unlike' : 'Like'}><Heart size={16} weight={p.liked ? 'fill' : 'bold'} aria-hidden="true" />{p.like_count}</button>
