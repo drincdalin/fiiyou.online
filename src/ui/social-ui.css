@@ -1,4 +1,4 @@
-/* social-ui.css: hashtags, comment layout, chat message menu.
+/* social-ui.css: hashtags, comment layout, reply bar, @mention popup.
    Loaded last in main.jsx so it wins over the other stylesheets.
    Uses the theme variables already defined by the app (--t-card, --t-border, --t-text, --accent). */
 
@@ -77,36 +77,7 @@ button.mention:focus-visible { text-decoration: underline; }
 .cmform .primary { border-radius: 999px; padding-inline: 16px; }
 .cmform .primary:disabled { opacity: .45; }
 
-/* ---------- chat message menu (edit / delete own messages) ---------- */
-.msgmenuwrap { position: relative; display: inline-block; }
-.msgmenu {
-  position: absolute;
-  z-index: 30;
-  min-width: 140px;
-  padding: 4px;
-  border: 1px solid var(--t-border);
-  border-radius: 12px;
-  background: var(--t-card);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
-}
-.msgmenu button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 8px 10px;
-  border: 0;
-  border-radius: 8px;
-  background: none;
-  color: var(--t-text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.msgmenu button:hover { background: color-mix(in srgb, var(--t-text) 10%, transparent); }
-.msgmenu button.danger { color: #ff5a5f; }
-.msgedited { font-size: .75em; opacity: .6; margin-left: 4px; }
-.msgdeleted { font-style: italic; opacity: .6; }
+/* chat message menu (edit / delete own messages): styles live in MessageMenu.css */
 
 /* ---------- reply bar, @mention popup ---------- */
 .cmreplying { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 12px 0 4px; padding: 4px 10px; font-size: .85em; border-radius: 8px; background: color-mix(in srgb, var(--t-text) 8%, transparent); }
