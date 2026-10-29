@@ -277,7 +277,12 @@ export default function App() {
   const [menu, setMenu] = useState(false); const { n: nCount, setN: setNCount, tick: nTick } = useNotifCount(me?.id); const [toast, setToast] = useState(null); const [unread, setUnread] = useState(0);
   const refreshMe = useCallback(() => profiles.getMyProfile().then(setMe).catch(() => {}), []);
   const [meErr, setMeErr] = useState(null); const [inviteOpen, setInviteOpen] = useState(false);
-  const loadMe = useCallback(() => { setMeErr(null); return profiles.getMyProfile().then(setMe).catch(setMeErr); }, []);
+  const loadMe = useCallback(() => {
+    setMeErr(null);
+    return profiles.getMyProfile()
+      .then((p) => { if (p) setMe(p); else auth.signOut().catch(() => {}); })   // stale session (user deleted/banned): drop it, onAuthChange then shows the sign-in screen
+      .catch(setMeErr);
+  }, []);
   const myImg = useImages([me?.avatar_path]);
   const refreshUnread = useCallback(() => social.unreadCount().then(setUnread).catch(() => {}), []);
   useEffect(() => {
