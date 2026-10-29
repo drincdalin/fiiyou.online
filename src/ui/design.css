@@ -144,7 +144,7 @@ input[type=file]::file-selector-button { border-radius: var(--rad-s); }
 .leaflet-bar a { background: var(--g1) !important; border-color: var(--g3) !important; }
 .leaflet-bar a:hover { background: var(--hover) !important; }
 .mkp { border-radius: 50% 50% 50% 4px; border-width: 3px; }
-.mkf { border-radius: var(--rad-s); border-width: 3px; }
+.mkf, .mk .mkf { width: 30px !important; height: 30px !important; min-width: 30px; max-width: none !important; max-height: none !important; aspect-ratio: 1 / 1 !important; border-radius: 50% !important; border-width: 3px; box-sizing: border-box; object-fit: cover; }
 
 /* ---------- toast ---------- */
 .toast { border: 2px solid var(--edge); border-radius: var(--rad-m); box-shadow: var(--lift-lg); font-weight: 800; }

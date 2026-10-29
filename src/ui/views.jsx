@@ -111,7 +111,7 @@ export function MapView({ me, go, notify }) {
       html: `<div class="mkp${p.friends_there ? ' hot' : ''}"><b>${Number(p.post_count)}</b></div>` }) }).on('click', () => setSel(p)).addTo(g));
     if (show.friends) fr.forEach((f) => { const h = hash(f.id); const src = img[f.avatar_path];
       L.marker([f.lat + ((h % 100) - 50) / 50 * 0.0025, f.lng + (((h >> 7) % 100) - 50) / 50 * 0.0035], { title: f.display_name,
-        icon: L.divIcon({ className: 'mk', iconSize: [30, 30], iconAnchor: [15, 15], html: src ? `<img class="mkf" src="${src}" alt="">` : '<div class="mkf"></div>' }) })
+        icon: L.divIcon({ className: 'mk', iconSize: [30, 30], iconAnchor: [15, 15], html: src ? `<img class="mkf" src="${src}" alt="" style="width:30px;height:30px;aspect-ratio:1/1;border-radius:50%;object-fit:cover">` : '<div class="mkf"></div>' }) })
         .on('click', () => go('profile', f.username)).addTo(g); });
   }, [places, fr, show, img]);
   const search = async (e) => { e.preventDefault(); if (q.trim().length < 3 || searching) return; setSearching(true);

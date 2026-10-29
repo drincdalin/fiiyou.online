@@ -13,6 +13,7 @@ function Reports({ go, notify, refresh }) {
   const img = useImages((rows || []).flatMap((r) => [r.preview?.image_path, r.preview?.avatar_path]));
   const run = async (fn, msg) => { try { await fn(); notify(msg); await load(); refresh(); } catch (e) { notify(e.message || 'Failed', 'err'); } };
   const delAccount = (id, name) => { if (prompt(`Type "${name}" to permanently delete this account, its files and everything it owns.`) === name) run(() => admin.deleteUser(id), 'Account deleted'); };
+  const banAccount = (id, name, reason) => { if (prompt(`Type "${name}" to BAN this email and permanently delete the account, its files and everything it owns.`) === name) run(() => admin.banUser(id, reason), 'Account deleted and email banned'); };
   return (<>
     <div className="tabs">{['open', 'reviewed', 'dismissed'].map((s) => <button key={s} className={status === s ? 'on' : ''} onClick={() => setStatus(s)}>{s}</button>)}</div>
     {!rows ? <div className="boot">Loading…</div> : !rows.length ? <p className="empty">Nothing here.</p> : rows.map((r) => { const p = r.preview; return (
@@ -27,6 +28,7 @@ function Reports({ go, notify, refresh }) {
           {p && <button className="ghost sm" onClick={() => go('profile', p.author)}>Open profile</button>}
           {p && r.target_type !== 'profile' && <button className="ghost sm danger" onClick={() => confirm('Delete this content?') && run(async () => { r.target_type === 'post' ? await admin.deletePost(r.target_id) : await admin.deleteComment(r.target_type, r.target_id); await admin.setReport(r.id, 'reviewed'); }, 'Content deleted')}>Delete content</button>}
           {p && <button className="ghost sm danger" onClick={() => delAccount(p.author_id, p.author)}>Delete account</button>}
+          {p && <button className="ghost sm danger" onClick={() => banAccount(p.author_id, p.author, r.reason)}>Ban &amp; delete</button>}
           {status === 'open' && <><button className="primary sm" onClick={() => run(() => admin.setReport(r.id, 'reviewed'), 'Marked reviewed')}>Mark reviewed</button><button className="ghost sm" onClick={() => run(() => admin.setReport(r.id, 'dismissed'), 'Dismissed')}>Dismiss</button></>}
           {status !== 'open' && <button className="ghost sm" onClick={() => run(() => admin.setReport(r.id, 'open'), 'Reopened')}>Reopen</button>}
         </div></article>); })}
@@ -39,10 +41,15 @@ function Users({ go, notify, refresh }) {
   const img = useImages(rows.map((u) => u.avatar_path));
   const verify = async (u) => { try { await admin.setVerified(u.id, !u.verified); notify(u.verified ? 'Verification removed' : 'Profile verified'); load(); refresh(); } catch (e) { notify(e.message, 'err'); } };
   const del = async (u) => { if (prompt(`Type "${u.username}" to permanently delete this account, its files and everything it owns.`) !== u.username) return; try { await admin.deleteUser(u.id); notify('Account deleted'); load(); refresh(); } catch (e) { notify(e.message, 'err'); } };
+  const ban = async (u) => {
+    if (prompt(`Type "${u.username}" to BAN this email and permanently delete the account, its files and everything it owns.`) !== u.username) return;
+    const reason = prompt('Reason (optional, only you will see it):') || null;
+    try { await admin.banUser(u.id, reason); notify('Account deleted and email banned'); load(); refresh(); } catch (e) { notify(e.message, 'err'); }
+  };
   return (<><input placeholder="Search username or display name (empty = newest)" value={q} onChange={(e) => setQ(e.target.value)} />
     {rows.map((u) => (<div className="row" key={u.id}><Avatar src={img[u.avatar_path]} size={44} />
       <button className="link" onClick={() => go('profile', u.username)}><span>{u.display_name}{u.verified && <em className="badge vb">Verified</em>}</span><small>@{u.username} · joined {new Date(u.created_at).toLocaleDateString('ro-RO')} · {u.post_count} posts{u.open_reports > 0 ? ` · ${u.open_reports} open reports` : ''}</small></button>
-      <span className="acts"><button className={u.verified ? 'ghost sm' : 'primary sm'} onClick={() => verify(u)}>{u.verified ? 'Unverify' : 'Verify'}</button><button className="ghost sm danger" onClick={() => del(u)}>Delete</button></span></div>))}</>);
+      <span className="acts"><button className={u.verified ? 'ghost sm' : 'primary sm'} onClick={() => verify(u)}>{u.verified ? 'Unverify' : 'Verify'}</button><button className="ghost sm danger" onClick={() => del(u)}>Delete</button><button className="ghost sm danger" onClick={() => ban(u)}>Ban &amp; delete</button></span></div>))}</>);
 }
 
 function Storage({ notify }) {
