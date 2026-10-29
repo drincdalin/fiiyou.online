@@ -1,0 +1,48 @@
+/* "..." button: small, round, quiet; appears on hover/focus (always on touch screens) */
+.msgmenuwrap { position: relative; display: inline-flex; align-self: center; flex: none; }
+.msgmenuwrap .msgmore {
+  width: 28px; height: 28px; min-width: 0; padding: 0; margin: 0;
+  display: grid; place-items: center;
+  border: 0; border-radius: 50%; background: transparent; box-shadow: none;
+  color: var(--muted, #8b8b93); cursor: pointer;
+}
+.msgmenuwrap .msgmore:hover, .msgmenuwrap .msgmore[aria-expanded="true"] { background: rgba(255,255,255,.10); color: var(--text, #f2f2f4); }
+.brow .msgmenuwrap { opacity: 0; transition: opacity .12s; }
+.brow:hover .msgmenuwrap, .brow:focus-within .msgmenuwrap, .brow .msgmenuwrap:has(.msgmenu) { opacity: 1; }
+@media (hover: none) { .brow .msgmenuwrap { opacity: 1; } }
+
+/* click-away layer + dropdown */
+.pmenuback { position: fixed; inset: 0; z-index: 40; background: transparent; }
+.msgmenu {
+  position: fixed; z-index: 41; min-width: 150px; padding: 5px;
+  display: flex; flex-direction: column; gap: 2px;
+  background: var(--card, #1b1b1f); border: 1px solid rgba(255,255,255,.10); border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.45);
+}
+.msgmenu button {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 12px; margin: 0;
+  border: 0; border-radius: 8px; background: transparent; box-shadow: none;
+  color: var(--text, #f2f2f4); font: inherit; font-size: .95rem; text-align: left; cursor: pointer;
+}
+.msgmenu button:hover { background: rgba(255,255,255,.08); }
+.msgmenu button.danger { color: #ff6b6b; }
+.msgmenu button.danger:hover { background: rgba(255,107,107,.12); }
+
+/* inline editor inside the bubble */
+.bub.editing { min-width: min(280px, 70vw); }
+.msgedit textarea {
+  display: block; width: 100%; box-sizing: border-box; resize: none; padding: 8px 10px;
+  border: 1px solid rgba(0,0,0,.25); border-radius: 10px; background: rgba(0,0,0,.18);
+  color: inherit; font: inherit; line-height: 1.35;
+}
+.msgedit textarea:focus { outline: 2px solid rgba(0,0,0,.35); outline-offset: 0; }
+.msgedit .acts { display: flex; justify-content: flex-end; gap: 6px; margin-top: 6px; }
+.msgedit .acts button { display: inline-flex; align-items: center; gap: 4px; padding: 5px 11px; font-size: .85rem; border-radius: 999px; cursor: pointer; }
+.msgedit .acts .primary { background: #1a1a1a; color: #fff; border: 0; }
+.msgedit .acts .ghost { background: transparent; color: inherit; border: 1px solid rgba(0,0,0,.3); }
+.msgedit .acts button:disabled { opacity: .5; cursor: default; }
+
+/* deleted + edited markers */
+.bub.msgdeleted { background: transparent !important; border: 1px dashed rgba(255,255,255,.22); color: var(--muted, #8b8b93) !important; font-style: italic; }
+.bub.msgdeleted small { display: none; }
+.msgedited { opacity: .75; }

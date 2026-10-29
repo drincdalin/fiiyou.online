@@ -1,0 +1,80 @@
+/* social-ui.css: hashtags, comment layout, chat message menu.
+   Loaded last in main.jsx so it wins over the other stylesheets.
+   Uses the theme variables already defined by the app (--t-card, --t-border, --t-text, --accent). */
+
+/* ---------- #hashtags (Rich() renders <button class="tag">) ---------- */
+.tag {
+  display: inline;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: none;
+}
+.tag:hover,
+.tag:focus-visible { text-decoration: underline; }
+
+/* ---------- comments ---------- */
+.comments { border-top: 1px solid var(--t-border); padding: 12px 0 0; margin-top: 8px; }
+.cmtop { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.cmcount {
+  font-size: .8em;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--t-text) 10%, transparent);
+}
+.cmload, .cmempty { padding: 12px 0; text-align: center; opacity: .7; margin: 0; }
+
+.cmlist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.cm { display: grid; grid-template-columns: 32px 1fr auto; gap: 10px; align-items: start; }
+.cmav { padding: 0; border: 0; background: none; cursor: pointer; line-height: 0; }
+.cmmain { min-width: 0; }
+.cmhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+.cmname { padding: 0; }
+.cmop {
+  font-size: .72em;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--on-accent, #000);
+}
+.cmmeta { opacity: .65; }
+.cmtext { margin: 2px 0 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.cmdel { opacity: .55; padding: 4px; }
+.cmdel:hover { opacity: 1; }
+.cmform { margin-top: 12px; }
+
+/* ---------- chat message menu (edit / delete own messages) ---------- */
+.msgmenuwrap { position: relative; display: inline-block; }
+.msgmenu {
+  position: absolute;
+  z-index: 30;
+  min-width: 140px;
+  padding: 4px;
+  border: 1px solid var(--t-border);
+  border-radius: 12px;
+  background: var(--t-card);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
+}
+.msgmenu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--t-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.msgmenu button:hover { background: color-mix(in srgb, var(--t-text) 10%, transparent); }
+.msgmenu button.danger { color: #ff5a5f; }
+.msgedited { font-size: .75em; opacity: .6; margin-left: 4px; }
+.msgdeleted { font-style: italic; opacity: .6; }

@@ -5,6 +5,7 @@ import { posts, social, friends, discover, profiles } from '../index.js';
 import { useImages, Avatar, ago } from './shared.jsx';
 import { PostCard, Composer, Lightbox } from './parts.jsx';
 import { SharedPostCard, decodeSharedPost, previewText } from './PostShare.jsx';
+import { MessageMenu, MessageEditor } from './MessageMenu.jsx';
 import { ask } from './dialog.jsx';
 import { ErrorState, friendlyError } from './errors.jsx';
 import { ArrowBendUpLeft, PaperPlaneRight, X } from '@phosphor-icons/react';
@@ -145,11 +146,11 @@ export function MapView({ me, go, notify }) {
 const dayLabel = (iso) => { const d = new Date(iso), t = new Date(); const y = new Date(); y.setDate(t.getDate() - 1);
   return d.toDateString() === t.toDateString() ? 'Today' : d.toDateString() === y.toDateString() ? 'Yesterday' : d.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long' }); };
 export function MessagesView({ me, peer, go, notify, refreshUnread }) {
-  const [convs, setConvs] = useState([]); const [fl, setFl] = useState([]); const [cur, setCur] = useState(peer || null); const [msgs, setMsgs] = useState(null); const [txt, setTxt] = useState(''); const end = useRef(); const inp = useRef(); const [replyTo, setReplyTo] = useState(null);
+  const [convs, setConvs] = useState([]); const [fl, setFl] = useState([]); const [cur, setCur] = useState(peer || null); const [msgs, setMsgs] = useState(null); const [txt, setTxt] = useState(''); const end = useRef(); const inp = useRef(); const [replyTo, setReplyTo] = useState(null); const [editing, setEditing] = useState(null);   // editing = id of the message being edited
   const loadConvs = () => social.conversations().then(setConvs).catch(() => {});
   const loadThread = useCallback(async (id) => { try { setMsgs(await social.thread(id)); await social.markRead(id); loadConvs(); refreshUnread(); } catch (e) { notify(e.message, 'err'); } }, []);
   useEffect(() => { loadConvs(); friends.listFriends().then(setFl); }, []);
-  useEffect(() => { setMsgs(null); setReplyTo(null); if (cur) loadThread(cur); }, [cur]);
+  useEffect(() => { setMsgs(null); setReplyTo(null); setEditing(null); if (cur) loadThread(cur); }, [cur]);
   useEffect(() => { const off = social.onMessage(me.id, () => { loadConvs(); if (cur) loadThread(cur); });
     const t = setInterval(() => { loadConvs(); if (cur) loadThread(cur); }, 12000); return () => { off(); clearInterval(t); }; }, [cur]);
   useEffect(() => { end.current?.scrollIntoView({ block: 'end' }); }, [msgs?.length, cur]);
@@ -158,6 +159,8 @@ export function MessagesView({ me, peer, go, notify, refreshUnread }) {
   const send = async (e) => { e.preventDefault(); const body = txt.trim(); if (!body) return; const rep = replyTo; setTxt(''); setReplyTo(null);
     try { const m = await social.sendMessage(cur, body, rep?.id); setMsgs((x) => [...(x || []), m]); loadConvs(); } catch (er) { setTxt(body); setReplyTo(rep); notify(er.message?.includes('rate_limit') ? 'Slow down a little.' : 'Could not send. Are you still friends?', 'err'); } };
   const startReply = (m) => { setReplyTo(m); inp.current?.focus(); };
+  /** an edited or deleted message of mine comes back from MessageMenu / MessageEditor: swap it in the list, refresh the conversation preview, fix a pending reply */
+  const replaceMsg = (nm) => { setMsgs((list) => (list || []).map((x) => (x.id === nm.id ? { ...x, ...nm } : x))); setReplyTo((r) => (r && r.id === nm.id ? { ...r, ...nm } : r)); loadConvs(); };
   const nameOf = (m) => (m.sender_id === me.id ? 'You' : who?.display_name);
   // the quoted message is looked up among the loaded messages first, so a message that is not a reply (reply_to empty) can never show a quote
   const byId = new Map((msgs || []).map((x) => [x.id, x]));
@@ -180,9 +183,10 @@ export function MessagesView({ me, peer, go, notify, refreshUnread }) {
         const nx = msgs[i + 1]; const first = newDay || msgs[i - 1].sender_id !== m.sender_id;   // first / last bubble of a run from the same person
         const tail = !nx || nx.sender_id !== m.sender_id || new Date(nx.created_at).toDateString() !== new Date(m.created_at).toDateString();
         const q = m.reply_to ? (byId.get(m.reply_to) || (m.reply?.id ? m.reply : null)) : null;
-        const sp = decodeSharedPost(m.body);   // a shared post: drawn as a card instead of text
-        return (<Fragment key={m.id}>{newDay && <div className="dsep">{dayLabel(m.created_at)}</div>}<div className={`brow${mine ? ' mine' : ''}${first ? ' first' : ''}${tail ? ' tail' : ''}`} id={`m-${m.id}`}>{!mine && (tail ? <Avatar src={img[who.avatar_path]} size={26} /> : <span className="avsp" />)}{mine && replyBtn(m)}
-          <div className="bcol">{q && <button type="button" className="rq" onClick={() => jump(q.id)} aria-label="Go to the original message"><span className="rqlab"><ArrowBendUpLeft size={12} weight="bold" aria-hidden="true" />{replyLabel(m, q)}</span><span className="rqtxt">{previewText(q.body)}</span></button>}<div className={`bub${mine ? ' mine' : ''}${sp ? ' hasshare' : ''}`}>{sp ? <><SharedPostCard data={sp.data} go={go} />{sp.note && <p>{sp.note}</p>}</> : <p>{m.body}</p>}<small>{new Date(m.created_at).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}</small></div></div>{!mine && replyBtn(m)}</div></Fragment>); }) : <p className="empty">Say hi.</p>) : <div className="boot">…</div>}<div ref={end} /></div>
+        const del = m.body === social.DELETED_BODY; const isEd = editing === m.id;
+        const sp = del ? null : decodeSharedPost(m.body);   // a shared post: drawn as a card instead of text
+        return (<Fragment key={m.id}>{newDay && <div className="dsep">{dayLabel(m.created_at)}</div>}<div className={`brow${mine ? ' mine' : ''}${first ? ' first' : ''}${tail ? ' tail' : ''}`} id={`m-${m.id}`}>{!mine && (tail ? <Avatar src={img[who.avatar_path]} size={26} /> : <span className="avsp" />)}{mine && <>{!del && !isEd && <MessageMenu m={m} me={me.id} notify={notify} canEdit={!sp} onEdit={() => setEditing(m.id)} onDeleted={replaceMsg} />}{!del && replyBtn(m)}</>}
+          <div className="bcol">{q && <button type="button" className="rq" onClick={() => jump(q.id)} aria-label="Go to the original message"><span className="rqlab"><ArrowBendUpLeft size={12} weight="bold" aria-hidden="true" />{replyLabel(m, q)}</span><span className="rqtxt">{previewText(q.body)}</span></button>}<div className={`bub${mine ? ' mine' : ''}${sp ? ' hasshare' : ''}${del ? ' msgdeleted' : ''}${isEd ? ' editing' : ''}`}>{isEd ? <MessageEditor m={m} notify={notify} onCancel={() => setEditing(null)} onSaved={(nm) => { replaceMsg(nm); setEditing(null); }} /> : del ? <p>This message was deleted</p> : sp ? <><SharedPostCard data={sp.data} go={go} />{sp.note && <p>{sp.note}</p>}</> : <p>{m.body}</p>}{!isEd && <small>{new Date(m.created_at).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}{m.edited_at && !del && <span className="msgedited"> · edited</span>}</small>}</div></div>{!mine && !del && replyBtn(m)}</div></Fragment>); }) : <p className="empty">Say hi.</p>) : <div className="boot">…</div>}<div ref={end} /></div>
       {replyTo && <div className="replybar"><ArrowBendUpLeft className="ric" size={18} weight="bold" aria-hidden="true" /><div><b>Replying to {nameOf(replyTo)}</b><span>{previewText(replyTo.body)}</span></div><button type="button" aria-label="Cancel reply" title="Cancel reply" onClick={() => setReplyTo(null)}><X size={16} weight="bold" aria-hidden="true" /></button></div>}
       <form className="inline" onSubmit={send}><input ref={inp} value={txt} maxLength={1000} placeholder="Write a message…" onChange={(e) => setTxt(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && replyTo && setReplyTo(null)} autoFocus /><button className="primary sendbtn" aria-label="Send" title="Send" disabled={!txt.trim()}><PaperPlaneRight size={20} weight="fill" aria-hidden="true" /></button></form></>)
       : <p className="empty">Pick a conversation.</p>}</section></div>);
