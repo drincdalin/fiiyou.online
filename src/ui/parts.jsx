@@ -4,6 +4,8 @@ import PostShareModal from './PostShare.jsx';
 import { posts, safety } from '../index.js';
 import { Avatar, ago, Rich, useImages } from './shared.jsx';
 import { ask } from './dialog.jsx';
+import Comments from './Comments.jsx';
+import MentionInput from './MentionInput.jsx';
 
 /** Friendly text for the database's spam-guard errors (see spam_and_bans.sql). Returns null for any other error. */
 export const spamMessage = (er) => {
@@ -42,17 +44,12 @@ export function Lightbox({ items, index, onClose, onIndex, onLike, onLikers }) {
 
 export function PostCard({ p, me, img, go, onChange, onDelete, notify }) {
   const [edit, setEdit] = useState(false); const [body, setBody] = useState(p.body); const [title, setTitle] = useState(p.title || '');
-  const [open, setOpen] = useState(false); const [cs, setCs] = useState(null); const [txt, setTxt] = useState(''); const [zoom, setZoom] = useState(false); const [rep, setRep] = useState(false); const [shr, setShr] = useState(false); const [menu, setMenu] = useState(false);
-  const cimg = useImages((cs || []).map((c) => c.author?.avatar_path));   // commenters' avatars
+  const [open, setOpen] = useState(false); const [zoom, setZoom] = useState(false); const [rep, setRep] = useState(false); const [shr, setShr] = useState(false); const [menu, setMenu] = useState(false);
   const own = p.author_id === me.id; const fail = (e) => notify(spamMessage(e) || e.message || 'Something went wrong', 'err');
   const like = async () => { const on = !p.liked; onChange({ ...p, liked: on, like_count: p.like_count + (on ? 1 : -1) }); try { await posts.setLike(p.id, on); } catch (e) { onChange(p); fail(e); } };
   const save = async () => { try { const r = await posts.updatePost(p.id, { body, title: p.kind === 'event' ? title : undefined }); onChange({ ...p, body: r.body, title: r.title, edited_at: r.edited_at }); setEdit(false); notify('Post updated'); } catch (e) { fail(e); } };
   const dropImg = async () => { try { await posts.updatePost(p.id, { body: p.body }, { removeImage: true, oldImage: p.image_path }); onChange({ ...p, image_path: null }); } catch (e) { fail(e); } };
   const del = async () => { if (!(await ask({ title: 'Delete this post?', message: 'This cannot be undone.', confirmLabel: 'Delete', danger: true }))) return; try { await posts.deletePost(p.id, p.image_path); onDelete(p.id); notify('Post deleted'); } catch (e) { fail(e); } };
-  const toggle = async () => { setOpen(!open); if (!open && !cs) setCs(await posts.listComments(p.id).catch(() => [])); };
-  const delComment = async (c) => { if (!(await ask({ title: 'Delete this comment?', message: 'This cannot be undone.', confirmLabel: 'Delete', danger: true }))) return;
-    try { await posts.deleteComment(c.id); setCs((x) => (x || []).filter((y) => y.id !== c.id)); onChange({ ...p, comment_count: Math.max(0, p.comment_count - 1) }); notify('Comment deleted'); } catch (e) { fail(e); } };
-  const send = async (e) => { e.preventDefault(); try { await posts.addComment(p.id, txt); setTxt(''); setCs(await posts.listComments(p.id)); onChange({ ...p, comment_count: p.comment_count + 1 }); } catch (er) { fail(er); } };
   const src = img[p.image_path];
   return (<article className={`post${p.author_official ? ' official' : ''}`}>
     <header><button className="who" onClick={() => go('profile', p.author_username)}><Avatar src={img[p.author_avatar_path]} />
@@ -68,27 +65,17 @@ export function PostCard({ p, me, img, go, onChange, onDelete, notify }) {
         {p.kind === 'event' && <div className="evmeta"><CalendarBlank size={14} weight="bold" aria-hidden="true" />{new Date(p.event_at).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' })}{p.event_place && ` · ${p.event_place}`}</div>}
         {p.place_name && <div className="chipline"><MapPin size={14} weight="bold" aria-hidden="true" />At {p.place_name}</div>}
         {edit ? (<div className="editbox">{p.kind === 'event' && <input value={title} maxLength={100} placeholder="Title" onChange={(e) => setTitle(e.target.value)} />}
-          <textarea rows="3" maxLength={1000} value={body} onChange={(e) => setBody(e.target.value)} />
+          <MentionInput as="textarea" rows="3" maxLength={1000} value={body} onChange={(e) => setBody(e.target.value)} />
           <div className="acts"><button className="primary sm" disabled={!body.trim()} onClick={save}>Save</button><button className="ghost sm" onClick={() => { setEdit(false); setBody(p.body); setTitle(p.title || ''); }}>Cancel</button>
             {p.image_path && <button className="ghost sm" onClick={dropImg}>Remove image</button>}</div></div>)
           : <>{p.title && <h3>{p.title}</h3>}<p className="pre"><Rich text={p.body} onUser={(u) => go('profile', u)} onTag={(t) => go('tag', t)} /></p></>}
       </div>
     </div>
     <footer><button className={`like${p.liked ? ' on' : ''}`} onClick={like} aria-label={p.liked ? 'Unlike' : 'Like'}><Heart size={16} weight={p.liked ? 'fill' : 'bold'} aria-hidden="true" />{p.like_count}</button>
-      <button className="ghost sm" onClick={toggle} aria-label="Comments"><ChatCircle size={16} weight="bold" aria-hidden="true" /><span className="lbl">Comments </span>{p.comment_count}</button>
+      <button className="ghost sm" onClick={() => setOpen(!open)} aria-label="Comments"><ChatCircle size={16} weight="bold" aria-hidden="true" /><span className="lbl">Comments </span>{p.comment_count}</button>
       {p.visibility !== 'friends' && <button className="ghost sm pshare" onClick={() => setShr(true)} aria-label="Share"><ShareNetwork size={16} weight="bold" aria-hidden="true" /><span className="lbl">Share</span></button>}</footer>
-    {open && <div className="comments">
-      <div className="cmtop"><b>Comments</b><span className="cmcount">{p.comment_count}</span></div>
-      {cs === null ? <div className="boot cmload">…</div> : cs.length === 0 ? <p className="cmempty">No comments yet. Start the conversation.</p>
-        : <ul className="cmlist">{cs.map((c) => (<li key={c.id} className="cm">
-          <button type="button" className="cmav" onClick={() => go('profile', c.author.username)} aria-label={`Open ${c.author.display_name}'s profile`}><Avatar src={cimg[c.author.avatar_path]} size={32} /></button>
-          <div className="cmmain">
-            <div className="cmhead"><button type="button" className="ulink cmname" onClick={() => go('profile', c.author.username)}><b>{c.author.display_name}</b></button>
-              {c.author.id === p.author_id && <span className="cmop">Author</span>}
-              <small className="cmmeta">@{c.author.username} · {ago(c.created_at)}</small></div>
-            <p className="cmtext"><Rich text={c.body} onUser={(u) => go('profile', u)} onTag={(t) => go('tag', t)} /></p></div>
-          {(c.author.id === me.id || own) ? <button type="button" className="ghost cmdel" aria-label="Delete comment" title="Delete comment" onClick={() => delComment(c)}><Trash size={14} weight="bold" aria-hidden="true" /></button> : <span />}</li>))}</ul>}
-      <form className="inline cmform" onSubmit={send}><input value={txt} maxLength={500} placeholder="Write a comment…" onChange={(e) => setTxt(e.target.value)} /><button className="primary sm" disabled={!txt.trim()}><PaperPlaneRight size={14} weight="bold" aria-hidden="true" />Send</button></form></div>}
+    {open && <Comments postId={p.id} postAuthorId={p.author_id} me={me} go={go} notify={notify} fail={fail} onTag={(t) => go('tag', t)}
+      onDelta={(d) => onChange({ ...p, comment_count: Math.max(0, p.comment_count + d) })} />}
     {zoom && <Lightbox items={[{ id: p.id, src, caption: p.body }]} index={0} onClose={() => setZoom(false)} onIndex={() => {}} />}
     {rep && <ReportModal target={{ type: 'post', id: p.id }} onClose={() => setRep(false)} notify={notify} />}
     {shr && <PostShareModal p={p} img={img} onClose={() => setShr(false)} notify={notify} />}
@@ -141,7 +128,7 @@ export function Composer({ me, places = [], fixedPlace = null, onPosted, notify 
       setF({ ...blank, kind: f.kind, visibility: f.visibility }); setFile(null); setOpen(false); e.target.reset?.(); onPosted(); notify(ev ? 'Event published' : 'Posted'); } catch (er) { notify(spamMessage(er) || er.message || 'Could not post', 'err'); } setBusy(false); };
   return (<form className={`composer panel${expanded ? ' open' : ''}`} onSubmit={submit}>
     {ev && <input placeholder="Event title" maxLength={100} required value={f.title} onChange={set('title')} />}
-    <textarea rows={expanded ? 3 : 1} maxLength={1000} required placeholder={ev ? 'Details' : f.kind === 'ask' ? 'Ask your neighbours…' : "What's happening?"} value={f.body} onFocus={() => setOpen(true)} onChange={set('body')} />
+    <MentionInput as="textarea" rows={expanded ? 3 : 1} maxLength={1000} required placeholder={ev ? 'Details' : f.kind === 'ask' ? 'Ask your neighbours…' : "What's happening?"} value={f.body} onFocus={() => setOpen(true)} onChange={set('body')} />
     {expanded && <>
       {ev && <div className="crow"><input type="datetime-local" required value={f.when} onChange={set('when')} aria-label="When" /><input placeholder="Where (text)" maxLength={120} value={f.where} onChange={set('where')} /></div>}
       {more && <div className="crow">{!fixedPlace && !ev && places.length > 0 && <select value={f.place} onChange={set('place')} aria-label="Place"><option value="">No place</option>{places.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select>}

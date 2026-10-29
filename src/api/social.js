@@ -27,7 +27,7 @@ export const listPhotoLikers = async (photoId) => unwrap(await supabase.rpc('pho
 // photo like can open MY profile, where it happened.
 export async function listNotifications(limit = 50) {
   const rows = unwrap(await supabase.from('notifications')
-    .select('id, type, post_id, photo_id, read, created_at, actor:profiles!notifications_actor_id_fkey(id, username, display_name, avatar_path, is_official), recipient:profiles!notifications_user_id_fkey(username)')
+    .select('id, type, post_id, photo_id, comment_id, read, created_at, actor:profiles!notifications_actor_id_fkey(id, username, display_name, avatar_path, is_official), recipient:profiles!notifications_user_id_fkey(username)')
     .order('created_at', { ascending: false }).limit(limit)) || [];
   return rows.map(({ recipient, ...r }) => ({ ...r, profile_username: recipient?.username || null }));
 }

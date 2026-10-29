@@ -35,12 +35,36 @@ export async function setLike(postId, on) {
 }
 /** Who liked MY post, newest first (the database returns rows only to the post's author). See 0016_likers_and_views.sql. */
 export const listLikers = async (postId) => unwrap(await supabase.rpc('post_likers', { p_post: postId })) || [];
+/** Comments of one post, oldest first, each with { parent_id, reply_to, like_count, liked } (see 0028_comment_likes_replies_mentions.sql).
+ *  parent_id = the thread root (null for top-level comments); reply_to = the comment that was actually answered. */
 export async function listComments(postId) {
-  return unwrap(await supabase.from('post_comments')
-    .select('id, body, created_at, author:profiles!post_comments_author_id_fkey(id, username, display_name, avatar_path)').eq('post_id', postId).order('created_at'));
+  const [rows, likes] = await Promise.all([
+    supabase.from('post_comments')
+      .select('id, body, created_at, parent_id, reply_to, author:profiles!post_comments_author_id_fkey(id, username, display_name, avatar_path)').eq('post_id', postId).order('created_at').then(unwrap),
+    supabase.rpc('comment_likes_for', { p_post: postId }).then(unwrap).catch(() => []),   // likes failing must not hide the comments
+  ]);
+  const by = new Map((likes || []).map((l) => [l.comment_id, l]));
+  return (rows || []).map((c) => ({ ...c, like_count: Number(by.get(c.id)?.like_count || 0), liked: !!by.get(c.id)?.liked }));
 }
-export async function addComment(postId, body) {
-  return unwrap(await supabase.from('post_comments').insert({ post_id: postId, author_id: await uid(), body }).select().single());
+/** parentId = the comment the person clicked "Reply" on (the database flattens it to the thread root). */
+export async function addComment(postId, body, parentId = null) {
+  return unwrap(await supabase.from('post_comments').insert({ post_id: postId, author_id: await uid(), body, parent_id: parentId || null }).select().single());
+}
+export async function setCommentLike(commentId, on) {
+  const user_id = await uid();
+  if (on) unwrap(await supabase.from('comment_likes').insert({ comment_id: commentId, user_id }));
+  else unwrap(await supabase.from('comment_likes').delete().eq('comment_id', commentId).eq('user_id', user_id));
+}
+/** People for the @mention popup: username or name starts with `word`. */
+export async function searchUsers(word, limit = 6) {
+  const w = String(word || '').replace(/[^A-Za-z0-9_]/g, '').slice(0, 30);
+  const sel = 'id, username, display_name, avatar_path';
+  const [a, b] = await Promise.all([
+    supabase.from('profiles').select(sel).ilike('username', `${w}%`).limit(limit).then(unwrap),
+    w ? supabase.from('profiles').select(sel).ilike('display_name', `${w}%`).limit(limit).then(unwrap) : [],
+  ]);
+  const seen = new Set();
+  return [...(a || []), ...(b || [])].filter((u) => !seen.has(u.id) && seen.add(u.id)).slice(0, limit);
 }
 export async function deleteComment(id) { unwrap(await supabase.from('post_comments').delete().eq('id', id)); }
 

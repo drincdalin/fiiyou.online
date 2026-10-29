@@ -17,36 +17,65 @@
 .tag:hover,
 .tag:focus-visible { text-decoration: underline; }
 
-/* ---------- comments ---------- */
-.comments { border-top: 1px solid var(--t-border); padding: 12px 0 0; margin-top: 8px; }
-.cmtop { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.cmcount {
-  font-size: .8em;
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--t-text) 10%, transparent);
+/* ---------- @mentions (Rich() renders <button class="ulink mention">, or <span class="mention"> when not clickable) ---------- */
+.mention {
+  display: inline;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  min-height: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: none;
 }
+span.mention { cursor: inherit; }
+button.mention:hover,
+button.mention:focus-visible { text-decoration: underline; }
+
+/* ---------- comments: bubble (who + what) > actions (when, like, reply) > replies ---------- */
+.comments { border-top: 1px solid var(--t-border); padding: 14px 0 0; margin-top: 8px; }
+.cmtop { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; font-size: 1.1em; }
+.cmcount { font-size: .8em; padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, var(--t-text) 10%, transparent); }
 .cmload, .cmempty { padding: 12px 0; text-align: center; opacity: .7; margin: 0; }
 
-.cmlist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
-.cm { display: grid; grid-template-columns: 32px 1fr auto; gap: 10px; align-items: start; }
+.cmlist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.cmlist > .cm { padding: 14px 0; }
+.cmlist > .cm + .cm { border-top: 1px solid var(--t-border); }
+.cmlist > .cm:first-child { padding-top: 0; }
+.cm { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 12px; align-items: start; }
 .cmav { padding: 0; border: 0; background: none; cursor: pointer; line-height: 0; }
 .cmmain { min-width: 0; }
-.cmhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
-.cmname { padding: 0; }
-.cmop {
-  font-size: .72em;
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 6px;
-  background: var(--accent);
-  color: var(--on-accent, #000);
-}
-.cmmeta { opacity: .65; }
-.cmtext { margin: 2px 0 0; overflow-wrap: anywhere; white-space: pre-wrap; }
-.cmdel { opacity: .55; padding: 4px; }
-.cmdel:hover { opacity: 1; }
-.cmform { margin-top: 12px; }
+
+.cmbubble { width: 100%; box-sizing: border-box; padding: 0; background: none; border-radius: 0; }
+.cmhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; min-height: 22px; }
+.cmname { padding: 0; font-size: .92em; }
+.cmname b { font-weight: 700; }
+.cmop { font-size: .65em; font-weight: 700; padding: 1px 6px; border-radius: 6px; background: var(--accent); color: var(--on-accent, #000); align-self: center; }
+.cmmeta { font-size: .8em; opacity: .5; font-weight: 400; }
+.cmtext { margin: 2px 0 0; font-size: 1em; font-weight: 400; line-height: 1.5; overflow-wrap: anywhere; white-space: pre-wrap; }
+.cmtext .ulink { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: var(--accent); cursor: pointer; }
+.cmtext .ulink:hover { text-decoration: underline; }
+.cmdel { margin-left: auto; padding: 3px; border: 0; background: none; color: inherit; line-height: 0; opacity: .45; cursor: pointer; }
+.cmdel:hover, .cmdel:focus-visible { opacity: 1; background: none; color: #ff5a5f; }
+@media (hover: hover) { .cmdel { opacity: 0; } .cmbubble:hover .cmdel, .cmdel:focus-visible { opacity: .7; } .cmbubble:hover .cmdel:hover { opacity: 1; } }
+
+.cmactions { display: flex; align-items: center; gap: 4px 16px; margin: 4px 0 0 -2px; font-size: .8em; color: color-mix(in srgb, var(--t-text) 55%, transparent); }
+.cmactions button { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; padding: 0 2px; border: 0; background: none; color: inherit; font: inherit; font-weight: 600; cursor: pointer; }
+.cmactions button:hover, .cmactions button:focus-visible { color: var(--t-text); }
+.cmactions button.on { color: var(--accent); }
+.cmto { font-size: .95em; }
+
+.cmreplies { list-style: none; margin: 10px 0 0; padding: 0 0 0 14px; border-left: 2px solid var(--t-border); display: flex; flex-direction: column; gap: 14px; }
+.cmreplies .cm { grid-template-columns: 26px minmax(0, 1fr); gap: 8px; }
+.cmmore { display: inline-flex; align-items: center; gap: 6px; margin: 6px 0 0 4px; padding: 4px 0; border: 0; background: none; color: color-mix(in srgb, var(--t-text) 62%, transparent); font: inherit; font-size: .8em; font-weight: 600; cursor: pointer; }
+.cmmore:hover { color: var(--t-text); }
+.cmform { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--t-border); align-items: center; gap: 10px; }
+.cmform input { border-radius: 999px; padding-left: 18px; }
+.cmform .primary { border-radius: 999px; padding-inline: 16px; }
+.cmform .primary:disabled { opacity: .45; }
 
 /* ---------- chat message menu (edit / delete own messages) ---------- */
 .msgmenuwrap { position: relative; display: inline-block; }
@@ -78,3 +107,17 @@
 .msgmenu button.danger { color: #ff5a5f; }
 .msgedited { font-size: .75em; opacity: .6; margin-left: 4px; }
 .msgdeleted { font-style: italic; opacity: .6; }
+
+/* ---------- reply bar, @mention popup ---------- */
+.cmreplying { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 12px 0 4px; padding: 4px 10px; font-size: .85em; border-radius: 8px; background: color-mix(in srgb, var(--t-text) 8%, transparent); }
+.cmreplying button { border: 0; background: none; color: inherit; cursor: pointer; opacity: .7; }
+.cmreplying + .cmform { margin-top: 0; }
+
+.mentionwrap { position: relative; display: block; flex: 1; min-width: 0; }
+.mentionwrap > input, .mentionwrap > textarea { width: 100%; box-sizing: border-box; }
+.mentionpop { position: absolute; left: 0; bottom: 100%; z-index: 40; min-width: 220px; max-width: 100%; margin: 0 0 4px; padding: 4px; list-style: none;
+  border: 1px solid var(--t-border); border-radius: 12px; background: var(--t-card); box-shadow: 0 8px 24px rgba(0, 0, 0, .35); }
+.mentionpop button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border: 0; border-radius: 8px; background: none; color: var(--t-text); font: inherit; text-align: left; cursor: pointer; }
+.mentionpop button.on, .mentionpop button:hover { background: color-mix(in srgb, var(--t-text) 10%, transparent); }
+.mentionpop span { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.mentionpop small { opacity: .65; }

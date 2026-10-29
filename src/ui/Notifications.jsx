@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Bell, Heart, ChatCircle, UserPlus, UsersThree } from '@phosphor-icons/react';
+import { Bell, Heart, ChatCircle, UserPlus, UsersThree, ArrowBendUpLeft, At } from '@phosphor-icons/react';
 import { social } from '../index.js';
 import { Avatar, ago, useImages } from './shared.jsx';
 import { Verified } from './parts.jsx';
 
 // ---------------------------------------------------------------------------------------------
 // The only calls this file makes to your backend (see api/social.js, 0020_notifications.sql and 0025_wall_notifications.sql):
-//   social.listNotifications()        -> [{ id, type, created_at, read, post_id?, photo_id?, profile_username, actor: { username, display_name, avatar_path, is_official } }]
+//   social.listNotifications()        -> [{ id, type, created_at, read, post_id?, photo_id?, comment_id?, profile_username, actor: { username, display_name, avatar_path, is_official } }]
 //                                         profile_username = the RECIPIENT's own username (i.e. my profile), added in api/social.js
-//   types: post_like, photo_like, comment, wall_comment, friend_request, friend_accept
+//   types: post_like, photo_like, comment, wall_comment, friend_request, friend_accept,
+//          comment_like, reply, mention (in a post), comment_mention (in a comment)  <- 0028_comment_likes_replies_mentions.sql
 //   social.unreadNotifications()      -> number
 //   social.markNotificationsRead()    -> marks all of my notifications as read
 //   social.onNotification(meId, cb)   -> realtime hook, returns an unsubscribe function
@@ -20,6 +21,10 @@ const KINDS = {
   wall_comment: [ChatCircle, 'commented on your wall'],
   friend_request: [UserPlus, 'sent you a friend request'],
   friend_accept: [UsersThree, 'accepted your friend request'],
+  comment_like: [Heart, 'liked your comment'],
+  reply: [ArrowBendUpLeft, 'replied to your comment'],
+  mention: [At, 'mentioned you in a post'],
+  comment_mention: [At, 'mentioned you in a comment'],
 };
 
 /** Unread count for the badge, kept fresh by a 30 s poll + realtime. `tick` changes whenever a new one arrives. Call it in App. */
@@ -55,7 +60,7 @@ export default function NotificationList({ go, notify, tick, onRead }) {
 
   return (<section className="nsec" aria-label="Notifications">
     <h3 className="nhead"><Bell size={16} weight="bold" aria-hidden="true" />Notifications</h3>
-    {!rows ? <div className="boot">…</div> : !rows.length ? <p className="muted nempty">Nothing yet. Likes and comments on your posts, photos and wall will show up here.</p>
+    {!rows ? <div className="boot">…</div> : !rows.length ? <p className="muted nempty">Nothing yet. Likes, replies and mentions will show up here.</p>
       : <ul className="nlist">{rows.map((r) => { const [Icon, text] = KINDS[r.type] || [Bell, 'did something']; return (
         <li key={r.id}><button type="button" role="menuitem" className={`nrow${r.read ? '' : ' new'}`} onClick={() => visit(r)}>
           <span className="nav2"><Avatar src={img[r.actor?.avatar_path]} size={36} /><i className="nic"><Icon size={10} weight="fill" aria-hidden="true" /></i></span>
