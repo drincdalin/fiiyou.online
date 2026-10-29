@@ -22,10 +22,15 @@ export async function setPhotoLike(photoId, on) {
 /** Who liked MY photo, newest first (the database returns rows only to the photo's owner). */
 export const listPhotoLikers = async (photoId) => unwrap(await supabase.rpc('photo_likers', { p_photo: photoId })) || [];
 
-// ---------- notifications (rows are written by database triggers, see 0017_notifications.sql) ----------
-export const listNotifications = async (limit = 50) => unwrap(await supabase.from('notifications')
-  .select('id, type, post_id, photo_id, read, created_at, actor:profiles!notifications_actor_id_fkey(id, username, display_name, avatar_path, is_official)')
-  .order('created_at', { ascending: false }).limit(limit));
+// ---------- notifications (rows are written by database triggers, see 0020_notifications.sql and 0025_wall_notifications.sql) ----------
+// `recipient` is me (I only ever see my own rows). It is flattened to `profile_username` so a click on a wall comment or a
+// photo like can open MY profile, where it happened.
+export async function listNotifications(limit = 50) {
+  const rows = unwrap(await supabase.from('notifications')
+    .select('id, type, post_id, photo_id, read, created_at, actor:profiles!notifications_actor_id_fkey(id, username, display_name, avatar_path, is_official), recipient:profiles!notifications_user_id_fkey(username)')
+    .order('created_at', { ascending: false }).limit(limit)) || [];
+  return rows.map(({ recipient, ...r }) => ({ ...r, profile_username: recipient?.username || null }));
+}
 export async function unreadNotifications() {
   const r = await supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('read', false);
   if (r.error) throw r.error; return r.count || 0;
