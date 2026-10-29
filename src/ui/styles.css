@@ -669,3 +669,58 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
    (a scroll). Giving every sticker its own compositor layer makes it paint on the first frame. */
 .sticker { will-change: transform; backface-visibility: hidden; }
 .sticker img { content-visibility: visible; }
+
+/* ======================================================================
+   Single-column layout (desktop): the header is ONE row, like the share image:
+
+     [ avatar ] [ name plate (name, @handle, stats, headline) ] [ music player ]
+     [ avatar ] [ buttons (customize / share, or message / friends) ] [ music player ]
+     [ cards, full width ...                                                       ]
+
+   The avatar keeps its normal shape. Tablet / phone keep the stacked rules above (<= 1000px).
+   ====================================================================== */
+@media (min-width: 1001px) {
+  /* grid:  [ avatar ] [ name plate      ] [ player ]
+            [ avatar ] [ buttons          ] [ player ]      avatar keeps its normal 5:6 shape, same as the other layouts */
+  .frame[data-layout=single] .side { grid-template-columns: var(--sidebar) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; align-items: stretch; column-gap: max(var(--gap), 18px); row-gap: max(var(--step), 12px); }
+  .frame[data-layout=single] .side:has(> .player) { grid-template-columns: var(--sidebar) minmax(0, 1fr) clamp(280px, 30%, 360px); }
+  .frame[data-layout=single] .side > .avatar { grid-column: 1; grid-row: 1 / span 2; align-self: start; }
+  .frame[data-layout=single] .side > .nameplate { grid-column: 2; grid-row: 1; align-content: center; justify-items: center; }
+  .frame[data-layout=single] .side > .player { grid-column: 3; grid-row: 1 / span 2; align-content: space-between; }
+  .frame[data-layout=single] .side > .acw { grid-column: 2; grid-row: 2; align-self: end; }
+  .frame[data-layout=single] .nameplate .headline.in { margin: 8px 0 0; padding: 0 6px; opacity: .78; }
+  /* buttons live in the middle column: owner's two buttons side by side, visitors keep Message / Friends + Report · Block */
+  .frame[data-layout=single] .acw.own { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .frame[data-layout=single] .acw.own .primary, .frame[data-layout=single] .acw.own .ghost { width: 100%; justify-content: center; white-space: nowrap; }
+
+  /* player: small square cover + title / buttons beside it, seek bar and volume underneath (never a full-width square) */
+  .frame[data-layout=single] .player { grid-template-columns: 92px minmax(0, 1fr); column-gap: 14px; row-gap: 6px; align-items: center;
+    grid-template-areas: "cover title" "cover ctrl" "seek seek" "times times" "vol vol"; }
+  .frame[data-layout=single] .player .pcover { grid-area: cover; align-self: start; }
+  .frame[data-layout=single] .player .ptitle { grid-area: title; text-align: left; align-self: end; min-width: 0; }
+  .frame[data-layout=single] .player .ctrl { grid-area: ctrl; justify-content: flex-start; align-self: start; gap: 6px; }
+  .frame[data-layout=single] .player .seek { grid-area: seek; width: 100%; }
+  .frame[data-layout=single] .player .times { grid-area: times; margin-top: 0; }
+  .frame[data-layout=single] .player .volrow { grid-area: vol; padding-top: 6px; }
+  .frame[data-layout=single] .player.nocover { grid-template-columns: minmax(0, 1fr); grid-template-areas: "title" "ctrl" "seek" "times" "vol"; }
+  .frame[data-layout=single] .player.nocover .ptitle { text-align: center; align-self: auto; }
+  .frame[data-layout=single] .player.nocover .ctrl { justify-content: center; }
+  .frame[data-layout=single] .player.live { grid-template-columns: minmax(0, 1fr); grid-template-areas: "cover" "title" "ctrl"; }
+  .frame[data-layout=single] .player.live .pcover { width: 100%; justify-self: center; align-self: auto; }
+  .frame[data-layout=single] .player.live .ptitle { text-align: center; align-self: auto; }
+  .frame[data-layout=single] .player.live .ctrl { justify-content: center; }
+
+}
+
+/* ======================================================================
+   Tablet / phone: the name box is exactly as tall as the avatar.
+   Before, the avatar spanned 3 rows (two of them empty when there is no headline) while the name box only had its own text height.
+   Now the avatar spans only the rows that exist, and the name box takes whatever height is left over, text centred.
+   ====================================================================== */
+@media (max-width: 1000px) {
+  .frame .side { grid-template-rows: 1fr; }
+  .frame .side:has(> .headline) { grid-template-rows: 1fr auto; }
+  .frame .side > .avatar { grid-row: span 1; }
+  .frame .side:has(> .headline) > .avatar { grid-row: span 2; }
+  .frame .side > .nameplate { align-self: stretch; align-content: center; justify-items: center; }
+}

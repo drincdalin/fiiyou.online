@@ -160,7 +160,7 @@ export default function ShareSheet({ data: incoming, onClose }) {
 
         <div className="ss-body">
           <div className="ss-preview">
-            <div className="ss-stage" style={{ '--ss-ar': preview ? preview.ratio : '9 / 16' }} aria-busy={busy}>
+            <div className="ss-stage" style={{ '--ss-ar': preview ? preview.ratio : 9 / 16 }} aria-busy={busy}>
               {showImg && <img src={preview.url} alt="Preview of your share image" className={busy ? 'dim' : ''} />}
               {busy && <div className="ss-state" role="status"><span className="ss-spin" aria-hidden="true" />Building your image…</div>}
               {error && !busy && <div className="ss-state err" role="alert">{error}</div>}
