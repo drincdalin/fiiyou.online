@@ -13,15 +13,28 @@ export const log = () => rpc('admin_log', { p_limit: 50 });
 async function removeFiles(bucket, paths) { for (let i = 0; i < paths.length; i += 100) unwrap(await supabase.storage.from(bucket).remove(paths.slice(i, i + 100))); }
 /** Deletes the post, then its image file (SQL can't delete files; the Storage API can, and admins are allowed to). */
 export async function deletePost(id) { const path = await rpc('admin_delete_post', { p_id: id }); if (path) await removeFiles('media', [path]); }
-/** Removes every file the person owns first, then the account (everything else cascades). */
-export async function deleteUser(id) {
+
+/** Removes every file the person owns in both buckets (shared by deleteUser and banUser). */
+async function removeUserFiles(id) {
   for (const b of ['media', 'audio']) {
     const files = unwrap(await supabase.storage.from(b).list(id, { limit: 1000 }));
     const paths = files.filter((f) => f.name !== '.emptyFolderPlaceholder').map((f) => `${id}/${f.name}`);
     if (paths.length) await removeFiles(b, paths);
   }
+}
+/** Removes every file the person owns first, then the account (everything else cascades). */
+export async function deleteUser(id) {
+  await removeUserFiles(id);
   await rpc('admin_delete_user', { p_user: id });
 }
+/** Same as deleteUser, but the database also remembers the (hashed) email so it can never sign up again. */
+export async function banUser(id, reason) {
+  await removeUserFiles(id);
+  await rpc('admin_ban_user', { p_user: id, p_reason: reason || null });
+}
+/** Undo a ban by email (not used in the UI yet). */
+export const unbanEmail = (email) => rpc('admin_unban_email', { p_email: email });
+
 /** Files in storage that nothing references (older than the grace period, so uploads in progress are safe). */
 export async function findOrphans(graceMs = 2 * 3600e3) {
   const keep = { media: new Set(), audio: new Set() }; (await rpc('admin_referenced_paths')).forEach((r) => keep[r.bucket]?.add(r.path));
