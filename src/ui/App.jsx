@@ -3,7 +3,13 @@ import { auth, admin as adminApi, profiles, cards as cardsApi, friends, wall, so
 import { useImages, Boot, Avatar, Rich } from './shared.jsx';
 import { toCss } from './customCss.js';
 import { Lightbox, LikersModal, ReportModal, Verified, NavIcon, spamMessage } from './parts.jsx';
-import { HomeView, MapView, MessagesView, PeopleView, PostView } from './views.jsx';
+import { HomeView, MapView, MessagesView, PostView } from './views.jsx';
+import { PeopleView } from './PeopleView.jsx';
+import Onboarding from './Onboarding.jsx';
+import { friendlyError, ErrorState } from './errors.jsx';
+import { useDraftAutosave, DraftRestoreBar } from './draft.jsx';
+import { clearDraft } from '../lib/draftStore.js';
+import { getInvite, clearInvite } from '../lib/invite.js';
 import AdminView from './Admin.jsx';
 import { themeStyle } from './theme.js';
 import { useCustomFont } from './fonts.js';
@@ -15,20 +21,21 @@ const Customizer = lazy(() => import('./Customizer.jsx'));
 import { ask } from './dialog.jsx';
 import { usePath, parseRoute, navigate, isReserved } from './router.jsx';
 const ShareSheet = lazy(() => import('./ShareSheet.jsx'));
+const InviteModal = lazy(() => import('./InviteModal.jsx'));
 import NotificationList, { useNotifCount } from './Notifications.jsx';
 import PushToggle from './PushToggle.jsx';
 import { registerSW, forgetDevice } from './push.js';
-import { Eye, EyeSlash, Check, Heart, PencilSimple, ShareNetwork, SignOut, Trash } from '@phosphor-icons/react';
+import { Eye, EyeSlash, Check, Heart, PencilSimple, ShareNetwork, SignOut, Trash, UserPlus } from '@phosphor-icons/react';
 
 const BASE = import.meta.env.BASE_URL;
 function Auth() {
-  const [mode, setMode] = useState('in'); const [f, setF] = useState({ email: '', password: '', username: '', displayName: '' }); const [agree, setAgree] = useState(false); const [banned, setBanned] = useState(false);
+  const [invite] = useState(() => getInvite()); const [mode, setMode] = useState(invite ? 'up' : 'in'); const [f, setF] = useState({ email: '', password: '', username: '', displayName: '' }); const [agree, setAgree] = useState(false); const [banned, setBanned] = useState(false);
   const [msg, setMsg] = useState(''); const [ok, setOk] = useState(false); const [busy, setBusy] = useState(false); const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const say = (m, good = false) => { setMsg(m); setOk(good); };
   const go = async (e) => { e.preventDefault(); say(''); if (mode === 'up' && isReserved(f.username)) return say('That username is reserved.'); setBusy(true);
-    try { if (mode === 'in') await auth.signIn(f); else { const r = await auth.signUp(f); if (!r.session) say('Check your email to confirm your account.', true); } }
-    catch (er) { if (er.message === 'banned') setBanned(true); else say(er.message === 'username_taken' ? 'That username is taken.' : er.message); } setBusy(false); };
-  const forgot = async () => { if (!f.email) return say('Type your email first.'); try { await auth.resetPassword(f.email); say('If that email has an account, a reset link is on its way.', true); } catch (er) { say(er.message); } };
+    try { if (mode === 'in') await auth.signIn(f); else { const r = await auth.signUp({ ...f, invitedBy: invite }); if (!r.session) say('Check your email to confirm your account.', true); } }
+    catch (er) { if (er.message === 'banned') setBanned(true); else say(er.message === 'username_taken' ? 'That username is taken.' : friendlyError(er)); } setBusy(false); };
+  const forgot = async () => { if (!f.email) return say('Type your email first.'); try { await auth.resetPassword(f.email); say('If that email has an account, a reset link is on its way.', true); } catch (er) { say(friendlyError(er)); } };
   const up = mode === 'up'; const [showPw, setShowPw] = useState(false);
   if (banned) return <Banned onBack={() => setBanned(false)} />;
   return (
@@ -39,6 +46,7 @@ function Auth() {
           <button type="button" role="tab" aria-selected={!up} className={!up ? 'on' : ''} onClick={() => { setMode('in'); say(''); }}>Sign in</button>
           <button type="button" role="tab" aria-selected={up} className={up ? 'on' : ''} onClick={() => { setMode('up'); say(''); }}>Create account</button>
         </div>
+        {up && invite && <p className="obnote">@{invite} invited you to fiiyou.</p>}
         {up && <><label className="field"><span>Username</span><input placeholder="a-z, 0-9 and _" value={f.username} onChange={set('username')} required minLength={3} maxLength={24} pattern="[A-Za-z0-9_]{3,24}" autoComplete="username" /></label>
           <label className="field"><span>Display name</span><input placeholder="How people see you" value={f.displayName} onChange={set('displayName')} maxLength={50} /></label></>}
         <label className="field"><span>Email</span><input type="email" placeholder="you@example.com" value={f.email} onChange={set('email')} required autoComplete="email" /></label>
@@ -131,8 +139,10 @@ const makeDraft = (d) => { const profile = d.profile; return { theme: { ...profi
 function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
   const [d, setD] = useState(null); const [draft, setDraft] = useState(null); const [sel, setSel] = useState(null); const [colW, setColW] = useState(920); const [avW, setAvW] = useState(190); const cardsRef = useRef(); const avRef = useRef();
   const [collapsed, setCollapsed] = useState(false); const [lb, setLb] = useState(null); const [rep, setRep] = useState(false); const frame = useRef(); const pageRef = useRef(); const [sharing, setSharing] = useState(false); const [shareData, setShareData] = useState(null); const [likers, setLikers] = useState(null);
-  const load = useCallback(() => profiles.getFullProfile(username).then(setD).catch((e) => notify(e.message, 'err')), [username]);
-  useEffect(() => { setD(null); setDraft(null); setSel(null); setLb(null); load(); }, [load]);
+  const [loadErr, setLoadErr] = useState(null); const [missing, setMissing] = useState(false);   // missing = no such profile (or hidden from you)
+  const load = useCallback(() => profiles.getFullProfile(username).then((x) => { setLoadErr(null); if (x) { setMissing(false); setD(x); } else setMissing(true); }).catch((e) => { setLoadErr(e); notify(friendlyError(e), 'err'); }), [username]);
+  useEffect(() => { setD(null); setMissing(false); setDraft(null); setSel(null); setLb(null); setLoadErr(null); load(); }, [load]);
+  useDraftAutosave(d && d.relationship?.status === 'self' ? d.profile.id : null, draft);   // the editor draft survives a refresh
   const viewed = useRef(null);
   useEffect(() => {   // one visit = one view: recorded once per profile page open (not on reloads after friend / wall actions), then the shown count is refreshed
     if (!d || d.relationship.status === 'self' || viewed.current === d.profile.id) return; const id = d.profile.id; viewed.current = id;
@@ -168,7 +178,8 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
   }, [d]);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (autoEdit && d && d.relationship.status === 'self' && !draft) { setCollapsed(false); setDraft(makeDraft(d)); navigate(`/${meName.toLowerCase()}`, { replace: true }); } }, [d, autoEdit]);   // "Edit my profile" on Home opens the editor straight away
   useEffect(() => { let on = true; setAudioUrl(null); if (music.audio) media.signedUrl(music.audio, 'audio').then((u) => on && setAudioUrl(u)).catch(() => {}); return () => { on = false; }; }, [music.audio]);
-  if (!d) return <Boot />;
+  if (missing) return <div className="plain view"><p className="empty">This profile does not exist, or it is not available to you.</p></div>;
+  if (!d) return loadErr ? <ErrorState error={loadErr} onRetry={() => { setLoadErr(null); return load(); }} title="Could not load this profile" /> : <Boot />;
   const { profile, relationship: rel } = d; const own = rel.status === 'self';
   const startEdit = () => { setCollapsed(false); setDraft(makeDraft(d)); };
   const patch = (id, p) => setDraft((x) => ({ ...x, cards: x.cards.map((c) => (c.id === id ? { ...c, ...p } : c)) }));
@@ -205,6 +216,7 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
     upd(on, on ? 1 : -1); try { await social.setPhotoLike(it.id, on); } catch (e) { upd(!on, on ? -1 : 1); notify(e.message, 'err'); } };
   return (
     <>
+    {own && !draft && <DraftRestoreBar userId={profile.id} buildFresh={() => makeDraft(d)} onRestore={(x) => { setCollapsed(false); setDraft(x); }} />}
     <div ref={pageRef} className={`page view${draft ? ' editing' : ''}${draft && collapsed ? ' collapsed' : ''}`} style={{ ...themeStyle(theme, img[theme.bg_image], fontFamily), '--u-cards': `${colW / 1000}px`, '--u-avatar': `${avW / 1000}px` }} onPointerDown={() => draft && setSel(null)}>
       <style>{toCss(draft ? draft.css : profile.custom_css)}</style>
       <div className="dim" />
@@ -232,7 +244,7 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
       {stickersOn('frame')}
       </main>
     </div>
-    {draft && <Suspense fallback={null}><Customizer draft={draft} setDraft={setDraft} onClose={() => setDraft(null)} reload={async () => { await load(); refreshMe(); }} sel={sel} setSel={setSel} notify={notify} photos={d.photos} img={img} collapsed={collapsed} setCollapsed={setCollapsed} /></Suspense>}
+    {draft && <Suspense fallback={null}><Customizer draft={draft} setDraft={setDraft} onClose={() => { clearDraft(profile.id); setDraft(null); }} reload={async () => { await load(); refreshMe(); }} sel={sel} setSel={setSel} notify={notify} photos={d.photos} img={img} collapsed={collapsed} setCollapsed={setCollapsed} /></Suspense>}
     {rep && <ReportModal target={{ type: 'profile', id: profile.id }} onClose={() => setRep(false)} notify={notify} />}
     {shareData && <Suspense fallback={null}><ShareSheet data={shareData} onClose={() => setShareData(null)} /></Suspense>}
     {lb != null && <Lightbox items={items} index={lb} onClose={() => setLb(null)} onIndex={setLb} onLike={own ? undefined : likePhoto} onLikers={own ? (it) => setLikers(it) : undefined} />}
@@ -264,10 +276,12 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false); const [recovery, setRecovery] = useState(false);
   const [menu, setMenu] = useState(false); const { n: nCount, setN: setNCount, tick: nTick } = useNotifCount(me?.id); const [toast, setToast] = useState(null); const [unread, setUnread] = useState(0);
   const refreshMe = useCallback(() => profiles.getMyProfile().then(setMe).catch(() => {}), []);
+  const [meErr, setMeErr] = useState(null); const [inviteOpen, setInviteOpen] = useState(false);
+  const loadMe = useCallback(() => { setMeErr(null); return profiles.getMyProfile().then(setMe).catch(setMeErr); }, []);
   const myImg = useImages([me?.avatar_path]);
   const refreshUnread = useCallback(() => social.unreadCount().then(setUnread).catch(() => {}), []);
   useEffect(() => {
-    auth.getSession().then(setSession);
+    auth.getSession().then(setSession).catch(() => setSession(null));
     return auth.onAuthChange((sess, ev) => {
       // Keeps the last 30 auth events in localStorage so an unexpected logout leaves evidence (read: localStorage.getItem('auth_log')).
       try {
@@ -282,7 +296,10 @@ export default function App() {
   useEffect(() => { registerSW(); }, []);   // service worker: installable app + push notifications
   useEffect(() => { const t = { home: 'Home', profile: route.username ? `@${route.username}` : 'Me', map: 'Map', messages: 'Chat', people: 'People', admin: 'Admin', post: 'Post' }[route.v]; document.title = `fiiyou · ${t}`; }, [route]);
   useEffect(() => { if (route.legacyMe && me) navigate(`/${me.username.toLowerCase()}${route.edit ? '/edit' : ''}`, { replace: true }); }, [route.legacyMe, route.edit, me?.username]);   // old /me -> /<username>
-  useEffect(() => { if (session) profiles.getMyProfile().then(setMe).catch(() => {}); else setMe(null); }, [session]);
+  useEffect(() => { if (session) loadMe(); else { setMe(null); setMeErr(null); } }, [session, loadMe]);
+  useEffect(() => {   // someone who is already a member opened an invite link: take them to the person who sent it
+    if (!me || me.onboarded_at === null) return; const u = getInvite(); if (!u) return; clearInvite(); if (u !== me.username.toLowerCase()) navigate(`/${u}`);
+  }, [me?.id, me?.onboarded_at]);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (!me) return; refreshUnread(); const t = setInterval(refreshUnread, 30000); const off = social.onMessage(me.id, refreshUnread); return () => { clearInterval(t); off(); }; }, [me?.id]);
   useEffect(() => { if (me?.id) adminApi.isAdmin().then(setIsAdmin).catch(() => setIsAdmin(false)); else setIsAdmin(false); }, [me?.id]);   // display only: the database re-checks every admin call
   useEffect(() => { if (me?.id) media.sweepOrphans().catch(() => {}); }, [me?.id]);   // clears files nothing references any more
@@ -294,8 +311,10 @@ export default function App() {
   if (session === undefined) return <Boot />;
   if (recovery && session) return <NewPassword onDone={() => setRecovery(false)} />;
   if (!session) return <Auth />;
-  if (!me) return <Boot />;
-  const notify = (msg, type = 'ok') => setToast({ msg, type });
+  if (!me) return meErr ? <div className="authwrap"><ErrorState error={meErr} onRetry={loadMe} title="Could not load your account" /></div> : <Boot />;
+  const notify = (msg, type = 'ok') => setToast({ msg: type === 'err' ? friendlyError({ message: msg }) : msg, type });
+  // first run after sign-up: the welcome steps (null = not done yet; undefined = the 0024 migration has not run, so nobody is sent through it)
+  if (me.onboarded_at === null) return (<><Onboarding me={me} inviter={session.user?.user_metadata?.invited_by || getInvite()} onDone={async () => setMe(await profiles.getMyProfile())} notify={notify} />{toast && <div className={`toast ${toast.type}`} role="status">{toast.msg}</div>}</>);
   const go = (v, username, peer, edit) => {   // go('profile', username?, null, edit?) | go('messages', null, peerId) | go('post', postId)
     const mine = !username || username.toLowerCase() === me.username.toLowerCase();
     const to = v === 'profile' ? `/${encodeURIComponent((username || me.username).toLowerCase())}${mine && edit ? '/edit' : ''}`
@@ -314,15 +333,17 @@ export default function App() {
         <NotificationList go={go} notify={notify} tick={nTick} onRead={() => setNCount(0)} />
         <PushToggle notify={notify} />
         <hr className="msep" />
+        <button role="menuitem" onClick={() => { setMenu(false); setInviteOpen(true); }}><UserPlus size={18} weight="bold" aria-hidden="true" />Invite friends</button>
         <button role="menuitem" onClick={async () => { setMenu(false); await forgetDevice(); auth.signOut(); }}><SignOut size={18} weight="bold" aria-hidden="true" />Sign out</button>
         <button role="menuitem" className="danger" onClick={async () => { setMenu(false); if (await ask({ title: 'Delete your account?', message: 'Your account and everything in it will be deleted. This cannot be undone.', confirmLabel: 'Delete account', danger: true })) auth.deleteAccount(); }}><Trash size={18} weight="bold" aria-hidden="true" />Delete account</button></div>}</div></nav>
     {route.v === 'home' && <HomeView me={me} go={go} notify={notify} unread={unread} />}
     {route.v === 'map' && <MapView me={me} go={go} notify={notify} />}
     {route.v === 'messages' && <MessagesView key={route.peer || 'all'} me={me} peer={route.peer} go={go} notify={notify} refreshUnread={refreshUnread} />}
     {route.v === 'admin' && isAdmin && <AdminView go={go} notify={notify} />}
-    {route.v === 'people' && <PeopleView me={me} go={go} notify={notify} />}
+    {route.v === 'people' && <PeopleView me={me} go={go} notify={notify} onInvite={() => setInviteOpen(true)} />}
     {route.v === 'post' && <PostView key={route.id} id={route.id} me={me} go={go} notify={notify} />}
     {route.v === 'profile' && <ProfileView key={route.username || me.username} username={route.username || me.username} go={go} notify={notify} refreshMe={refreshMe} meName={me.username} autoEdit={!!route.edit} />}
+    {inviteOpen && <Suspense fallback={null}><InviteModal me={me} onClose={() => setInviteOpen(false)} notify={notify} /></Suspense>}
     {toast && <div className={`toast ${toast.type}`} role="status">{toast.msg}</div>}
   </div>);
 }

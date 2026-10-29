@@ -1,0 +1,20 @@
+.obcard { max-width: 440px; gap: 12px; }
+.obcard h2 { margin: 0; font-size: 1.15rem; outline: none; }
+.obdots { display: flex; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.obdots li { flex: 1; height: 5px; border-radius: 99px; background: var(--g3); } .obdots li.done { background: var(--g4); } .obdots li.on { background: var(--accent); }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.obhint { margin: 0; font-size: .85em; }
+.obnote { margin: 0; padding: .55rem .8rem; border: 1px solid var(--accent); border-radius: 14px; font-weight: 650; }
+.obavatar { display: grid; gap: 12px; justify-items: center; text-align: center; } .obavatar .filebtn { cursor: pointer; }
+.oblist { display: grid; gap: 8px; max-height: 40vh; overflow: auto; }
+.oblist .row { display: flex; align-items: center; gap: 12px; padding: .5rem .7rem; background: var(--g1); border: 1px solid var(--g3); border-radius: 16px; }
+.obwho { display: grid; min-width: 0; flex: 1; } .obwho small { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.obnav { display: flex; justify-content: space-between; gap: 8px; } .obnav .primary { min-width: 7rem; }
+.obskip { justify-self: center; font-size: .85em; }
+.invite { position: relative; justify-items: stretch; } .invite .invx { position: absolute; top: 10px; right: 10px; padding: .25rem .5rem; }
+.invite .qr { width: min(240px, 100%); aspect-ratio: 1; justify-self: center; border-radius: 12px; }
+.invite input { text-align: center; } .invite .acts { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.invite .acts button { display: inline-flex; align-items: center; gap: 6px; }
+.draftbar { position: sticky; top: calc(var(--nav-h, 56px) + 8px); z-index: 60; display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  margin: 8px auto; max-width: min(720px, calc(100vw - 24px)); padding: .55rem .9rem; border-radius: 16px; background: var(--g1); border: 1px solid var(--accent); font-size: .9rem; font-weight: 600; }
+.draftbar .acts { display: flex; gap: 6px; }

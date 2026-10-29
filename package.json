@@ -8,15 +8,17 @@
     "@phosphor-icons/react": "^2.1.10",
     "@supabase/supabase-js": "^2.45.0",
     "leaflet": "^1.9.4",
+    "qrcode-generator": "^2.0.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "scripts": {
     "dev": "vite",
     "prebuild": "node scripts/seo.mjs",
-    "build": "vite build",
+    "build": "vite build && node scripts/spa404.mjs",
     "preview": "vite preview",
-    "test:db": "sudo -u postgres bash supabase/tests/run.sh"
+    "test:db": "sudo -u postgres bash supabase/tests/run.sh",
+    "test:client": "node --test tests/client/*.test.mjs"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.0",

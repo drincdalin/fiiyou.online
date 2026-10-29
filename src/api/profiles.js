@@ -1,7 +1,7 @@
 import { supabase, unwrap } from '../lib/client.js';
 import { uploadImage, deleteImage } from './media.js';
 
-const EDITABLE = ['display_name', 'headline', 'bio', 'locality_id', 'show_on_map', 'wall_policy', 'theme', 'music', 'custom_css'];
+const EDITABLE = ['display_name', 'headline', 'bio', 'locality_id', 'show_on_map', 'wall_policy', 'theme', 'music', 'custom_css', 'onboarded_at'];
 
 export async function getMyProfile() {
   const { data: { user } } = await supabase.auth.getUser();

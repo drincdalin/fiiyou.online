@@ -15,12 +15,12 @@ async function orBanned(email, fn) {
 }
 
 /** Username/display name are passed as metadata; a DB trigger creates the profile + starter cards. */
-export async function signUp({ email, password, username, displayName }) {
+export async function signUp({ email, password, username, displayName, invitedBy }) {
   if (await emailBanned(email)) throw new Error('banned');
   if (!(await usernameAvailable(username))) throw new Error('username_taken');
   return orBanned(email, async () => unwrap(await supabase.auth.signUp({
     email, password,
-    options: { data: { username: username.toLowerCase(), display_name: displayName || username } },
+    options: { data: { username: username.toLowerCase(), display_name: displayName || username, ...(/^[a-z0-9_]{3,24}$/.test(invitedBy || '') ? { invited_by: invitedBy } : {}) } },
   })));
 }
 

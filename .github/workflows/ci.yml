@@ -20,6 +20,8 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - name: Unit tests
+        run: npm run test:client
       - name: Build
         run: npm run build
         env:

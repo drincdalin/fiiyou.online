@@ -6,20 +6,22 @@ import { useImages, Avatar, ago } from './shared.jsx';
 import { PostCard, Composer, Lightbox } from './parts.jsx';
 import { SharedPostCard, decodeSharedPost, previewText } from './PostShare.jsx';
 import { ask } from './dialog.jsx';
+import { ErrorState, friendlyError } from './errors.jsx';
 import { ArrowBendUpLeft, PaperPlaneRight, X } from '@phosphor-icons/react';
 
 const useFeed = (args, notify) => {
-  const [rows, setRows] = useState(null); const [more, setMore] = useState(false); const key = JSON.stringify(args);
+  const [rows, setRows] = useState(null); const [more, setMore] = useState(false); const [err, setErr] = useState(null); const key = JSON.stringify(args);
   const load = useCallback(async (append = false, cur = []) => {
+    if (!append) setErr(null);
     try { const before = append && cur.length ? cur[cur.length - 1].created_at : null; const r = await posts.feed({ ...args, before, limit: 20 });
-      setRows(append ? [...cur, ...r] : r); setMore(r.length === 20 && !args.upcoming); } catch (e) { notify(e.message, 'err'); setRows([]); }
+      setRows(append ? [...cur, ...r] : r); setMore(r.length === 20 && !args.upcoming); } catch (e) { if (append) notify(friendlyError(e), 'err'); else { setErr(e); setRows([]); } }
   }, [key]);
   useEffect(() => { setRows(null); load(false); }, [load]);
   const img = useImages((rows || []).flatMap((p) => [p.image_path, p.author_avatar_path]));
   const change = (np) => setRows((r) => r.map((x) => (x.id === np.id ? np : x))); const drop = (id) => setRows((r) => r.filter((x) => x.id !== id));
-  return { rows, more, load, img, change, drop };
+  return { rows, more, load, img, change, drop, err };
 };
-const List = ({ f, me, go, notify, empty }) => !f.rows ? <div className="boot">Loading…</div> : (<>
+const List = ({ f, me, go, notify, empty }) => !f.rows ? <div className="boot">Loading…</div> : f.err && !f.rows.length ? <ErrorState error={f.err} onRetry={() => f.load(false)} title="Could not load posts" /> : (<>
   {!f.rows.length && <p className="empty">{empty}</p>}
   {f.rows.map((p) => <PostCard key={p.id} p={p} me={me} img={f.img} go={go} onChange={f.change} onDelete={f.drop} notify={notify} />)}
   {f.more && <button className="ghost wide" onClick={() => f.load(true, f.rows)}>Load more</button>}</>);
@@ -27,8 +29,11 @@ const List = ({ f, me, go, notify, empty }) => !f.rows ? <div className="boot">L
 /* ---------------- Single post (opened from a shared-post card in chat: #/post/<id>) ---------------- */
 export function PostView({ id, me, go, notify }) {
   const [p, setP] = useState(undefined);   // undefined = loading, null = missing or not visible to this person
-  useEffect(() => { setP(undefined); posts.getPost(id).then(setP).catch(() => setP(null)); }, [id]);
+  const [err, setErr] = useState(null);   // a real failure (network...) is not the same as "this post is not available"
+  const fetchPost = useCallback(() => { setErr(null); setP(undefined); return posts.getPost(id).then(setP).catch(setErr); }, [id]);
+  useEffect(() => { fetchPost(); }, [fetchPost]);
   const img = useImages(p ? [p.image_path, p.author_avatar_path] : []);
+  if (err) return <ErrorState error={err} onRetry={fetchPost} title="Could not load this post" />;
   if (p === undefined) return <div className="boot">Loading…</div>;
   return (<div className="plain view"><div className="phead"><button className="ghost sm" onClick={() => (history.length > 1 ? history.back() : go('home'))}>‹ Back</button></div>
     {p ? <PostCard p={p} me={me} img={img} go={go} onChange={setP} onDelete={() => go('home')} notify={notify} />

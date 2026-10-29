@@ -1,0 +1,9 @@
+.errstate { display: grid; gap: 10px; justify-items: center; text-align: center; padding: 2.5rem 1rem; }
+.errstate h3 { margin: 0; } .errstate p { margin: 0; color: var(--muted); max-width: 34rem; }
+.errstate .erracts { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.errstate details { max-width: 640px; width: 100%; text-align: left; } .errstate summary { cursor: pointer; color: var(--muted); font-size: .85em; }
+.errfull { min-height: 60vh; align-content: center; }
+.netbar { position: fixed; left: 50%; transform: translateX(-50%); top: calc(var(--nav-h, 56px) + 8px); z-index: 900; max-width: min(560px, calc(100vw - 24px)); padding: .5rem 1rem; border-radius: 999px;
+  font-size: .85rem; font-weight: 650; text-align: center; border: 1px solid var(--g4); box-shadow: 0 4px 18px rgba(0, 0, 0, .35); }
+.netbar.down { background: var(--red, #d92d35); color: var(--on-red, #fff); border-color: transparent; }
+.netbar.up { background: var(--green, #fff); color: var(--on-green, #000); }

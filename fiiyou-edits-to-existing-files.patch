@@ -1,0 +1,380 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 2aef534..332e0bc 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -20,6 +20,8 @@ jobs:
+           node-version: 20
+           cache: npm
+       - run: npm ci
++      - name: Unit tests
++        run: npm run test:client
+       - name: Build
+         run: npm run build
+         env:
+diff --git a/package.json b/package.json
+index a3f54f9..8793e22 100644
+--- a/package.json
++++ b/package.json
+@@ -8,15 +8,17 @@
+     "@phosphor-icons/react": "^2.1.10",
+     "@supabase/supabase-js": "^2.45.0",
+     "leaflet": "^1.9.4",
++    "qrcode-generator": "^2.0.4",
+     "react": "^18.3.1",
+     "react-dom": "^18.3.1"
+   },
+   "scripts": {
+     "dev": "vite",
+     "prebuild": "node scripts/seo.mjs",
+-    "build": "vite build",
++    "build": "vite build && node scripts/spa404.mjs",
+     "preview": "vite preview",
+-    "test:db": "sudo -u postgres bash supabase/tests/run.sh"
++    "test:db": "sudo -u postgres bash supabase/tests/run.sh",
++    "test:client": "node --test tests/client/*.test.mjs"
+   },
+   "devDependencies": {
+     "@vitejs/plugin-react": "^4.3.0",
+diff --git a/public/privacy.html b/public/privacy.html
+index bfba2a7..fc8c961 100644
+--- a/public/privacy.html
++++ b/public/privacy.html
+@@ -3,7 +3,7 @@
+ <p>fiiyou is a small, independent social network. We collect only what is needed to run it. There are no ads, no analytics and no tracking cookies.</p>
+ <h2>Who is responsible</h2><p>Drinc Dalin, Beiuș, Romania. Contact: <a href="mailto:contact@fiiyou.online">contact@fiiyou.online</a>.</p>
+ <h2>What we store</h2><ul>
+-<li><b>Account:</b> your email address and a password hash (handled by our authentication provider).</li>
++<li><b>Account:</b> your email address and a password hash (handled by our authentication provider). If you joined through someone's invite link, the username of the person who invited you is kept with your account, only to suggest adding them as a friend.</li>
+ <li><b>Profile:</b> username, display name, mood, locality, theme and style settings, music link or audio file, cover image, avatar, background, stickers, photos and captions.</li>
+ <li><b>Activity:</b> posts, comments, likes, guestbook entries, friend requests and friendships, your Top friends, places you add, blocks and reports you file.</li>
+ <li><b>Messages:</b> direct messages between friends. They are stored in our database and are <b>not end-to-end encrypted</b>; the operator can technically read them.</li>
+diff --git a/src/api/auth.js b/src/api/auth.js
+index 278c231..f21d355 100644
+--- a/src/api/auth.js
++++ b/src/api/auth.js
+@@ -15,12 +15,12 @@ async function orBanned(email, fn) {
+ }
+ 
+ /** Username/display name are passed as metadata; a DB trigger creates the profile + starter cards. */
+-export async function signUp({ email, password, username, displayName }) {
++export async function signUp({ email, password, username, displayName, invitedBy }) {
+   if (await emailBanned(email)) throw new Error('banned');
+   if (!(await usernameAvailable(username))) throw new Error('username_taken');
+   return orBanned(email, async () => unwrap(await supabase.auth.signUp({
+     email, password,
+-    options: { data: { username: username.toLowerCase(), display_name: displayName || username } },
++    options: { data: { username: username.toLowerCase(), display_name: displayName || username, ...(/^[a-z0-9_]{3,24}$/.test(invitedBy || '') ? { invited_by: invitedBy } : {}) } },
+   })));
+ }
+ 
+diff --git a/src/api/discover.js b/src/api/discover.js
+index 1e35c4b..0839a06 100644
+--- a/src/api/discover.js
++++ b/src/api/discover.js
+@@ -4,8 +4,9 @@ import { supabase, unwrap } from '../lib/client.js';
+ export async function discover({ localityId = null, mode = 'random', limit = 20 } = {}) {
+   return unwrap(await supabase.rpc('discover_profiles', { p_locality: localityId, p_mode: mode, p_limit: limit }));
+ }
+-export async function searchProfiles(query, limit = 20) {
+-  return unwrap(await supabase.rpc('search_profiles', { p_query: query, p_limit: limit }));
++/** Matches name or @username, ignoring accents ("stefan" finds "Ștefan"). localityId narrows it to one locality (needs migration 0024). */
++export async function searchProfiles(query, limit = 20, localityId = null) {
++  return unwrap(await supabase.rpc('search_profiles', { p_query: query, p_limit: limit, ...(localityId ? { p_locality: localityId } : {}) }));
+ }
+ 
+ export async function listLocalities() {
+diff --git a/src/api/media.js b/src/api/media.js
+index eb8a046..9531eea 100644
+--- a/src/api/media.js
++++ b/src/api/media.js
+@@ -1,4 +1,5 @@
+ import { supabase, unwrap } from '../lib/client.js';
++import { draftMediaPaths } from '../lib/draftStore.js';
+ 
+ const BUCKET = 'media';
+ const MAX_BYTES = 1_500_000;        // keep under bucket limit (1572864)
+@@ -116,6 +117,7 @@ export async function sweepOrphans(graceMs = 2 * 3600e3) {
+     ...photos.map((p) => p.path), ...posts.map((p) => p.image_path)].filter(Boolean));
+   const audio = new Set([prof.music?.audio].filter(Boolean));
+   const fonts = new Set([prof.theme?.font_file].filter(Boolean));
++  for (const keep of [media, audio, fonts]) for (const p of draftMediaPaths(id)) keep.add(p);   // files of an autosaved, unsaved editor draft are still wanted
+   let removed = 0;
+   for (const [bucket, keep] of [[BUCKET, media], ['audio', audio], ['fonts', fonts]]) {
+     const files = unwrap(await supabase.storage.from(bucket).list(id, { limit: 1000 }));
+diff --git a/src/api/profiles.js b/src/api/profiles.js
+index 3cb9e42..764b66b 100644
+--- a/src/api/profiles.js
++++ b/src/api/profiles.js
+@@ -1,7 +1,7 @@
+ import { supabase, unwrap } from '../lib/client.js';
+ import { uploadImage, deleteImage } from './media.js';
+ 
+-const EDITABLE = ['display_name', 'headline', 'bio', 'locality_id', 'show_on_map', 'wall_policy', 'theme', 'music', 'custom_css'];
++const EDITABLE = ['display_name', 'headline', 'bio', 'locality_id', 'show_on_map', 'wall_policy', 'theme', 'music', 'custom_css', 'onboarded_at'];
+ 
+ export async function getMyProfile() {
+   const { data: { user } } = await supabase.auth.getUser();
+diff --git a/src/ui/App.jsx b/src/ui/App.jsx
+index 1e4634d..75a8456 100644
+--- a/src/ui/App.jsx
++++ b/src/ui/App.jsx
+@@ -3,7 +3,13 @@ import { auth, admin as adminApi, profiles, cards as cardsApi, friends, wall, so
+ import { useImages, Boot, Avatar, Rich } from './shared.jsx';
+ import { toCss } from './customCss.js';
+ import { Lightbox, LikersModal, ReportModal, Verified, NavIcon, spamMessage } from './parts.jsx';
+-import { HomeView, MapView, MessagesView, PeopleView, PostView } from './views.jsx';
++import { HomeView, MapView, MessagesView, PostView } from './views.jsx';
++import { PeopleView } from './PeopleView.jsx';
++import Onboarding from './Onboarding.jsx';
++import { friendlyError, ErrorState } from './errors.jsx';
++import { useDraftAutosave, DraftRestoreBar } from './draft.jsx';
++import { clearDraft } from '../lib/draftStore.js';
++import { getInvite, clearInvite } from '../lib/invite.js';
+ import AdminView from './Admin.jsx';
+ import { themeStyle } from './theme.js';
+ import { useCustomFont } from './fonts.js';
+@@ -15,20 +21,21 @@ const Customizer = lazy(() => import('./Customizer.jsx'));
+ import { ask } from './dialog.jsx';
+ import { usePath, parseRoute, navigate, isReserved } from './router.jsx';
+ const ShareSheet = lazy(() => import('./ShareSheet.jsx'));
++const InviteModal = lazy(() => import('./InviteModal.jsx'));
+ import NotificationList, { useNotifCount } from './Notifications.jsx';
+ import PushToggle from './PushToggle.jsx';
+ import { registerSW, forgetDevice } from './push.js';
+-import { Eye, EyeSlash, Check, Heart, PencilSimple, ShareNetwork, SignOut, Trash } from '@phosphor-icons/react';
++import { Eye, EyeSlash, Check, Heart, PencilSimple, ShareNetwork, SignOut, Trash, UserPlus } from '@phosphor-icons/react';
+ 
+ const BASE = import.meta.env.BASE_URL;
+ function Auth() {
+-  const [mode, setMode] = useState('in'); const [f, setF] = useState({ email: '', password: '', username: '', displayName: '' }); const [agree, setAgree] = useState(false); const [banned, setBanned] = useState(false);
++  const [invite] = useState(() => getInvite()); const [mode, setMode] = useState(invite ? 'up' : 'in'); const [f, setF] = useState({ email: '', password: '', username: '', displayName: '' }); const [agree, setAgree] = useState(false); const [banned, setBanned] = useState(false);
+   const [msg, setMsg] = useState(''); const [ok, setOk] = useState(false); const [busy, setBusy] = useState(false); const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+   const say = (m, good = false) => { setMsg(m); setOk(good); };
+   const go = async (e) => { e.preventDefault(); say(''); if (mode === 'up' && isReserved(f.username)) return say('That username is reserved.'); setBusy(true);
+-    try { if (mode === 'in') await auth.signIn(f); else { const r = await auth.signUp(f); if (!r.session) say('Check your email to confirm your account.', true); } }
+-    catch (er) { if (er.message === 'banned') setBanned(true); else say(er.message === 'username_taken' ? 'That username is taken.' : er.message); } setBusy(false); };
+-  const forgot = async () => { if (!f.email) return say('Type your email first.'); try { await auth.resetPassword(f.email); say('If that email has an account, a reset link is on its way.', true); } catch (er) { say(er.message); } };
++    try { if (mode === 'in') await auth.signIn(f); else { const r = await auth.signUp({ ...f, invitedBy: invite }); if (!r.session) say('Check your email to confirm your account.', true); } }
++    catch (er) { if (er.message === 'banned') setBanned(true); else say(er.message === 'username_taken' ? 'That username is taken.' : friendlyError(er)); } setBusy(false); };
++  const forgot = async () => { if (!f.email) return say('Type your email first.'); try { await auth.resetPassword(f.email); say('If that email has an account, a reset link is on its way.', true); } catch (er) { say(friendlyError(er)); } };
+   const up = mode === 'up'; const [showPw, setShowPw] = useState(false);
+   if (banned) return <Banned onBack={() => setBanned(false)} />;
+   return (
+@@ -39,6 +46,7 @@ function Auth() {
+           <button type="button" role="tab" aria-selected={!up} className={!up ? 'on' : ''} onClick={() => { setMode('in'); say(''); }}>Sign in</button>
+           <button type="button" role="tab" aria-selected={up} className={up ? 'on' : ''} onClick={() => { setMode('up'); say(''); }}>Create account</button>
+         </div>
++        {up && invite && <p className="obnote">@{invite} invited you to fiiyou.</p>}
+         {up && <><label className="field"><span>Username</span><input placeholder="a-z, 0-9 and _" value={f.username} onChange={set('username')} required minLength={3} maxLength={24} pattern="[A-Za-z0-9_]{3,24}" autoComplete="username" /></label>
+           <label className="field"><span>Display name</span><input placeholder="How people see you" value={f.displayName} onChange={set('displayName')} maxLength={50} /></label></>}
+         <label className="field"><span>Email</span><input type="email" placeholder="you@example.com" value={f.email} onChange={set('email')} required autoComplete="email" /></label>
+@@ -131,8 +139,10 @@ const makeDraft = (d) => { const profile = d.profile; return { theme: { ...profi
+ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
+   const [d, setD] = useState(null); const [draft, setDraft] = useState(null); const [sel, setSel] = useState(null); const [colW, setColW] = useState(920); const [avW, setAvW] = useState(190); const cardsRef = useRef(); const avRef = useRef();
+   const [collapsed, setCollapsed] = useState(false); const [lb, setLb] = useState(null); const [rep, setRep] = useState(false); const frame = useRef(); const pageRef = useRef(); const [sharing, setSharing] = useState(false); const [shareData, setShareData] = useState(null); const [likers, setLikers] = useState(null);
+-  const load = useCallback(() => profiles.getFullProfile(username).then(setD).catch((e) => notify(e.message, 'err')), [username]);
+-  useEffect(() => { setD(null); setDraft(null); setSel(null); setLb(null); load(); }, [load]);
++  const [loadErr, setLoadErr] = useState(null); const [missing, setMissing] = useState(false);   // missing = no such profile (or hidden from you)
++  const load = useCallback(() => profiles.getFullProfile(username).then((x) => { setLoadErr(null); if (x) { setMissing(false); setD(x); } else setMissing(true); }).catch((e) => { setLoadErr(e); notify(friendlyError(e), 'err'); }), [username]);
++  useEffect(() => { setD(null); setMissing(false); setDraft(null); setSel(null); setLb(null); setLoadErr(null); load(); }, [load]);
++  useDraftAutosave(d && d.relationship?.status === 'self' ? d.profile.id : null, draft);   // the editor draft survives a refresh
+   const viewed = useRef(null);
+   useEffect(() => {   // one visit = one view: recorded once per profile page open (not on reloads after friend / wall actions), then the shown count is refreshed
+     if (!d || d.relationship.status === 'self' || viewed.current === d.profile.id) return; const id = d.profile.id; viewed.current = id;
+@@ -168,7 +178,8 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
+   }, [d]);   // eslint-disable-line react-hooks/exhaustive-deps
+   useEffect(() => { if (autoEdit && d && d.relationship.status === 'self' && !draft) { setCollapsed(false); setDraft(makeDraft(d)); navigate(`/${meName.toLowerCase()}`, { replace: true }); } }, [d, autoEdit]);   // "Edit my profile" on Home opens the editor straight away
+   useEffect(() => { let on = true; setAudioUrl(null); if (music.audio) media.signedUrl(music.audio, 'audio').then((u) => on && setAudioUrl(u)).catch(() => {}); return () => { on = false; }; }, [music.audio]);
+-  if (!d) return <Boot />;
++  if (missing) return <div className="plain view"><p className="empty">This profile does not exist, or it is not available to you.</p></div>;
++  if (!d) return loadErr ? <ErrorState error={loadErr} onRetry={() => { setLoadErr(null); return load(); }} title="Could not load this profile" /> : <Boot />;
+   const { profile, relationship: rel } = d; const own = rel.status === 'self';
+   const startEdit = () => { setCollapsed(false); setDraft(makeDraft(d)); };
+   const patch = (id, p) => setDraft((x) => ({ ...x, cards: x.cards.map((c) => (c.id === id ? { ...c, ...p } : c)) }));
+@@ -205,6 +216,7 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
+     upd(on, on ? 1 : -1); try { await social.setPhotoLike(it.id, on); } catch (e) { upd(!on, on ? -1 : 1); notify(e.message, 'err'); } };
+   return (
+     <>
++    {own && !draft && <DraftRestoreBar userId={profile.id} buildFresh={() => makeDraft(d)} onRestore={(x) => { setCollapsed(false); setDraft(x); }} />}
+     <div ref={pageRef} className={`page view${draft ? ' editing' : ''}${draft && collapsed ? ' collapsed' : ''}`} style={{ ...themeStyle(theme, img[theme.bg_image], fontFamily), '--u-cards': `${colW / 1000}px`, '--u-avatar': `${avW / 1000}px` }} onPointerDown={() => draft && setSel(null)}>
+       <style>{toCss(draft ? draft.css : profile.custom_css)}</style>
+       <div className="dim" />
+@@ -232,7 +244,7 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
+       {stickersOn('frame')}
+       </main>
+     </div>
+-    {draft && <Suspense fallback={null}><Customizer draft={draft} setDraft={setDraft} onClose={() => setDraft(null)} reload={async () => { await load(); refreshMe(); }} sel={sel} setSel={setSel} notify={notify} photos={d.photos} img={img} collapsed={collapsed} setCollapsed={setCollapsed} /></Suspense>}
++    {draft && <Suspense fallback={null}><Customizer draft={draft} setDraft={setDraft} onClose={() => { clearDraft(profile.id); setDraft(null); }} reload={async () => { await load(); refreshMe(); }} sel={sel} setSel={setSel} notify={notify} photos={d.photos} img={img} collapsed={collapsed} setCollapsed={setCollapsed} /></Suspense>}
+     {rep && <ReportModal target={{ type: 'profile', id: profile.id }} onClose={() => setRep(false)} notify={notify} />}
+     {shareData && <Suspense fallback={null}><ShareSheet data={shareData} onClose={() => setShareData(null)} /></Suspense>}
+     {lb != null && <Lightbox items={items} index={lb} onClose={() => setLb(null)} onIndex={setLb} onLike={own ? undefined : likePhoto} onLikers={own ? (it) => setLikers(it) : undefined} />}
+@@ -264,10 +276,12 @@ export default function App() {
+   const [isAdmin, setIsAdmin] = useState(false); const [recovery, setRecovery] = useState(false);
+   const [menu, setMenu] = useState(false); const { n: nCount, setN: setNCount, tick: nTick } = useNotifCount(me?.id); const [toast, setToast] = useState(null); const [unread, setUnread] = useState(0);
+   const refreshMe = useCallback(() => profiles.getMyProfile().then(setMe).catch(() => {}), []);
++  const [meErr, setMeErr] = useState(null); const [inviteOpen, setInviteOpen] = useState(false);
++  const loadMe = useCallback(() => { setMeErr(null); return profiles.getMyProfile().then(setMe).catch(setMeErr); }, []);
+   const myImg = useImages([me?.avatar_path]);
+   const refreshUnread = useCallback(() => social.unreadCount().then(setUnread).catch(() => {}), []);
+   useEffect(() => {
+-    auth.getSession().then(setSession);
++    auth.getSession().then(setSession).catch(() => setSession(null));
+     return auth.onAuthChange((sess, ev) => {
+       // Keeps the last 30 auth events in localStorage so an unexpected logout leaves evidence (read: localStorage.getItem('auth_log')).
+       try {
+@@ -282,7 +296,10 @@ export default function App() {
+   useEffect(() => { registerSW(); }, []);   // service worker: installable app + push notifications
+   useEffect(() => { const t = { home: 'Home', profile: route.username ? `@${route.username}` : 'Me', map: 'Map', messages: 'Chat', people: 'People', admin: 'Admin', post: 'Post' }[route.v]; document.title = `fiiyou · ${t}`; }, [route]);
+   useEffect(() => { if (route.legacyMe && me) navigate(`/${me.username.toLowerCase()}${route.edit ? '/edit' : ''}`, { replace: true }); }, [route.legacyMe, route.edit, me?.username]);   // old /me -> /<username>
+-  useEffect(() => { if (session) profiles.getMyProfile().then(setMe).catch(() => {}); else setMe(null); }, [session]);
++  useEffect(() => { if (session) loadMe(); else { setMe(null); setMeErr(null); } }, [session, loadMe]);
++  useEffect(() => {   // someone who is already a member opened an invite link: take them to the person who sent it
++    if (!me || me.onboarded_at === null) return; const u = getInvite(); if (!u) return; clearInvite(); if (u !== me.username.toLowerCase()) navigate(`/${u}`);
++  }, [me?.id, me?.onboarded_at]);   // eslint-disable-line react-hooks/exhaustive-deps
+   useEffect(() => { if (!me) return; refreshUnread(); const t = setInterval(refreshUnread, 30000); const off = social.onMessage(me.id, refreshUnread); return () => { clearInterval(t); off(); }; }, [me?.id]);
+   useEffect(() => { if (me?.id) adminApi.isAdmin().then(setIsAdmin).catch(() => setIsAdmin(false)); else setIsAdmin(false); }, [me?.id]);   // display only: the database re-checks every admin call
+   useEffect(() => { if (me?.id) media.sweepOrphans().catch(() => {}); }, [me?.id]);   // clears files nothing references any more
+@@ -294,8 +311,10 @@ export default function App() {
+   if (session === undefined) return <Boot />;
+   if (recovery && session) return <NewPassword onDone={() => setRecovery(false)} />;
+   if (!session) return <Auth />;
+-  if (!me) return <Boot />;
+-  const notify = (msg, type = 'ok') => setToast({ msg, type });
++  if (!me) return meErr ? <div className="authwrap"><ErrorState error={meErr} onRetry={loadMe} title="Could not load your account" /></div> : <Boot />;
++  const notify = (msg, type = 'ok') => setToast({ msg: type === 'err' ? friendlyError({ message: msg }) : msg, type });
++  // first run after sign-up: the welcome steps (null = not done yet; undefined = the 0024 migration has not run, so nobody is sent through it)
++  if (me.onboarded_at === null) return (<><Onboarding me={me} inviter={session.user?.user_metadata?.invited_by || getInvite()} onDone={async () => setMe(await profiles.getMyProfile())} notify={notify} />{toast && <div className={`toast ${toast.type}`} role="status">{toast.msg}</div>}</>);
+   const go = (v, username, peer, edit) => {   // go('profile', username?, null, edit?) | go('messages', null, peerId) | go('post', postId)
+     const mine = !username || username.toLowerCase() === me.username.toLowerCase();
+     const to = v === 'profile' ? `/${encodeURIComponent((username || me.username).toLowerCase())}${mine && edit ? '/edit' : ''}`
+@@ -314,15 +333,17 @@ export default function App() {
+         <NotificationList go={go} notify={notify} tick={nTick} onRead={() => setNCount(0)} />
+         <PushToggle notify={notify} />
+         <hr className="msep" />
++        <button role="menuitem" onClick={() => { setMenu(false); setInviteOpen(true); }}><UserPlus size={18} weight="bold" aria-hidden="true" />Invite friends</button>
+         <button role="menuitem" onClick={async () => { setMenu(false); await forgetDevice(); auth.signOut(); }}><SignOut size={18} weight="bold" aria-hidden="true" />Sign out</button>
+         <button role="menuitem" className="danger" onClick={async () => { setMenu(false); if (await ask({ title: 'Delete your account?', message: 'Your account and everything in it will be deleted. This cannot be undone.', confirmLabel: 'Delete account', danger: true })) auth.deleteAccount(); }}><Trash size={18} weight="bold" aria-hidden="true" />Delete account</button></div>}</div></nav>
+     {route.v === 'home' && <HomeView me={me} go={go} notify={notify} unread={unread} />}
+     {route.v === 'map' && <MapView me={me} go={go} notify={notify} />}
+     {route.v === 'messages' && <MessagesView key={route.peer || 'all'} me={me} peer={route.peer} go={go} notify={notify} refreshUnread={refreshUnread} />}
+     {route.v === 'admin' && isAdmin && <AdminView go={go} notify={notify} />}
+-    {route.v === 'people' && <PeopleView me={me} go={go} notify={notify} />}
++    {route.v === 'people' && <PeopleView me={me} go={go} notify={notify} onInvite={() => setInviteOpen(true)} />}
+     {route.v === 'post' && <PostView key={route.id} id={route.id} me={me} go={go} notify={notify} />}
+     {route.v === 'profile' && <ProfileView key={route.username || me.username} username={route.username || me.username} go={go} notify={notify} refreshMe={refreshMe} meName={me.username} autoEdit={!!route.edit} />}
++    {inviteOpen && <Suspense fallback={null}><InviteModal me={me} onClose={() => setInviteOpen(false)} notify={notify} /></Suspense>}
+     {toast && <div className={`toast ${toast.type}`} role="status">{toast.msg}</div>}
+   </div>);
+ }
+diff --git a/src/ui/main.jsx b/src/ui/main.jsx
+index 237423b..fe6ac8d 100644
+--- a/src/ui/main.jsx
++++ b/src/ui/main.jsx
+@@ -1,19 +1,14 @@
+-import { Component } from 'react';
+ import { createRoot } from 'react-dom/client';
+ import App from './App.jsx';
+ import { DialogHost, installDialogs } from './dialog.jsx';
+ import { bootRouter } from './router.jsx';
++import { Boundary, OfflineBanner } from './errors.jsx';
++import { captureInvite } from '../lib/invite.js';
+ import './styles.css';
+ import './design.css';
+ import './ui-theme.css';
+ 
+-class Boundary extends Component {
+-  state = { e: null };
+-  static getDerivedStateFromError(e) { return { e }; }
+-  render() { return this.state.e ? (<div className="boot"><h3>Something broke.</h3><pre className="errpre">{String(this.state.e.message || this.state.e)}</pre>
+-    <button className="primary" onClick={() => location.reload()}>Reload</button></div>) : this.props.children; }
+-}
+-
+ bootRouter();       // old /#/... links become real paths
++captureInvite({ base: import.meta.env.BASE_URL.replace(/\/$/, '') });   // /invite/<username>: remember who invited you, then show the normal page
+ installDialogs();   // any leftover window.alert() shows the in-app card too
+-createRoot(document.getElementById('root')).render(<Boundary><App /><DialogHost /></Boundary>);
++createRoot(document.getElementById('root')).render(<Boundary><App /><DialogHost /><OfflineBanner /></Boundary>);
+diff --git a/src/ui/router.jsx b/src/ui/router.jsx
+index 2550840..1ba80f5 100644
+--- a/src/ui/router.jsx
++++ b/src/ui/router.jsx
+@@ -11,7 +11,7 @@ const BASE = import.meta.env.BASE_URL.replace(/\/$/, ''); // '' on app.fiiyou.on
+ /* Names a username may never take, because /<name> would collide with a real page or file. */
+ export const RESERVED = [
+   // app pages
+-  'home', 'me', 'u', 'map', 'people', 'chat', 'messages', 'post', 'admin', 'notifications',
++  'home', 'me', 'u', 'map', 'people', 'chat', 'messages', 'post', 'admin', 'notifications', 'invite',
+   // auth / meta pages
+   'login', 'signup', 'settings', 'about', 'help', 'privacy', 'terms', 'api',
+   // static files and folders
+diff --git a/src/ui/views.jsx b/src/ui/views.jsx
+index 80e510f..a0c88cd 100644
+--- a/src/ui/views.jsx
++++ b/src/ui/views.jsx
+@@ -6,20 +6,22 @@ import { useImages, Avatar, ago } from './shared.jsx';
+ import { PostCard, Composer, Lightbox } from './parts.jsx';
+ import { SharedPostCard, decodeSharedPost, previewText } from './PostShare.jsx';
+ import { ask } from './dialog.jsx';
++import { ErrorState, friendlyError } from './errors.jsx';
+ import { ArrowBendUpLeft, PaperPlaneRight, X } from '@phosphor-icons/react';
+ 
+ const useFeed = (args, notify) => {
+-  const [rows, setRows] = useState(null); const [more, setMore] = useState(false); const key = JSON.stringify(args);
++  const [rows, setRows] = useState(null); const [more, setMore] = useState(false); const [err, setErr] = useState(null); const key = JSON.stringify(args);
+   const load = useCallback(async (append = false, cur = []) => {
++    if (!append) setErr(null);
+     try { const before = append && cur.length ? cur[cur.length - 1].created_at : null; const r = await posts.feed({ ...args, before, limit: 20 });
+-      setRows(append ? [...cur, ...r] : r); setMore(r.length === 20 && !args.upcoming); } catch (e) { notify(e.message, 'err'); setRows([]); }
++      setRows(append ? [...cur, ...r] : r); setMore(r.length === 20 && !args.upcoming); } catch (e) { if (append) notify(friendlyError(e), 'err'); else { setErr(e); setRows([]); } }
+   }, [key]);
+   useEffect(() => { setRows(null); load(false); }, [load]);
+   const img = useImages((rows || []).flatMap((p) => [p.image_path, p.author_avatar_path]));
+   const change = (np) => setRows((r) => r.map((x) => (x.id === np.id ? np : x))); const drop = (id) => setRows((r) => r.filter((x) => x.id !== id));
+-  return { rows, more, load, img, change, drop };
++  return { rows, more, load, img, change, drop, err };
+ };
+-const List = ({ f, me, go, notify, empty }) => !f.rows ? <div className="boot">Loading…</div> : (<>
++const List = ({ f, me, go, notify, empty }) => !f.rows ? <div className="boot">Loading…</div> : f.err && !f.rows.length ? <ErrorState error={f.err} onRetry={() => f.load(false)} title="Could not load posts" /> : (<>
+   {!f.rows.length && <p className="empty">{empty}</p>}
+   {f.rows.map((p) => <PostCard key={p.id} p={p} me={me} img={f.img} go={go} onChange={f.change} onDelete={f.drop} notify={notify} />)}
+   {f.more && <button className="ghost wide" onClick={() => f.load(true, f.rows)}>Load more</button>}</>);
+@@ -27,8 +29,11 @@ const List = ({ f, me, go, notify, empty }) => !f.rows ? <div className="boot">L
+ /* ---------------- Single post (opened from a shared-post card in chat: #/post/<id>) ---------------- */
+ export function PostView({ id, me, go, notify }) {
+   const [p, setP] = useState(undefined);   // undefined = loading, null = missing or not visible to this person
+-  useEffect(() => { setP(undefined); posts.getPost(id).then(setP).catch(() => setP(null)); }, [id]);
++  const [err, setErr] = useState(null);   // a real failure (network...) is not the same as "this post is not available"
++  const fetchPost = useCallback(() => { setErr(null); setP(undefined); return posts.getPost(id).then(setP).catch(setErr); }, [id]);
++  useEffect(() => { fetchPost(); }, [fetchPost]);
+   const img = useImages(p ? [p.image_path, p.author_avatar_path] : []);
++  if (err) return <ErrorState error={err} onRetry={fetchPost} title="Could not load this post" />;
+   if (p === undefined) return <div className="boot">Loading…</div>;
+   return (<div className="plain view"><div className="phead"><button className="ghost sm" onClick={() => (history.length > 1 ? history.back() : go('home'))}>‹ Back</button></div>
+     {p ? <PostCard p={p} me={me} img={img} go={go} onChange={setP} onDelete={() => go('home')} notify={notify} />
+diff --git a/supabase/tests/00_mock_supabase.sql b/supabase/tests/00_mock_supabase.sql
+index f5ebc0c..21471ca 100644
+--- a/supabase/tests/00_mock_supabase.sql
++++ b/supabase/tests/00_mock_supabase.sql
+@@ -9,6 +9,8 @@ create function auth.uid() returns uuid language sql stable as $$
+   select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+ grant usage on schema auth to anon, authenticated;
+ grant execute on function auth.uid() to anon, authenticated;
++create schema if not exists extensions;
++grant usage on schema extensions to anon, authenticated;
+ create schema storage;
+ create table storage.buckets (id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);
+ create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text, name text, owner uuid, metadata jsonb);
+diff --git a/supabase/tests/run.sh b/supabase/tests/run.sh
+index c9aecf5..a87ec83 100755
+--- a/supabase/tests/run.sh
++++ b/supabase/tests/run.sh
+@@ -15,7 +15,8 @@ done
+ psql -q -d $DB -c 'grant select on public.localities to anon'
+ psql -v ON_ERROR_STOP=1 -d $DB -f tests/10_tests.sql
+ # 0022 (spam guard) rate-limits the bulk inserts in 10_tests.sql, so it is applied after them, then tested on its own
+-for f in migrations/0022_spam_and_bans.sql migrations/0023_media_read_scope.sql; do
++for f in migrations/0022_spam_and_bans.sql migrations/0023_media_read_scope.sql migrations/0024_onboarding_and_search.sql; do
+   psql -v ON_ERROR_STOP=1 -q -d $DB -f "$f"
+ done
+ psql -v ON_ERROR_STOP=1 -d $DB -f tests/20_media_scope.sql
++psql -v ON_ERROR_STOP=1 -d $DB -f tests/30_onboarding_search.sql

@@ -1,4 +1,5 @@
 import { supabase, unwrap } from '../lib/client.js';
+import { draftMediaPaths } from '../lib/draftStore.js';
 
 const BUCKET = 'media';
 const MAX_BYTES = 1_500_000;        // keep under bucket limit (1572864)
@@ -116,6 +117,7 @@ export async function sweepOrphans(graceMs = 2 * 3600e3) {
     ...photos.map((p) => p.path), ...posts.map((p) => p.image_path)].filter(Boolean));
   const audio = new Set([prof.music?.audio].filter(Boolean));
   const fonts = new Set([prof.theme?.font_file].filter(Boolean));
+  for (const keep of [media, audio, fonts]) for (const p of draftMediaPaths(id)) keep.add(p);   // files of an autosaved, unsaved editor draft are still wanted
   let removed = 0;
   for (const [bucket, keep] of [[BUCKET, media], ['audio', audio], ['fonts', fonts]]) {
     const files = unwrap(await supabase.storage.from(bucket).list(id, { limit: 1000 }));

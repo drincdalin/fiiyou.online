@@ -4,8 +4,9 @@ import { supabase, unwrap } from '../lib/client.js';
 export async function discover({ localityId = null, mode = 'random', limit = 20 } = {}) {
   return unwrap(await supabase.rpc('discover_profiles', { p_locality: localityId, p_mode: mode, p_limit: limit }));
 }
-export async function searchProfiles(query, limit = 20) {
-  return unwrap(await supabase.rpc('search_profiles', { p_query: query, p_limit: limit }));
+/** Matches name or @username, ignoring accents ("stefan" finds "Ștefan"). localityId narrows it to one locality (needs migration 0024). */
+export async function searchProfiles(query, limit = 20, localityId = null) {
+  return unwrap(await supabase.rpc('search_profiles', { p_query: query, p_limit: limit, ...(localityId ? { p_locality: localityId } : {}) }));
 }
 
 export async function listLocalities() {
