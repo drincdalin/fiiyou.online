@@ -1,0 +1,99 @@
+From 616091dd02ce0e656be80dcf12768845ced49e55 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Fri, 30 Oct 2026 14:05:22 +0000
+Subject: [PATCH] Release prep: test all migrations in CI, lazy-load Admin,
+ handle guestbook/delete-account errors, fix stale docs
+
+---
+ README.md             | 2 +-
+ docs/RELEASE.md       | 2 +-
+ src/ui/App.jsx        | 8 ++++----
+ supabase/tests/run.sh | 3 ++-
+ 4 files changed, 8 insertions(+), 7 deletions(-)
+
+diff --git a/README.md b/README.md
+index 2d935a1..bf5be20 100644
+--- a/README.md
++++ b/README.md
+@@ -5,7 +5,7 @@ A customizable local social network: profiles you can style (colors, fonts, stic
+ - **Release guide:** [docs/RELEASE.md](docs/RELEASE.md) · **Push notifications:** [docs/PUSH_SETUP.md](docs/PUSH_SETUP.md)
+ - **Run locally:** `cp .env.example .env`, fill in the Supabase URL and publishable key, `npm i`, `npm run dev`
+ - **Local Supabase (Docker, no cloud project needed):** `supabase start` builds the stack and applies every migration plus `seed.sql`; put the printed `API_URL` and `ANON_KEY` into `.env`. Studio: http://127.0.0.1:54323, auth emails (confirm / reset): http://127.0.0.1:54324. `supabase db reset` rebuilds the database from scratch; `supabase stop --no-backup` deletes it. Settings live in `supabase/config.toml`.
+-- **Database:** `supabase/migrations/0001…0023` in order, then `supabase/seed.sql`. Each file needs its own numeric prefix — the CLI records one migration version per number. Tests: `npm run test:db` (needs a local Postgres; it uses a mocked Supabase schema and applies every migration in order, so it also catches numbering mistakes). CI runs it on every push.
++- **Database:** `supabase/migrations/0001…0028` in order, then `supabase/seed.sql`. Each file needs its own numeric prefix — the CLI records one migration version per number. Tests: `npm run test:db` (needs a local Postgres; it uses a mocked Supabase schema and applies every migration in order, so it also catches numbering mistakes). CI runs it on every push.
+ - **Fonts:** Ubuntu Sans (variable woff2) and its licence are in `public/fonts/`.
+ - **Branding:** exact colours and type in [docs/BRANDING.md](docs/BRANDING.md).
+ 
+diff --git a/docs/RELEASE.md b/docs/RELEASE.md
+index a2b106f..42ff047 100644
+--- a/docs/RELEASE.md
++++ b/docs/RELEASE.md
+@@ -9,7 +9,7 @@ The site is a static Vite build hosted on **Vercel**; data, auth and files live
+ - Fonts (Ubuntu Sans, woff2) and their licence are already in `public/fonts/`.
+ 
+ ## 1. Supabase (production settings)
+-1. SQL Editor: migrations `0001` to `0023` and `seed.sql` must all have been run, in order, once each. Files `0015`–`0022` were renumbered in git so every file has its own version number; **their SQL is unchanged**. If you already ran them under their old names, the only new file to run is **`0023_media_read_scope.sql`**. Add `lat`/`lng` to your localities (the map skips localities without coordinates; verify the names in the seed while you are there).
++1. SQL Editor: migrations `0001` to `0028` and `seed.sql` must all have been run, in order, once each. Files `0015`–`0022` were renumbered in git so every file has its own version number; **their SQL is unchanged**. If you already ran them under their old names, the only new file to run is **`0023_media_read_scope.sql`**. Add `lat`/`lng` to your localities (the map skips localities without coordinates; verify the names in the seed while you are there).
+ 2. Authentication → URL Configuration: **Site URL** = `https://fiiyou.online`. **Redirect URLs**: add `https://fiiyou.online` and `https://fiiyou.online/**` (keep `http://localhost:5173` and `http://localhost:5173/**` for local work). Password-reset and confirmation links depend on this.
+ 3. Authentication → Email: turn **Confirm email** on. Set up your **own SMTP provider** before inviting people: Supabase's built-in sender is for testing and is heavily limited.
+ 4. Authentication → Attack protection / password settings: use the strongest options your plan offers. Do **not** enable CAPTCHA yet: the sign-up form does not send a CAPTCHA token, so sign-ups would fail.
+diff --git a/src/ui/App.jsx b/src/ui/App.jsx
+index 0827847..ca1483c 100644
+--- a/src/ui/App.jsx
++++ b/src/ui/App.jsx
+@@ -10,7 +10,6 @@ import { friendlyError, ErrorState } from './errors.jsx';
+ import { useDraftAutosave, DraftRestoreBar } from './draft.jsx';
+ import { clearDraft } from '../lib/draftStore.js';
+ import { getInvite, clearInvite } from '../lib/invite.js';
+-import AdminView from './Admin.jsx';
+ import { themeStyle } from './theme.js';
+ import { useCustomFont } from './fonts.js';
+ import { applyAppTheme } from './appTheme.js';
+@@ -20,6 +19,7 @@ import { stickerModel, stickerStyle, withModel, reanchor, nearestAnchor, settleS
+ const Customizer = lazy(() => import('./Customizer.jsx'));
+ import { ask } from './dialog.jsx';
+ import { usePath, parseRoute, navigate, isReserved } from './router.jsx';
++const AdminView = lazy(() => import('./Admin.jsx'));   // only admins ever open it
+ const ShareSheet = lazy(() => import('./ShareSheet.jsx'));
+ const InviteModal = lazy(() => import('./InviteModal.jsx'));
+ import NotificationList, { useNotifCount } from './Notifications.jsx';
+@@ -81,7 +81,7 @@ function NewPassword({ onDone }) {
+ 
+ function Guestbook({ profileId, go, own, meName, notify }) {
+   const [rows, setRows] = useState([]); const [body, setBody] = useState(''); const [err, setErr] = useState('');
+-  const load = () => wall.listWall(profileId).then(setRows); useEffect(() => { load(); }, [profileId]);
++  const load = () => wall.listWall(profileId).then(setRows).catch((e) => setErr(friendlyError(e, 'Could not load the guestbook.'))); useEffect(() => { load(); }, [profileId]);
+   const img = useImages(rows.map((r) => r.author.avatar_path));
+   const send = async (e) => { e.preventDefault(); setErr('');
+     try { await wall.postOnWall(profileId, body); setBody(''); load(); } catch (er) { setErr(spamMessage(er) || (errorCode(er) === 'rate_limit' ? 'Slow down a bit.' : 'Cannot post here.')); } };
+@@ -340,11 +340,11 @@ export default function App() {
+         <hr className="msep" />
+         <button role="menuitem" onClick={() => { setMenu(false); setInviteOpen(true); }}><UserPlus size={18} weight="bold" aria-hidden="true" />Invite friends</button>
+         <button role="menuitem" onClick={async () => { setMenu(false); await forgetDevice(); auth.signOut(); }}><SignOut size={18} weight="bold" aria-hidden="true" />Sign out</button>
+-        <button role="menuitem" className="danger" onClick={async () => { setMenu(false); if (await ask({ title: 'Delete your account?', message: 'Your account and everything in it will be deleted. This cannot be undone.', confirmLabel: 'Delete account', danger: true })) auth.deleteAccount(); }}><Trash size={18} weight="bold" aria-hidden="true" />Delete account</button></div>}</div></nav>
++        <button role="menuitem" className="danger" onClick={async () => { setMenu(false); if (await ask({ title: 'Delete your account?', message: 'Your account and everything in it will be deleted. This cannot be undone.', confirmLabel: 'Delete account', danger: true })) { try { await auth.deleteAccount(); } catch (e) { notify(friendlyError(e, 'Could not delete the account. Nothing was lost, try again.'), 'err'); } } }}><Trash size={18} weight="bold" aria-hidden="true" />Delete account</button></div>}</div></nav>
+     {route.v === 'home' && <HomeView me={me} go={go} notify={notify} unread={unread} />}
+     {route.v === 'map' && <MapView me={me} go={go} notify={notify} />}
+     {route.v === 'messages' && <MessagesView key={route.peer || 'all'} me={me} peer={route.peer} go={go} notify={notify} refreshUnread={refreshUnread} />}
+-    {route.v === 'admin' && isAdmin && <AdminView go={go} notify={notify} />}
++    {route.v === 'admin' && isAdmin && <Suspense fallback={<Boot />}><AdminView go={go} notify={notify} /></Suspense>}
+     {route.v === 'people' && <PeopleView me={me} go={go} notify={notify} onInvite={() => setInviteOpen(true)} />}
+     {route.v === 'post' && <PostView key={route.id} id={route.id} me={me} go={go} notify={notify} />}
+     {route.v === 'profile' && <ProfileView key={route.username || me.username} username={route.username || me.username} go={go} notify={notify} refreshMe={refreshMe} meName={me.username} autoEdit={!!route.edit} />}
+diff --git a/supabase/tests/run.sh b/supabase/tests/run.sh
+index a87ec83..7f61c40 100755
+--- a/supabase/tests/run.sh
++++ b/supabase/tests/run.sh
+@@ -15,7 +15,8 @@ done
+ psql -q -d $DB -c 'grant select on public.localities to anon'
+ psql -v ON_ERROR_STOP=1 -d $DB -f tests/10_tests.sql
+ # 0022 (spam guard) rate-limits the bulk inserts in 10_tests.sql, so it is applied after them, then tested on its own
+-for f in migrations/0022_spam_and_bans.sql migrations/0023_media_read_scope.sql migrations/0024_onboarding_and_search.sql; do
++for f in migrations/0022_spam_and_bans.sql migrations/0023_media_read_scope.sql migrations/0024_onboarding_and_search.sql \
++         migrations/0025_wall_notifications.sql migrations/0026_hashtags.sql migrations/0027_message_edit_delete.sql migrations/0028_comment_likes_replies_mentions.sql; do
+   psql -v ON_ERROR_STOP=1 -q -d $DB -f "$f"
+ done
+ psql -v ON_ERROR_STOP=1 -d $DB -f tests/20_media_scope.sql
+-- 
+2.43.0
+

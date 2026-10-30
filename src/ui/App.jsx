@@ -10,7 +10,6 @@ import { friendlyError, ErrorState } from './errors.jsx';
 import { useDraftAutosave, DraftRestoreBar } from './draft.jsx';
 import { clearDraft } from '../lib/draftStore.js';
 import { getInvite, clearInvite } from '../lib/invite.js';
-import AdminView from './Admin.jsx';
 import { themeStyle } from './theme.js';
 import { useCustomFont } from './fonts.js';
 import { applyAppTheme } from './appTheme.js';
@@ -20,6 +19,7 @@ import { stickerModel, stickerStyle, withModel, reanchor, nearestAnchor, settleS
 const Customizer = lazy(() => import('./Customizer.jsx'));
 import { ask } from './dialog.jsx';
 import { usePath, parseRoute, navigate, isReserved } from './router.jsx';
+const AdminView = lazy(() => import('./Admin.jsx'));   // only admins ever open it
 const ShareSheet = lazy(() => import('./ShareSheet.jsx'));
 const InviteModal = lazy(() => import('./InviteModal.jsx'));
 import NotificationList, { useNotifCount } from './Notifications.jsx';
@@ -81,7 +81,7 @@ function NewPassword({ onDone }) {
 
 function Guestbook({ profileId, go, own, meName, notify }) {
   const [rows, setRows] = useState([]); const [body, setBody] = useState(''); const [err, setErr] = useState('');
-  const load = () => wall.listWall(profileId).then(setRows); useEffect(() => { load(); }, [profileId]);
+  const load = () => wall.listWall(profileId).then(setRows).catch((e) => setErr(friendlyError(e, 'Could not load the guestbook.'))); useEffect(() => { load(); }, [profileId]);
   const img = useImages(rows.map((r) => r.author.avatar_path));
   const send = async (e) => { e.preventDefault(); setErr('');
     try { await wall.postOnWall(profileId, body); setBody(''); load(); } catch (er) { setErr(spamMessage(er) || (errorCode(er) === 'rate_limit' ? 'Slow down a bit.' : 'Cannot post here.')); } };
@@ -340,11 +340,11 @@ export default function App() {
         <hr className="msep" />
         <button role="menuitem" onClick={() => { setMenu(false); setInviteOpen(true); }}><UserPlus size={18} weight="bold" aria-hidden="true" />Invite friends</button>
         <button role="menuitem" onClick={async () => { setMenu(false); await forgetDevice(); auth.signOut(); }}><SignOut size={18} weight="bold" aria-hidden="true" />Sign out</button>
-        <button role="menuitem" className="danger" onClick={async () => { setMenu(false); if (await ask({ title: 'Delete your account?', message: 'Your account and everything in it will be deleted. This cannot be undone.', confirmLabel: 'Delete account', danger: true })) auth.deleteAccount(); }}><Trash size={18} weight="bold" aria-hidden="true" />Delete account</button></div>}</div></nav>
+        <button role="menuitem" className="danger" onClick={async () => { setMenu(false); if (await ask({ title: 'Delete your account?', message: 'Your account and everything in it will be deleted. This cannot be undone.', confirmLabel: 'Delete account', danger: true })) { try { await auth.deleteAccount(); } catch (e) { notify(friendlyError(e, 'Could not delete the account. Nothing was lost, try again.'), 'err'); } } }}><Trash size={18} weight="bold" aria-hidden="true" />Delete account</button></div>}</div></nav>
     {route.v === 'home' && <HomeView me={me} go={go} notify={notify} unread={unread} />}
     {route.v === 'map' && <MapView me={me} go={go} notify={notify} />}
     {route.v === 'messages' && <MessagesView key={route.peer || 'all'} me={me} peer={route.peer} go={go} notify={notify} refreshUnread={refreshUnread} />}
-    {route.v === 'admin' && isAdmin && <AdminView go={go} notify={notify} />}
+    {route.v === 'admin' && isAdmin && <Suspense fallback={<Boot />}><AdminView go={go} notify={notify} /></Suspense>}
     {route.v === 'people' && <PeopleView me={me} go={go} notify={notify} onInvite={() => setInviteOpen(true)} />}
     {route.v === 'post' && <PostView key={route.id} id={route.id} me={me} go={go} notify={notify} />}
     {route.v === 'profile' && <ProfileView key={route.username || me.username} username={route.username || me.username} go={go} notify={notify} refreshMe={refreshMe} meName={me.username} autoEdit={!!route.edit} />}
