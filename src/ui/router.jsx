@@ -11,7 +11,7 @@ const BASE = import.meta.env.BASE_URL.replace(/\/$/, ''); // '' on app.fiiyou.on
 /* Names a username may never take, because /<name> would collide with a real page or file. */
 export const RESERVED = [
   // app pages
-  'home', 'me', 'u', 'map', 'people', 'chat', 'messages', 'post', 'admin', 'notifications', 'invite', 'tag',
+  'home', 'me', 'u', 'map', 'people', 'chat', 'messages', 'post', 'admin', 'notifications', 'invite', 'tag', 'search',
   // auth / meta pages
   'login', 'signup', 'settings', 'about', 'help', 'privacy', 'terms', 'api',
   // static files and folders

@@ -9,7 +9,7 @@ The site is a static Vite build hosted on **Vercel**; data, auth and files live 
 - Fonts (Ubuntu Sans, woff2) and their licence are already in `public/fonts/`.
 
 ## 1. Supabase (production settings)
-1. SQL Editor: migrations `0001` to `0028` and `seed.sql` must all have been run, in order, once each. Files `0015`–`0022` were renumbered in git so every file has its own version number; **their SQL is unchanged**. If you already ran them under their old names, the only new file to run is **`0023_media_read_scope.sql`**. Add `lat`/`lng` to your localities (the map skips localities without coordinates; verify the names in the seed while you are there).
+1. SQL Editor: migrations `0001` to `0029` and `seed.sql` must all have been run, in order, once each. Files `0015`–`0022` were renumbered in git so every file has its own version number; **their SQL is unchanged**. If you already ran them under their old names, the only new file to run is **`0023_media_read_scope.sql`**. Add `lat`/`lng` to your localities (the map skips localities without coordinates; verify the names in the seed while you are there).
 2. Authentication → URL Configuration: **Site URL** = `https://fiiyou.online`. **Redirect URLs**: add `https://fiiyou.online` and `https://fiiyou.online/**` (keep `http://localhost:5173` and `http://localhost:5173/**` for local work). Password-reset and confirmation links depend on this.
 3. Authentication → Email: turn **Confirm email** on. Set up your **own SMTP provider** before inviting people: Supabase's built-in sender is for testing and is heavily limited.
 4. Authentication → Attack protection / password settings: use the strongest options your plan offers. Do **not** enable CAPTCHA yet: the sign-up form does not send a CAPTCHA token, so sign-ups would fail.
@@ -57,3 +57,11 @@ The site is a static Vite build hosted on **Vercel**; data, auth and files live 
 
 ## Updating later
 Change code, `git push`, wait for the green CI check and the Vercel deploy. Database changes: add a new numbered migration file (next free number, one file per number), add it to `supabase/tests/run.sh`, run it once in the SQL Editor.
+
+
+## 0029 notes (search, scheduled posts, several photos, pinned messages)
+- Run `0029_search_schedule_pins_images.sql` in the SQL editor **before** deploying this version of the site. Single-photo posts keep working without it, everything new needs it.
+- **Scheduled posts** are published by the app (when it opens and every minute) and, if the `pg_cron` extension is available in your project, by a job the migration creates itself. Without pg_cron a post scheduled for 03:00 appears the next time anybody opens the app after 03:00. Enable it in Dashboard → Database → Extensions → `pg_cron`, then run the migration again.
+- **"typing…"** uses a private Realtime channel. The migration adds the two policies it needs on `realtime.messages`. If your project does not show the indicator, check Dashboard → Realtime → Settings (private channels) and that the policies `typing_receive` / `typing_send` exist. Nothing else depends on it.
+- **"Seen" in chat** is always on: the person who sent a message sees when it was read. Mention this in `privacy.html`.
+- After a deploy, bump `VERSION` in `public/sw.js` only if you want to throw away every cached copy; normal deploys do not need it (pages are loaded network-first, assets have content hashes).

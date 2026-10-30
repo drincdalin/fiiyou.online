@@ -14,7 +14,14 @@ const TEXT: Record<string, string> = {
   comment: 'commented on your post',
   friend_request: 'sent you a friend request',
   friend_accept: 'accepted your friend request',
+  wall_comment: 'commented on your wall',          // 0025
+  comment_like: 'liked your comment',              // 0028 and below
+  reply: 'replied to your comment',
+  mention: 'mentioned you in a post',
+  comment_mention: 'mentioned you in a comment',
 };
+// these happened on the receiving person's OWN profile, so a tap opens their profile, not the actor's
+const OWN_PROFILE = new Set(['wall_comment', 'photo_like']);
 
 Deno.serve(async (req) => {
   // only our own database webhook knows this secret (set the same value in the webhook's HTTP headers)
@@ -25,21 +32,23 @@ Deno.serve(async (req) => {
   const n = body.record;
   if (body.type !== 'INSERT' || !n?.user_id) return new Response('ignored');
 
-  const [actor, subs] = await Promise.all([
+  const [actor, subs, owner] = await Promise.all([
     admin.from('profiles').select('username, display_name').eq('id', n.actor_id).maybeSingle(),
     admin.from('push_subscriptions').select('id, endpoint, p256dh, auth').eq('user_id', n.user_id),
+    OWN_PROFILE.has(n.type ?? '') ? admin.from('profiles').select('username').eq('id', n.user_id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   if (!subs.data?.length) return new Response('no devices');
 
   const name = actor.data?.display_name || actor.data?.username || 'Someone';
   // path is relative to the app's address (no leading slash): the service worker resolves it against its own scope
-  const username = actor.data?.username ? encodeURIComponent(actor.data.username.toLowerCase()) : '';
+  const target = OWN_PROFILE.has(n.type ?? '') && owner.data?.username ? owner.data.username : actor.data?.username;
+  const username = target ? encodeURIComponent(target.toLowerCase()) : '';
   const path = n.post_id ? `post/${n.post_id}` : username;
   const payload = JSON.stringify({
     title: 'fiiyou',
     body: `${name} ${TEXT[n.type ?? ''] ?? 'sent you something'}`,
     path,
-    tag: `${n.type}:${n.post_id ?? n.photo_id ?? n.actor_id}`,
+    tag: `${n.type}:${n.post_id ?? n.photo_id ?? n.comment_id ?? n.actor_id}`,
   });
 
   const dead: string[] = [];

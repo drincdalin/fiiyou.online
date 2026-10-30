@@ -1,0 +1,81 @@
+/* Styles for: password meter, search page, composer extras (photos / draft / schedule), notification grouping,
+   chat extras (pins, typing, seen, message search), push hints. Colours come from the app theme variables only. */
+
+/* password meter */
+.pwmeter { display: flex; align-items: center; gap: 10px; margin: -2px 0 2px; }
+.pwbars { display: inline-flex; gap: 4px; flex: none; }
+.pwbars i { width: 34px; height: 5px; border-radius: 99px; background: var(--g3); transition: background .2s; }
+.pwmeter[data-score="1"] .pwbars i.on { background: var(--red-fg); }
+.pwmeter[data-score="2"] .pwbars i.on { background: var(--muted); }
+.pwmeter[data-score="3"] .pwbars i.on, .pwmeter[data-score="4"] .pwbars i.on { background: var(--accent-fg); }
+.pwmeter[data-score="0"] .pwbars i { background: var(--g3); }
+.pwmeter small { color: var(--muted); }
+
+/* nav search button */
+.navsearch { flex: none; display: grid; place-items: center; width: 38px; height: 38px; padding: 0; background: none; border: 0; border-radius: var(--rad-m); color: var(--muted); cursor: pointer; }
+.navsearch:hover, .navsearch.on { color: var(--ink); background: var(--hover); }
+
+/* search page */
+.searchview { display: grid; gap: 14px; align-content: start; }
+.searchbar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; position: sticky; top: calc(var(--nav-h, 56px) + 6px); z-index: 5; }
+.searchbar input { flex: 1; min-width: 0; border: 0; background: transparent; box-shadow: none; font-size: 1.05rem; padding: 6px 0; }
+.searchbar input:focus { outline: none; }
+.searchbar:focus-within { border-color: var(--accent-fg); }
+.shead { margin: 4px 0 2px; font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.tagtitle { display: flex; align-items: center; gap: 6px; margin: 4px 0 0; }
+.tagchips { display: flex; flex-wrap: wrap; gap: 8px; }
+.tagchips .tag { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border: 1px solid var(--g3); border-radius: 999px; background: var(--g2); cursor: pointer; }
+.tagchips .tag small { color: var(--muted); }
+.searchhint h3 { margin: 0 0 10px; font-size: .95rem; }
+
+/* composer extras */
+.cthumbs { display: flex; flex-wrap: wrap; gap: 8px; }
+.cthumb { position: relative; width: 72px; height: 72px; border-radius: var(--rad-m); overflow: hidden; border: 2px solid var(--g3); }
+.cthumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cthumb button { position: absolute; top: 3px; right: 3px; width: 22px; height: 22px; padding: 0; display: grid; place-items: center; border-radius: 50%; border: 0; background: var(--scrim-hi); color: var(--ink); cursor: pointer; }
+.filebtn.off { opacity: .5; cursor: not-allowed; }
+.laterbox { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 700; }
+.laterbox input { width: auto; }
+.draftnote { color: var(--muted); }
+.draftnote .link { color: var(--link-fg); text-decoration: underline; padding: 0; }
+.schedlist { padding: 8px 12px; display: grid; gap: 8px; }
+.schedlist ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.schedlist li { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.schedlist li small { color: var(--muted); overflow-wrap: anywhere; }
+.pmore-badge { position: absolute; right: 10px; bottom: 10px; padding: 3px 10px; border-radius: 999px; background: var(--scrim-hi); color: var(--ink); font-weight: 800; font-size: .9rem; }
+
+/* notifications */
+.nitem { position: relative; list-style: none; }
+.nitem .nrow { padding-right: 44px; }
+.nread { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; padding: 0; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--g3); background: var(--g2); color: var(--muted); cursor: pointer; }
+.nread:hover { color: var(--ink); border-color: var(--g4); }
+.nhead .nmarkall { margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 700; }
+
+/* chat extras */
+.chatfind { position: relative; margin: 0 0 8px; }
+.chatfind input { width: 100%; }
+.fresults { margin-top: 6px; border: 1px solid var(--g3); border-radius: var(--rad-m); background: var(--g1); max-height: 280px; overflow-y: auto; display: grid; }
+.fresults > p { margin: 0; padding: 10px 12px; }
+.fresults button { text-align: left; display: grid; gap: 2px; padding: 8px 12px; background: none; border: 0; border-bottom: 1px solid var(--g3); cursor: pointer; }
+.fresults button:last-child { border-bottom: 0; }
+.fresults button:hover { background: var(--hover); }
+.fresults button span { color: var(--ink2); overflow-wrap: anywhere; }
+.fresults button small { color: var(--muted); }
+.cthread > .chatfind { margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--g3); }
+.findbtn { margin-left: auto; }
+.pinbar { display: flex; gap: 8px; align-items: flex-start; padding: 6px 12px; border-bottom: 1px solid var(--g3); background: var(--g2); color: var(--muted); font-size: .9rem; }
+.pinbar > svg { flex: none; margin-top: 3px; }
+.pinbar > div { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.pinbar button { text-align: left; background: none; border: 0; padding: 2px 0; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.pinbar button:hover { color: var(--ink); }
+.pinbtn.on { opacity: 1; color: var(--accent-fg); }
+.typing { display: flex; align-items: center; gap: 8px; padding: 2px 14px 6px; color: var(--muted); font-size: .85rem; }
+.tdots { display: inline-flex; gap: 3px; }
+.tdots i { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); animation: tdot 1s infinite ease-in-out; }
+.tdots i:nth-child(2) { animation-delay: .15s; } .tdots i:nth-child(3) { animation-delay: .3s; }
+@keyframes tdot { 0%, 80%, 100% { opacity: .3; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) { .tdots i { animation: none; opacity: .7; } }
+.bcol .seen { align-self: flex-end; color: var(--muted); font-size: .75rem; padding: 2px 4px 0; }
+
+/* push hints in the account menu */
+.pushhint { margin: 4px 10px; font-size: .85rem; }

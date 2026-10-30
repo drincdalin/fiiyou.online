@@ -27,9 +27,12 @@ export async function signUp({ email, password, username, displayName, invitedBy
 export async function signIn({ email, password }) {
   return orBanned(email, async () => unwrap(await supabase.auth.signInWithPassword({ email, password })));
 }
+/** Emails a one-time sign-in link. Only for EXISTING accounts (shouldCreateUser: false), because a new account needs a username and
+ *  the Terms. Never reveals whether the email has an account: an unknown address looks exactly like a sent link. */
 export async function signInWithMagicLink(email) {
   if (await emailBanned(email)) throw new Error('banned');
-  return orBanned(email, async () => unwrap(await supabase.auth.signInWithOtp({ email })));
+  const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: `${location.origin}${import.meta.env?.BASE_URL ?? '/'}` } });
+  if (error && !/signups? not allowed|user not found/i.test(error.message || '')) throw error;
 }
 /** scope 'local' signs out this device only. The default ('global') revokes the user's sessions on every device. */
 export async function signOut() { return unwrap({ error: (await supabase.auth.signOut({ scope: 'local' })).error }); }
@@ -56,3 +59,13 @@ export async function resetPassword(email) {
   if (error && error.status !== 400) throw error;
 }
 export async function updatePassword(password) { return unwrap(await supabase.auth.updateUser({ password })); }
+/** From the account menu: checks the CURRENT password first (a stolen, still-open session alone cannot change it), then sets the new one.
+ *  Throws Error('wrong_password') when the current one is not right. */
+export async function changePassword(current, next) {
+  const email = (await supabase.auth.getUser()).data.user?.email;
+  if (!email) throw new Error('not_authenticated');
+  const check = await supabase.auth.signInWithPassword({ email, password: current });
+  if (check.error) throw new Error(/invalid login|credentials/i.test(check.error.message || '') ? 'wrong_password' : check.error.message);
+  return updatePassword(next);
+}
+export async function myEmail() { return (await supabase.auth.getUser()).data.user?.email || null; }

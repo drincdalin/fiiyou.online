@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { auth, admin as adminApi, profiles, cards as cardsApi, friends, wall, social, safety, media, errorCode } from '../index.js';
+import { auth, admin as adminApi, posts, profiles, cards as cardsApi, friends, wall, social, safety, media, errorCode } from '../index.js';
 import { useImages, Boot, Avatar, Rich } from './shared.jsx';
 import { toCss } from './customCss.js';
 import { Lightbox, LikersModal, ReportModal, Verified, NavIcon, spamMessage } from './parts.jsx';
@@ -19,13 +19,15 @@ import { stickerModel, stickerStyle, withModel, reanchor, nearestAnchor, settleS
 const Customizer = lazy(() => import('./Customizer.jsx'));
 import { ask } from './dialog.jsx';
 import { usePath, parseRoute, navigate, isReserved } from './router.jsx';
+const SearchView = lazy(() => import('./SearchView.jsx'));
 const AdminView = lazy(() => import('./Admin.jsx'));   // only admins ever open it
 const ShareSheet = lazy(() => import('./ShareSheet.jsx'));
 const InviteModal = lazy(() => import('./InviteModal.jsx'));
 import NotificationList, { useNotifCount } from './Notifications.jsx';
 import PushToggle from './PushToggle.jsx';
+import { PasswordMeter, ChangePasswordModal } from './PasswordMeter.jsx';
 import { registerSW, forgetDevice } from './push.js';
-import { Eye, EyeSlash, Check, Heart, PencilSimple, ShareNetwork, SignOut, Trash, UserPlus } from '@phosphor-icons/react';
+import { Eye, EyeSlash, Check, Heart, LockKey, MagnifyingGlass, PencilSimple, ShareNetwork, SignOut, Trash, UserPlus } from '@phosphor-icons/react';
 
 const BASE = import.meta.env.BASE_URL;
 function Auth() {
@@ -36,6 +38,8 @@ function Auth() {
     try { if (mode === 'in') await auth.signIn(f); else { const r = await auth.signUp({ ...f, invitedBy: invite }); if (!r.session) say('Check your email to confirm your account.', true); } }
     catch (er) { if (er.message === 'banned') setBanned(true); else say(er.message === 'username_taken' ? 'That username is taken.' : friendlyError(er)); } setBusy(false); };
   const forgot = async () => { if (!f.email) return say('Type your email first.'); try { await auth.resetPassword(f.email); say('If that email has an account, a reset link is on its way.', true); } catch (er) { say(friendlyError(er)); } };
+  const magic = async () => { if (!f.email) return say('Type your email first.'); setBusy(true);
+    try { await auth.signInWithMagicLink(f.email); say('If that email has an account, a sign-in link is on its way.', true); } catch (er) { if (er.message === 'banned') setBanned(true); else say(friendlyError(er)); } setBusy(false); };
   const up = mode === 'up'; const [showPw, setShowPw] = useState(false);
   if (banned) return <Banned onBack={() => setBanned(false)} />;
   return (
@@ -52,10 +56,12 @@ function Auth() {
         <label className="field"><span>Email</span><input type="email" placeholder="you@example.com" value={f.email} onChange={set('email')} required autoComplete="email" /></label>
         <label className="field"><span>Password</span><div className="pwbox"><input type={showPw ? 'text' : 'password'} placeholder="8+ characters" value={f.password} onChange={set('password')} required minLength={8} autoComplete={mode === 'in' ? 'current-password' : 'new-password'} />
           <button type="button" className="pweye" onClick={() => setShowPw(!showPw)} aria-label={showPw ? 'Hide password' : 'Show password'} aria-pressed={showPw}>{showPw ? <EyeSlash size={18} weight="bold" aria-hidden="true" /> : <Eye size={18} weight="bold" aria-hidden="true" />}</button></div></label>
+        {up && <PasswordMeter value={f.password} username={f.username} email={f.email} />}
         {up && <label className="agree"><input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} /><span>I am 16 or older and accept the <a href={`${BASE}terms.html`} target="_blank" rel="noopener">Terms</a> and <a href={`${BASE}privacy.html`} target="_blank" rel="noopener">Privacy Policy</a>.</span></label>}
         {msg && <p className={ok ? 'okmsg' : 'err'} role="alert">{msg}</p>}
         <button className="primary wide authgo" disabled={busy || (up && !agree)}>{busy ? 'One moment…' : up ? 'Create account' : 'Sign in'}</button>
         {!up && <button type="button" className="link muted authforgot" onClick={forgot}>Forgot your password?</button>}
+        {!up && <button type="button" className="link muted authforgot" disabled={busy} onClick={magic}>Email me a sign-in link instead</button>}
         <p className="legal"><a href={`${BASE}privacy.html`} target="_blank" rel="noopener">Privacy</a> · <a href={`${BASE}terms.html`} target="_blank" rel="noopener">Terms</a></p>
       </form>
     </div>
@@ -76,6 +82,7 @@ function NewPassword({ onDone }) {
   const save = async (e) => { e.preventDefault(); setBusy(true); try { await auth.updatePassword(pw); onDone(); } catch (er) { setMsg(er.message); setBusy(false); } };
   return (<div className="authwrap"><form className="authcard" onSubmit={save}><h1 className="brand">New password</h1><p className="muted">Choose a new password for your account.</p>
     <input type="password" minLength={8} required autoFocus placeholder="new password (8+ characters)" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="new-password" />
+    <PasswordMeter value={pw} />
     {msg && <p className="err">{msg}</p>}<button className="primary" disabled={busy}>{busy ? '…' : 'Save password'}</button></form></div>);
 }
 
@@ -262,6 +269,8 @@ function toRoute(path) {
   const dec = (x) => { try { return decodeURIComponent(x); } catch { return x; } };
   switch (r.page) {
     case 'map': case 'people': case 'admin': return { v: r.page };
+    case 'search': return { v: 'search', q: new URLSearchParams(location.search).get('q') || '' };
+    case 'tag': return { v: 'search', tag: first ? dec(first).toLowerCase().replace(/[^\p{L}\p{N}_]/gu, '').slice(0, 32) : '' };
     case 'chat': return { v: 'messages', peer: first };
     case 'post': return first ? { v: 'post', id: dec(first) } : { v: 'home' };
     case 'me': return { v: 'profile', legacyMe: true, edit: first === 'edit' };
@@ -276,7 +285,7 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false); const [recovery, setRecovery] = useState(false);
   const [menu, setMenu] = useState(false); const { n: nCount, setN: setNCount, tick: nTick } = useNotifCount(me?.id); const [toast, setToast] = useState(null); const [unread, setUnread] = useState(0);
   const refreshMe = useCallback(() => profiles.getMyProfile().then(setMe).catch(() => {}), []);
-  const [meErr, setMeErr] = useState(null); const [inviteOpen, setInviteOpen] = useState(false);
+  const [meErr, setMeErr] = useState(null); const [inviteOpen, setInviteOpen] = useState(false); const [pwOpen, setPwOpen] = useState(false);
   const loadMe = useCallback(() => {
     setMeErr(null);
     return profiles.getMyProfile()
@@ -298,8 +307,14 @@ export default function App() {
       if (ev === 'PASSWORD_RECOVERY') setRecovery(true);
     });
   }, []);
-  useEffect(() => { registerSW(); }, []);   // service worker: installable app + push notifications
-  useEffect(() => { const t = { home: 'Home', profile: route.username ? `@${route.username}` : 'Me', map: 'Map', messages: 'Chat', people: 'People', admin: 'Admin', post: 'Post' }[route.v]; document.title = `fiiyou · ${t}`; }, [route]);
+  useEffect(() => { registerSW(); }, []);
+  // scheduled posts: publish the ones that are due when the app opens and then every minute (a database job does it too when pg_cron is available)
+  useEffect(() => {
+    if (!me?.id) return undefined;
+    const tick = () => posts.publishDue().then((n) => { if (n > 0) window.dispatchEvent(new Event('fiiyou:published')); }).catch(() => {});
+    tick(); const t = setInterval(tick, 60000); return () => clearInterval(t);
+  }, [me?.id]);   // service worker: installable app + push notifications
+  useEffect(() => { const t = { home: 'Home', profile: route.username ? `@${route.username}` : 'Me', map: 'Map', messages: 'Chat', people: 'People', admin: 'Admin', post: 'Post', search: 'Search', tag: 'Tag' }[route.v]; document.title = `fiiyou · ${t}`; }, [route]);
   useEffect(() => { if (route.legacyMe && me) navigate(`/${me.username.toLowerCase()}${route.edit ? '/edit' : ''}`, { replace: true }); }, [route.legacyMe, route.edit, me?.username]);   // old /me -> /<username>
   useEffect(() => { if (session) loadMe(); else { setMe(null); setMeErr(null); } }, [session, loadMe]);
   useEffect(() => {   // someone who is already a member opened an invite link: take them to the person who sent it
@@ -325,6 +340,8 @@ export default function App() {
     const to = v === 'profile' ? `/${encodeURIComponent((username || me.username).toLowerCase())}${mine && edit ? '/edit' : ''}`
       : v === 'messages' ? (peer ? `/chat/${peer}` : '/chat')
       : v === 'post' ? `/post/${encodeURIComponent(username)}`
+      : v === 'tag' ? `/tag/${encodeURIComponent(username)}`
+      : v === 'search' ? (username ? `/search?q=${encodeURIComponent(username)}` : '/search')
       : v === 'home' ? '/' : `/${v}`;
     setMenu(false); navigate(to); };
   const NAV = [['home', 'Home'], ['profile', 'Me'], ['map', 'Map'], ['messages', 'Chat'], ['people', 'People'], ...(isAdmin ? [['admin', 'Admin']] : [])];
@@ -332,22 +349,26 @@ export default function App() {
   return (<div className="app">
     <nav className="nav"><button className="logo" onClick={() => go('home')}>fiiyou</button>
       <div className="navlinks">{NAV.map(([v, l]) => <button key={v} className={active(v) ? 'on' : ''} aria-label={l} title={l} aria-current={active(v) ? 'page' : undefined} onClick={() => go(v)}><NavIcon name={v} active={active(v)} />{v === 'messages' && unread > 0 && <em className="dotb">{unread > 99 ? '99+' : unread}</em>}</button>)}</div>
+      <button className={`navsearch${route.v === 'search' ? ' on' : ''}`} aria-label="Search" title="Search" onClick={() => go('search')}><MagnifyingGlass size="1.3em" weight={route.v === 'search' ? 'fill' : 'bold'} aria-hidden="true" /></button>
       <div className="more" ref={menuRef}><button className="avbtn" onClick={() => setMenu(!menu)} aria-label={nCount > 0 ? `Account menu (${nCount} new notifications)` : 'Account menu'} aria-expanded={menu}><Avatar src={myImg[me.avatar_path]} size={34} /></button>{nCount > 0 && <em className="avdot" aria-hidden="true">{nCount > 9 ? '9+' : nCount}</em>}{menu && <div className="menu" role="menu">
         <button className="mhead" role="menuitem" onClick={() => go('profile')}><Avatar src={myImg[me.avatar_path]} size={44} /><span><b>{me.display_name || me.username}</b><small>@{me.username}</small></span></button>
         <hr className="msep" />
-        <NotificationList go={go} notify={notify} tick={nTick} onRead={() => setNCount(0)} />
-        <PushToggle notify={notify} />
+        <NotificationList go={go} notify={notify} tick={nTick} onRead={setNCount} />
+        <PushToggle notify={notify} isAdmin={isAdmin} />
         <hr className="msep" />
         <button role="menuitem" onClick={() => { setMenu(false); setInviteOpen(true); }}><UserPlus size={18} weight="bold" aria-hidden="true" />Invite friends</button>
+        <button role="menuitem" onClick={() => { setMenu(false); setPwOpen(true); }}><LockKey size={18} weight="bold" aria-hidden="true" />Change password</button>
         <button role="menuitem" onClick={async () => { setMenu(false); await forgetDevice(); auth.signOut(); }}><SignOut size={18} weight="bold" aria-hidden="true" />Sign out</button>
         <button role="menuitem" className="danger" onClick={async () => { setMenu(false); if (await ask({ title: 'Delete your account?', message: 'Your account and everything in it will be deleted. This cannot be undone.', confirmLabel: 'Delete account', danger: true })) { try { await auth.deleteAccount(); } catch (e) { notify(friendlyError(e, 'Could not delete the account. Nothing was lost, try again.'), 'err'); } } }}><Trash size={18} weight="bold" aria-hidden="true" />Delete account</button></div>}</div></nav>
     {route.v === 'home' && <HomeView me={me} go={go} notify={notify} unread={unread} />}
     {route.v === 'map' && <MapView me={me} go={go} notify={notify} />}
     {route.v === 'messages' && <MessagesView key={route.peer || 'all'} me={me} peer={route.peer} go={go} notify={notify} refreshUnread={refreshUnread} />}
     {route.v === 'admin' && isAdmin && <Suspense fallback={<Boot />}><AdminView go={go} notify={notify} /></Suspense>}
+    {route.v === 'search' && <Suspense fallback={<Boot />}><SearchView key={`${route.tag || ''}|${route.q || ''}`} me={me} go={go} notify={notify} initialQuery={route.q || ''} initialTag={route.tag || ''} /></Suspense>}
     {route.v === 'people' && <PeopleView me={me} go={go} notify={notify} onInvite={() => setInviteOpen(true)} />}
     {route.v === 'post' && <PostView key={route.id} id={route.id} me={me} go={go} notify={notify} />}
     {route.v === 'profile' && <ProfileView key={route.username || me.username} username={route.username || me.username} go={go} notify={notify} refreshMe={refreshMe} meName={me.username} autoEdit={!!route.edit} />}
+    {pwOpen && <ChangePasswordModal onClose={() => setPwOpen(false)} notify={notify} />}
     {inviteOpen && <Suspense fallback={null}><InviteModal me={me} onClose={() => setInviteOpen(false)} notify={notify} /></Suspense>}
     {toast && <div className={`toast ${toast.type}`} role="status">{toast.msg}</div>}
   </div>);

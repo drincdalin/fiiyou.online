@@ -31,3 +31,12 @@ Vercel → Environment Variables → `VITE_VAPID_PUBLIC_KEY` = the public key �
 Sign in on a phone or desktop browser, account menu → Turn on push notifications. From a second account, like a post of the first. With the first app in the background you get a notification; tapping it opens `/post/<id>` (or the person's profile for friend requests). In the foreground no system notification is shown (the in-app badge already does that).
 iPhone: the site must be added to the Home Screen first (Share → Add to Home Screen), then opened from there.
 Logs: Dashboard → Edge Functions → `send-push` → Logs. Expired devices (404/410) are removed automatically.
+
+## Troubleshooting: "there is no button" / "nothing arrives"
+Work through this in order, the first failing step is the problem.
+1. **No "Turn on push notifications" item in the account menu.** The build has no `VITE_VAPID_PUBLIC_KEY` (step 4). Admins now see a hint line saying so. Add the variable in Vercel and **redeploy** (Vite bakes it in at build time; changing it without a redeploy does nothing).
+2. **The item says "Notifications are blocked".** The browser permission is "block" for this site; allow it in the browser / OS site settings.
+3. **On iPhone only a hint shows.** Add the site to the Home Screen and open it from there (iOS 16.4+).
+4. **You turned it on but nothing arrives.** Dashboard → Database → Webhooks: is there one for `notifications` / Insert with the `x-webhook-secret` header? Dashboard → Edge Functions → `send-push` → Logs: a 403 means the secret differs, no log line at all means the webhook never fires, "no devices" means the device was not saved (turn it off and on again).
+5. **It arrives only when the app is closed.** That is intended: while the app is open and in front, the in-app badge is used instead.
+Notification kinds covered since 0029: likes, comments, wall comments, replies, comment likes, @mentions, friend requests. Redeploy the function after pulling these changes: `supabase functions deploy send-push --no-verify-jwt`.
