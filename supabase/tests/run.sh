@@ -16,8 +16,9 @@ psql -q -d $DB -c 'grant select on public.localities to anon'
 psql -v ON_ERROR_STOP=1 -d $DB -f tests/10_tests.sql
 # 0022 (spam guard) rate-limits the bulk inserts in 10_tests.sql, so it is applied after them, then tested on its own
 for f in migrations/0022_spam_and_bans.sql migrations/0023_media_read_scope.sql migrations/0024_onboarding_and_search.sql \
-         migrations/0025_wall_notifications.sql migrations/0026_hashtags.sql migrations/0027_message_edit_delete.sql migrations/0028_comment_likes_replies_mentions.sql; do
+         migrations/0025_wall_notifications.sql migrations/0026_hashtags.sql migrations/0027_message_edit_delete.sql migrations/0028_comment_likes_replies_mentions.sql migrations/0029_search_schedule_pins_images.sql; do
   psql -v ON_ERROR_STOP=1 -q -d $DB -f "$f"
 done
 psql -v ON_ERROR_STOP=1 -d $DB -f tests/20_media_scope.sql
 psql -v ON_ERROR_STOP=1 -d $DB -f tests/30_onboarding_search.sql
+psql -v ON_ERROR_STOP=1 -d $DB -f tests/40_search_schedule_pins.sql
