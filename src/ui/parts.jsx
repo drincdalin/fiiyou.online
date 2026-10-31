@@ -26,7 +26,8 @@ export function Verified() {
 
 /** Pop-up viewer. items: [{id, src, caption, likes, liked}]. Pass onLike to show the like button. */
 export function Lightbox({ items, index, onClose, onIndex, onLike, onLikers }) {
-  const it = items[index]; const n = items.length;
+  const it = items[index]; const n = items.length; const sx = useRef(null);
+  const swipeEnd = (e) => { if (sx.current == null || n < 2) return; const dx = e.clientX - sx.current; sx.current = null; if (Math.abs(dx) > 50) onIndex(dx < 0 ? (index + 1) % n : (index - 1 + n) % n); };
   useEffect(() => {
     const key = (e) => { if (e.key === 'Escape') onClose(); if (e.key === 'ArrowRight') onIndex((index + 1) % n); if (e.key === 'ArrowLeft') onIndex((index - 1 + n) % n); };
     addEventListener('keydown', key); document.body.style.overflow = 'hidden';
@@ -35,12 +36,34 @@ export function Lightbox({ items, index, onClose, onIndex, onLike, onLikers }) {
   if (!it) return null;
   return (<div className="lb" onClick={onClose} role="dialog" aria-modal="true"><div className="lbin" onClick={(e) => e.stopPropagation()}>
     <button className="lbx ghost" onClick={onClose} aria-label="Close"><X size={18} weight="bold" aria-hidden="true" /></button>
-    <div className="lbimg">{n > 1 && <button className="arrow l" onClick={() => onIndex((index - 1 + n) % n)} aria-label="Previous"><CaretLeft size={22} weight="bold" aria-hidden="true" /></button>}
+    <div className="lbimg" onPointerDown={(e) => { sx.current = e.clientX; }} onPointerUp={swipeEnd} onPointerCancel={() => { sx.current = null; }}>{n > 1 && <button className="arrow l" onClick={() => onIndex((index - 1 + n) % n)} aria-label="Previous"><CaretLeft size={22} weight="bold" aria-hidden="true" /></button>}
       {it.src ? <img src={it.src} alt={it.caption || ''} /> : <div className="boot">…</div>}
       {n > 1 && <button className="arrow r" onClick={() => onIndex((index + 1) % n)} aria-label="Next"><CaretRight size={22} weight="bold" aria-hidden="true" /></button>}</div>
     <div className="lbfoot">{it.caption && <p>{it.caption}</p>}
       <div className="lbbar">{onLike && <button className={`like${it.liked ? ' on' : ''}`} onClick={() => onLike(it)}><Heart size={16} weight={it.liked ? 'fill' : 'bold'} aria-hidden="true" />{it.likes}</button>}{!onLike && onLikers && it.likes > 0 && <button className="like" onClick={() => onLikers(it)} aria-label={`See who liked (${it.likes})`}><Heart size={16} weight="fill" aria-hidden="true" />{it.likes}</button>}<small>{index + 1} / {n}</small></div></div>
   </div></div>);
+}
+
+/** Several photos of one post: swipe (touch), scroll (trackpad), drag or use the arrows (mouse) right inside the post. A tap opens the big viewer. */
+function PostImages({ srcs, onOpen }) {
+  const box = useRef(null); const down = useRef(null); const dragged = useRef(false); const [i, setI] = useState(0); const n = srcs.length;
+  const to = (k) => { const el = box.current; if (el) el.scrollTo({ left: el.clientWidth * Math.max(0, Math.min(n - 1, k)), behavior: 'smooth' }); };
+  const onScroll = () => { const el = box.current; if (el && el.clientWidth) setI(Math.round(el.scrollLeft / el.clientWidth)); };
+  const key = (e) => { if (e.key === 'ArrowRight') { e.preventDefault(); to(i + 1); } else if (e.key === 'ArrowLeft') { e.preventDefault(); to(i - 1); } };
+  // a mouse cannot swipe, so a drag with the mouse turns the page; touch and trackpads scroll natively
+  const pdown = (e) => { dragged.current = false; down.current = e.pointerType === 'mouse' ? e.clientX : null; };
+  const pup = (e) => { if (down.current == null) return; const dx = e.clientX - down.current; down.current = null; if (Math.abs(dx) > 40) { dragged.current = true; to(dx < 0 ? i + 1 : i - 1); } };
+  return (<div className="pimgs">
+    <div className="pslides" ref={box} onScroll={onScroll} onKeyDown={key} onPointerDown={pdown} onPointerUp={pup} onClickCapture={(e) => { if (dragged.current) { e.stopPropagation(); e.preventDefault(); dragged.current = false; } }}
+      tabIndex={0} role="group" aria-roledescription="carousel" aria-label={`${n} photos`}>
+      {srcs.map((u, k) => <button key={k} type="button" className="pimg pslide" style={u ? { '--bgimg': `url("${u}")` } : undefined} onClick={() => onOpen(k)} aria-label={`Open photo ${k + 1} of ${n}`}>
+        {u ? <img src={u} alt="" loading={k ? 'lazy' : undefined} draggable="false" /> : <span className="pslideph" />}</button>)}
+    </div>
+    {i > 0 && <button type="button" className="pnav l" aria-label="Previous photo" onClick={() => to(i - 1)}><CaretLeft size={18} weight="bold" aria-hidden="true" /></button>}
+    {i < n - 1 && <button type="button" className="pnav r" aria-label="Next photo" onClick={() => to(i + 1)}><CaretRight size={18} weight="bold" aria-hidden="true" /></button>}
+    <span className="pcount" aria-hidden="true">{i + 1}/{n}</span>
+    <div className="pdots" aria-hidden="true">{srcs.map((_, k) => <i key={k} className={k === i ? 'on' : ''} />)}</div>
+  </div>);
 }
 
 export function PostCard({ p, me, img, go, onChange, onDelete, notify }) {
@@ -61,7 +84,8 @@ export function PostCard({ p, me, img, go, onChange, onDelete, notify }) {
             <button role="menuitem" className="danger" onClick={() => { setMenu(false); del(); }}><Trash size={18} weight="bold" aria-hidden="true" />Delete</button></>
             : <button role="menuitem" onClick={() => { setMenu(false); setRep(true); }}><Flag size={18} weight="bold" aria-hidden="true" />Report</button>}</div></>}</div>}</header>
     <div className={`pmain${p.image_path && src ? ' has' : ''}`}>
-      {p.image_path && src && <button className="pimg" style={{ '--bgimg': `url("${src}")` }} onClick={() => setZoom(true)} aria-label={extra.length ? `Open photos (${extra.length + 1})` : 'Open photo'}><img src={src} alt="" loading="lazy" />{extra.length > 0 && <span className="pmore-badge">+{extra.length}</span>}</button>}
+      {p.image_path && src && (extra.length ? <PostImages srcs={[src, ...extra.map((x) => xi[x])]} onOpen={(k) => { setZi(k); setZoom(true); }} />
+        : <button className="pimg" style={{ '--bgimg': `url("${src}")` }} onClick={() => setZoom(true)} aria-label="Open photo"><img src={src} alt="" loading="lazy" /></button>)}
       <div className="ptext">
         {p.kind === 'event' && <div className="evmeta"><CalendarBlank size={14} weight="bold" aria-hidden="true" />{new Date(p.event_at).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' })}{p.event_place && ` · ${p.event_place}`}</div>}
         {p.place_name && <div className="chipline"><MapPin size={14} weight="bold" aria-hidden="true" />At {p.place_name}</div>}

@@ -34,9 +34,11 @@ Logs: Dashboard → Edge Functions → `send-push` → Logs. Expired devices (40
 
 ## Troubleshooting: "there is no button" / "nothing arrives"
 Work through this in order, the first failing step is the problem.
-1. **No "Turn on push notifications" item in the account menu.** The build has no `VITE_VAPID_PUBLIC_KEY` (step 4). Admins now see a hint line saying so. Add the variable in Vercel and **redeploy** (Vite bakes it in at build time; changing it without a redeploy does nothing).
+1. **The menu says push is "not set up on this server".** The build has no `VITE_VAPID_PUBLIC_KEY` (step 4). Add the variable in Vercel and **redeploy** (Vite bakes it in at build time; changing it without a redeploy does nothing).
 2. **The item says "Notifications are blocked".** The browser permission is "block" for this site; allow it in the browser / OS site settings.
 3. **On iPhone only a hint shows.** Add the site to the Home Screen and open it from there (iOS 16.4+).
 4. **You turned it on but nothing arrives.** Dashboard → Database → Webhooks: is there one for `notifications` / Insert with the `x-webhook-secret` header? Dashboard → Edge Functions → `send-push` → Logs: a 403 means the secret differs, no log line at all means the webhook never fires, "no devices" means the device was not saved (turn it off and on again).
 5. **It arrives only when the app is closed.** That is intended: while the app is open and in front, the in-app badge is used instead.
 Notification kinds covered since 0029: likes, comments, wall comments, replies, comment likes, @mentions, friend requests. Redeploy the function after pulling these changes: `supabase functions deploy send-push --no-verify-jwt`.
+
+**Use the built-in test.** Turn notifications on, then account menu → *Send a test notification*. It tells you which link is broken: device not saved, function not deployed or crashed (missing secrets), or VAPID keys that do not match. If the test arrives but real likes and comments do not, only the database webhook (step 3) is missing or has the wrong secret. The test needs the current version of the function, so deploy it again after updating.

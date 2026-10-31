@@ -23,9 +23,31 @@ const TEXT: Record<string, string> = {
 // these happened on the receiving person's OWN profile, so a tap opens their profile, not the actor's
 const OWN_PROFILE = new Set(['wall_comment', 'photo_like']);
 
+const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
+const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...cors, 'content-type': 'application/json' } });
+
+/** Test mode, called from the app's account menu by a signed-in person: sends one push to that person's own devices and reports what happened. */
+async function selfTest(req: Request) {
+  const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
+  const { data } = await admin.auth.getUser(token);
+  if (!data?.user) return json({ error: 'not signed in' }, 401);
+  const subs = await admin.from('push_subscriptions').select('id, endpoint, p256dh, auth').eq('user_id', data.user.id);
+  const out = { devices: subs.data?.length ?? 0, sent: 0, failed: [] as { code?: number; message: string }[], dead: 0 };
+  const payload = JSON.stringify({ title: 'fiiyou', body: 'Test notification. Push works on this device.', path: '', tag: 'test' });
+  const dead: string[] = [];
+  await Promise.all((subs.data ?? []).map(async (x) => {
+    try { await webpush.sendNotification({ endpoint: x.endpoint, keys: { p256dh: x.p256dh, auth: x.auth } }, payload, { TTL: 300 }); out.sent++; }
+    catch (e) { const code = (e as { statusCode?: number }).statusCode; if (code === 404 || code === 410) dead.push(x.id); out.failed.push({ code, message: String((e as Error).message).slice(0, 160) }); }
+  }));
+  if (dead.length) { out.dead = dead.length; await admin.from('push_subscriptions').delete().in('id', dead); }
+  return json(out);
+}
+
 Deno.serve(async (req) => {
-  // only our own database webhook knows this secret (set the same value in the webhook's HTTP headers)
-  if (!env('WEBHOOK_SECRET') || req.headers.get('x-webhook-secret') !== env('WEBHOOK_SECRET')) return new Response('forbidden', { status: 403 });
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
+  // the database webhook proves itself with a shared secret; a signed-in person may only ask for a test to their own devices
+  const hook = !!env('WEBHOOK_SECRET') && req.headers.get('x-webhook-secret') === env('WEBHOOK_SECRET');
+  if (!hook) { if (req.headers.get('authorization')) return selfTest(req); return new Response('forbidden', { status: 403 }); }
 
   let body: { type?: string; record?: Record<string, string | null> };
   try { body = await req.json(); } catch { return new Response('bad request', { status: 400 }); }

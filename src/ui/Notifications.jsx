@@ -31,6 +31,9 @@ const KINDS = {
   comment_mention: [At, 'mentioned you in a comment'],
 };
 
+// when one line stands for likes on several different things
+const PLURAL = { post_like: 'liked your posts', photo_like: 'liked your photos', comment_like: 'liked your comments' };
+
 /** Unread count for the badge, kept fresh by a 30 s poll + realtime. `tick` changes whenever a new one arrives. Call it in App. */
 export function useNotifCount(meId) {
   const [n, setN] = useState(0); const [tick, setTick] = useState(0);
@@ -78,11 +81,11 @@ export default function NotificationList({ go, notify, tick, onRead }) {
     <h3 className="nhead"><Bell size={16} weight="bold" aria-hidden="true" />Notifications
       {unreadTotal > 0 && <button type="button" className="ghost sm nmarkall" onClick={markAll}>Mark all as read</button>}</h3>
     {!rows ? <div className="boot">…</div> : !groups.length ? <p className="muted nempty">Nothing yet. Likes, replies and mentions will show up here.</p>
-      : <ul className="nlist">{groups.map((g) => { const [Icon, text] = KINDS[g.type] || [Bell, 'did something']; const r = g.latest; const count = g.rows.length; return (
+      : <ul className="nlist">{groups.map((g) => { const [Icon, single] = KINDS[g.type] || [Bell, 'did something']; const text = g.targetCount > 1 && PLURAL[g.type] ? PLURAL[g.type] : single; const r = g.latest; const count = g.rows.length; return (
         <li key={g.key} className="nitem">
           <button type="button" role="menuitem" className={`nrow${g.unread ? ' new' : ''}`} onClick={() => visit(g)}>
             <span className="nav2"><Avatar src={img[r.actor?.avatar_path]} size={36} /><i className="nic"><Icon size={10} weight="fill" aria-hidden="true" /></i></span>
-            <span className="ntxt"><span><b>{actorsLabel(g.actors)}</b>{g.actors.length === 1 && g.actors[0].official && <Verified />} {text}{count > g.actors.length && g.actors.length === 1 ? ` (${count})` : ''}</span><small>{ago(r.created_at)}</small></span></button>
+            <span className="ntxt"><span><b>{actorsLabel(g.actors)}</b>{g.actors.length === 1 && g.actors[0].official && <Verified />} {text}{count > g.actors.length && g.actors.length === 1 && g.targetCount <= 1 ? ` (${count})` : ''}</span><small>{ago(r.created_at)}</small></span></button>
           {g.unread && <button type="button" className="nread" aria-label="Mark as read" title="Mark as read" onClick={() => markIds(g.unreadIds)}><Check size={14} weight="bold" aria-hidden="true" /></button>}
         </li>); })}</ul>}
   </section>);

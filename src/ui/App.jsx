@@ -324,6 +324,11 @@ export default function App() {
   useEffect(() => { if (me?.id) adminApi.isAdmin().then(setIsAdmin).catch(() => setIsAdmin(false)); else setIsAdmin(false); }, [me?.id]);   // display only: the database re-checks every admin call
   useEffect(() => { if (me?.id) media.sweepOrphans().catch(() => {}); }, [me?.id]);   // clears files nothing references any more
   useEffect(() => { applyAppTheme(me?.theme); }, [me?.theme]);   // the whole UI is coloured from the signed-in person's theme (Mono when signed out)
+  useEffect(() => {   // "/" opens search from anywhere (not while typing in a field)
+    if (!me?.id) return undefined;
+    const key = (e) => { const t = e.target; if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey || t?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t?.tagName || '')) return; e.preventDefault(); navigate('/search'); };
+    addEventListener('keydown', key); return () => removeEventListener('keydown', key);
+  }, [me?.id]);
   const menuRef = useRef();
   useEffect(() => { if (!menu) return; const out = (e) => { if (!menuRef.current?.contains(e.target)) setMenu(false); }; const esc = (e) => e.key === 'Escape' && setMenu(false);
     addEventListener('pointerdown', out); addEventListener('keydown', esc); return () => { removeEventListener('pointerdown', out); removeEventListener('keydown', esc); }; }, [menu]);
@@ -349,13 +354,13 @@ export default function App() {
   return (<div className="app">
     <nav className="nav"><button className="logo" onClick={() => go('home')}>fiiyou</button>
       <div className="navlinks">{NAV.map(([v, l]) => <button key={v} className={active(v) ? 'on' : ''} aria-label={l} title={l} aria-current={active(v) ? 'page' : undefined} onClick={() => go(v)}><NavIcon name={v} active={active(v)} />{v === 'messages' && unread > 0 && <em className="dotb">{unread > 99 ? '99+' : unread}</em>}</button>)}</div>
-      <button className={`navsearch${route.v === 'search' ? ' on' : ''}`} aria-label="Search" title="Search" onClick={() => go('search')}><MagnifyingGlass size="1.3em" weight={route.v === 'search' ? 'fill' : 'bold'} aria-hidden="true" /></button>
       <div className="more" ref={menuRef}><button className="avbtn" onClick={() => setMenu(!menu)} aria-label={nCount > 0 ? `Account menu (${nCount} new notifications)` : 'Account menu'} aria-expanded={menu}><Avatar src={myImg[me.avatar_path]} size={34} /></button>{nCount > 0 && <em className="avdot" aria-hidden="true">{nCount > 9 ? '9+' : nCount}</em>}{menu && <div className="menu" role="menu">
         <button className="mhead" role="menuitem" onClick={() => go('profile')}><Avatar src={myImg[me.avatar_path]} size={44} /><span><b>{me.display_name || me.username}</b><small>@{me.username}</small></span></button>
         <hr className="msep" />
         <NotificationList go={go} notify={notify} tick={nTick} onRead={setNCount} />
-        <PushToggle notify={notify} isAdmin={isAdmin} />
+        <PushToggle notify={notify} />
         <hr className="msep" />
+        <button role="menuitem" onClick={() => go('search')}><MagnifyingGlass size={18} weight="bold" aria-hidden="true" />Search</button>
         <button role="menuitem" onClick={() => { setMenu(false); setInviteOpen(true); }}><UserPlus size={18} weight="bold" aria-hidden="true" />Invite friends</button>
         <button role="menuitem" onClick={() => { setMenu(false); setPwOpen(true); }}><LockKey size={18} weight="bold" aria-hidden="true" />Change password</button>
         <button role="menuitem" onClick={async () => { setMenu(false); await forgetDevice(); auth.signOut(); }}><SignOut size={18} weight="bold" aria-hidden="true" />Sign out</button>
