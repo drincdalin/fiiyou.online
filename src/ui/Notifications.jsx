@@ -48,7 +48,7 @@ export function useNotifCount(meId) {
 }
 
 /** The list that sits inside the account menu. `onRead(remainingUnread)` keeps the badge in step. */
-export default function NotificationList({ go, notify, tick, onRead }) {
+export function NotificationList({ go, notify, tick, onRead }) {
   const [rows, setRows] = useState(null);
   const load = useCallback(() => social.listNotifications().then((r) => setRows(r || [])).catch(() => { setRows((x) => x || []); notify('Could not load notifications', 'err'); }), []);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [tick]);   // eslint-disable-line react-hooks/exhaustive-deps
@@ -77,16 +77,21 @@ export default function NotificationList({ go, notify, tick, onRead }) {
     else if (r.actor) go('profile', r.actor.username);
   };
 
-  return (<section className="nsec" aria-label="Notifications">
-    <h3 className="nhead"><Bell size={16} weight="bold" aria-hidden="true" />Notifications
-      {unreadTotal > 0 && <button type="button" className="ghost sm nmarkall" onClick={markAll}>Mark all as read</button>}</h3>
+  return (<section className="nsec npage" aria-label="Notifications">
+    <div className="nhead">{unreadTotal > 0 ? `${unreadTotal} unread` : 'All caught up'}
+      {unreadTotal > 0 && <button type="button" className="ghost sm nmarkall" onClick={markAll}>Mark all as read</button>}</div>
     {!rows ? <div className="boot">…</div> : !groups.length ? <p className="muted nempty">Nothing yet. Likes, replies and mentions will show up here.</p>
       : <ul className="nlist">{groups.map((g) => { const [Icon, single] = KINDS[g.type] || [Bell, 'did something']; const text = g.targetCount > 1 && PLURAL[g.type] ? PLURAL[g.type] : single; const r = g.latest; const count = g.rows.length; return (
         <li key={g.key} className="nitem">
-          <button type="button" role="menuitem" className={`nrow${g.unread ? ' new' : ''}`} onClick={() => visit(g)}>
+          <button type="button" className={`nrow${g.unread ? ' new' : ''}`} onClick={() => visit(g)}>
             <span className="nav2"><Avatar src={img[r.actor?.avatar_path]} size={36} /><i className="nic"><Icon size={10} weight="fill" aria-hidden="true" /></i></span>
             <span className="ntxt"><span><b>{actorsLabel(g.actors)}</b>{g.actors.length === 1 && g.actors[0].official && <Verified />} {text}{count > g.actors.length && g.actors.length === 1 && g.targetCount <= 1 ? ` (${count})` : ''}</span><small>{ago(r.created_at)}</small></span></button>
           {g.unread && <button type="button" className="nread" aria-label="Mark as read" title="Mark as read" onClick={() => markIds(g.unreadIds)}><Check size={14} weight="bold" aria-hidden="true" /></button>}
         </li>); })}</ul>}
   </section>);
+}
+
+/** The /notifications page. */
+export default function NotificationsView(props) {
+  return (<div className="plain view"><h2>Notifications</h2><div className="panel npanel"><NotificationList {...props} /></div></div>);
 }

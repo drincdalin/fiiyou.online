@@ -23,11 +23,11 @@ const SearchView = lazy(() => import('./SearchView.jsx'));
 const AdminView = lazy(() => import('./Admin.jsx'));   // only admins ever open it
 const ShareSheet = lazy(() => import('./ShareSheet.jsx'));
 const InviteModal = lazy(() => import('./InviteModal.jsx'));
-import NotificationList, { useNotifCount } from './Notifications.jsx';
-import PushToggle from './PushToggle.jsx';
-import { PasswordMeter, ChangePasswordModal } from './PasswordMeter.jsx';
+import NotificationsView, { useNotifCount } from './Notifications.jsx';
+import SettingsView from './SettingsView.jsx';
+import { PasswordMeter } from './PasswordMeter.jsx';
 import { registerSW, forgetDevice } from './push.js';
-import { Eye, EyeSlash, Check, Heart, LockKey, MagnifyingGlass, PencilSimple, ShareNetwork, SignOut, Trash, UserPlus } from '@phosphor-icons/react';
+import { Bell, Eye, EyeSlash, Check, GearSix, Heart, MagnifyingGlass, PencilSimple, ShareNetwork, SignOut, Trash, UserPlus } from '@phosphor-icons/react';
 
 const BASE = import.meta.env.BASE_URL;
 function Auth() {
@@ -269,6 +269,7 @@ function toRoute(path) {
   const dec = (x) => { try { return decodeURIComponent(x); } catch { return x; } };
   switch (r.page) {
     case 'map': case 'people': case 'admin': return { v: r.page };
+    case 'notifications': case 'settings': return { v: r.page };
     case 'search': return { v: 'search', q: new URLSearchParams(location.search).get('q') || '' };
     case 'tag': return { v: 'search', tag: first ? dec(first).toLowerCase().replace(/[^\p{L}\p{N}_]/gu, '').slice(0, 32) : '' };
     case 'chat': return { v: 'messages', peer: first };
@@ -285,7 +286,7 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false); const [recovery, setRecovery] = useState(false);
   const [menu, setMenu] = useState(false); const { n: nCount, setN: setNCount, tick: nTick } = useNotifCount(me?.id); const [toast, setToast] = useState(null); const [unread, setUnread] = useState(0);
   const refreshMe = useCallback(() => profiles.getMyProfile().then(setMe).catch(() => {}), []);
-  const [meErr, setMeErr] = useState(null); const [inviteOpen, setInviteOpen] = useState(false); const [pwOpen, setPwOpen] = useState(false);
+  const [meErr, setMeErr] = useState(null); const [inviteOpen, setInviteOpen] = useState(false);
   const loadMe = useCallback(() => {
     setMeErr(null);
     return profiles.getMyProfile()
@@ -314,7 +315,7 @@ export default function App() {
     const tick = () => posts.publishDue().then((n) => { if (n > 0) window.dispatchEvent(new Event('fiiyou:published')); }).catch(() => {});
     tick(); const t = setInterval(tick, 60000); return () => clearInterval(t);
   }, [me?.id]);   // service worker: installable app + push notifications
-  useEffect(() => { const t = { home: 'Home', profile: route.username ? `@${route.username}` : 'Me', map: 'Map', messages: 'Chat', people: 'People', admin: 'Admin', post: 'Post', search: 'Search', tag: 'Tag' }[route.v]; document.title = `fiiyou · ${t}`; }, [route]);
+  useEffect(() => { const t = { home: 'Home', profile: route.username ? `@${route.username}` : 'Me', map: 'Map', messages: 'Chat', people: 'People', admin: 'Admin', post: 'Post', search: 'Search', tag: 'Tag', notifications: 'Notifications', settings: 'Settings' }[route.v]; document.title = `fiiyou · ${t}`; }, [route]);
   useEffect(() => { if (route.legacyMe && me) navigate(`/${me.username.toLowerCase()}${route.edit ? '/edit' : ''}`, { replace: true }); }, [route.legacyMe, route.edit, me?.username]);   // old /me -> /<username>
   useEffect(() => { if (session) loadMe(); else { setMe(null); setMeErr(null); } }, [session, loadMe]);
   useEffect(() => {   // someone who is already a member opened an invite link: take them to the person who sent it
@@ -357,23 +358,23 @@ export default function App() {
       <div className="more" ref={menuRef}><button className="avbtn" onClick={() => setMenu(!menu)} aria-label={nCount > 0 ? `Account menu (${nCount} new notifications)` : 'Account menu'} aria-expanded={menu}><Avatar src={myImg[me.avatar_path]} size={34} /></button>{nCount > 0 && <em className="avdot" aria-hidden="true">{nCount > 9 ? '9+' : nCount}</em>}{menu && <div className="menu" role="menu">
         <button className="mhead" role="menuitem" onClick={() => go('profile')}><Avatar src={myImg[me.avatar_path]} size={44} /><span><b>{me.display_name || me.username}</b><small>@{me.username}</small></span></button>
         <hr className="msep" />
-        <NotificationList go={go} notify={notify} tick={nTick} onRead={setNCount} />
-        <PushToggle notify={notify} />
-        <hr className="msep" />
+        <button role="menuitem" onClick={() => go('notifications')}><Bell size={18} weight="bold" aria-hidden="true" />Notifications{nCount > 0 && <em className="mcount">{nCount > 99 ? '99+' : nCount}</em>}</button>
         <button role="menuitem" onClick={() => go('search')}><MagnifyingGlass size={18} weight="bold" aria-hidden="true" />Search</button>
         <button role="menuitem" onClick={() => { setMenu(false); setInviteOpen(true); }}><UserPlus size={18} weight="bold" aria-hidden="true" />Invite friends</button>
-        <button role="menuitem" onClick={() => { setMenu(false); setPwOpen(true); }}><LockKey size={18} weight="bold" aria-hidden="true" />Change password</button>
+        <button role="menuitem" onClick={() => go('settings')}><GearSix size={18} weight="bold" aria-hidden="true" />Settings</button>
+        <hr className="msep" />
         <button role="menuitem" onClick={async () => { setMenu(false); await forgetDevice(); auth.signOut(); }}><SignOut size={18} weight="bold" aria-hidden="true" />Sign out</button>
-        <button role="menuitem" className="danger" onClick={async () => { setMenu(false); if (await ask({ title: 'Delete your account?', message: 'Your account and everything in it will be deleted. This cannot be undone.', confirmLabel: 'Delete account', danger: true })) { try { await auth.deleteAccount(); } catch (e) { notify(friendlyError(e, 'Could not delete the account. Nothing was lost, try again.'), 'err'); } } }}><Trash size={18} weight="bold" aria-hidden="true" />Delete account</button></div>}</div></nav>
+      </div>}</div></nav>
     {route.v === 'home' && <HomeView me={me} go={go} notify={notify} unread={unread} />}
     {route.v === 'map' && <MapView me={me} go={go} notify={notify} />}
     {route.v === 'messages' && <MessagesView key={route.peer || 'all'} me={me} peer={route.peer} go={go} notify={notify} refreshUnread={refreshUnread} />}
     {route.v === 'admin' && isAdmin && <Suspense fallback={<Boot />}><AdminView go={go} notify={notify} /></Suspense>}
     {route.v === 'search' && <Suspense fallback={<Boot />}><SearchView key={`${route.tag || ''}|${route.q || ''}`} me={me} go={go} notify={notify} initialQuery={route.q || ''} initialTag={route.tag || ''} /></Suspense>}
+    {route.v === 'notifications' && <NotificationsView go={go} notify={notify} tick={nTick} onRead={setNCount} />}
+    {route.v === 'settings' && <SettingsView notify={notify} />}
     {route.v === 'people' && <PeopleView me={me} go={go} notify={notify} onInvite={() => setInviteOpen(true)} />}
     {route.v === 'post' && <PostView key={route.id} id={route.id} me={me} go={go} notify={notify} />}
     {route.v === 'profile' && <ProfileView key={route.username || me.username} username={route.username || me.username} go={go} notify={notify} refreshMe={refreshMe} meName={me.username} autoEdit={!!route.edit} />}
-    {pwOpen && <ChangePasswordModal onClose={() => setPwOpen(false)} notify={notify} />}
     {inviteOpen && <Suspense fallback={null}><InviteModal me={me} onClose={() => setInviteOpen(false)} notify={notify} /></Suspense>}
     {toast && <div className={`toast ${toast.type}`} role="status">{toast.msg}</div>}
   </div>);

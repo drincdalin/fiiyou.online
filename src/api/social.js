@@ -46,17 +46,6 @@ export function onNotification(myId, cb) {
   } catch { return () => {}; }
 }
 
-/** Asks the send-push function to send a test notification to MY devices. -> { devices, sent, failed: [{code, message}], dead }
- *  Throws Error('not_deployed') when the function does not exist, Error('function_error') when it crashed (usually missing secrets). */
-export async function sendTestPush() {
-  const { data, error } = await supabase.functions.invoke('send-push', { body: { test: true } });
-  if (error) {
-    const st = error.context?.status;
-    throw new Error(st === 404 ? 'not_deployed' : st === 403 ? 'old_function' : error.name === 'FunctionsFetchError' ? 'not_deployed' : 'function_error');
-  }
-  return data;
-}
-
 // ---------- push (this device's address for system notifications, see 0018_push.sql) ----------
 export const savePushSubscription = async (sub) => unwrap(await supabase.rpc('save_push_subscription',
   { p_endpoint: sub.endpoint, p_p256dh: sub.keys.p256dh, p_auth: sub.keys.auth, p_ua: String(navigator.userAgent).slice(0, 200) }));

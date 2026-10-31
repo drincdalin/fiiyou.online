@@ -1,6 +1,6 @@
 # Push notifications setup (optional)
 
-Push is off until all of this is done; the toggle in the account menu stays hidden without `VITE_VAPID_PUBLIC_KEY`.
+Push is off until all of this is done; Settings shows "not set up" without `VITE_VAPID_PUBLIC_KEY`.
 How it works: a row is inserted into `public.notifications` (by database triggers) → a Supabase **database webhook** calls the Edge Function `send-push` → it sends a Web Push message to every device that person turned notifications on for (`public.push_subscriptions`).
 
 ## 1. Generate a VAPID key pair (once)
@@ -28,17 +28,16 @@ Supabase Dashboard → Database → Webhooks → Create:
 Vercel → Environment Variables → `VITE_VAPID_PUBLIC_KEY` = the public key → redeploy.
 
 ## 5. Test
-Sign in on a phone or desktop browser, account menu → Turn on push notifications. From a second account, like a post of the first. With the first app in the background you get a notification; tapping it opens `/post/<id>` (or the person's profile for friend requests). In the foreground no system notification is shown (the in-app badge already does that).
+Sign in on a phone or desktop browser, account menu → Settings → Push notifications → Turn on. From a second account, like a post of the first. With the first app in the background you get a notification; tapping it opens `/post/<id>` (or the person's profile for friend requests). In the foreground no system notification is shown (the in-app badge already does that).
 iPhone: the site must be added to the Home Screen first (Share → Add to Home Screen), then opened from there.
 Logs: Dashboard → Edge Functions → `send-push` → Logs. Expired devices (404/410) are removed automatically.
 
-## Troubleshooting: "there is no button" / "nothing arrives"
+## Troubleshooting: "it says not set up" / "nothing arrives"
 Work through this in order, the first failing step is the problem.
-1. **The menu says push is "not set up on this server".** The build has no `VITE_VAPID_PUBLIC_KEY` (step 4). Add the variable in Vercel and **redeploy** (Vite bakes it in at build time; changing it without a redeploy does nothing).
+1. **Settings says push is "not set up on this server".** The build has no `VITE_VAPID_PUBLIC_KEY` (step 4). Add the variable in Vercel and **redeploy** (Vite bakes it in at build time; changing it without a redeploy does nothing).
 2. **The item says "Notifications are blocked".** The browser permission is "block" for this site; allow it in the browser / OS site settings.
 3. **On iPhone only a hint shows.** Add the site to the Home Screen and open it from there (iOS 16.4+).
 4. **You turned it on but nothing arrives.** Dashboard → Database → Webhooks: is there one for `notifications` / Insert with the `x-webhook-secret` header? Dashboard → Edge Functions → `send-push` → Logs: a 403 means the secret differs, no log line at all means the webhook never fires, "no devices" means the device was not saved (turn it off and on again).
 5. **It arrives only when the app is closed.** That is intended: while the app is open and in front, the in-app badge is used instead.
 Notification kinds covered since 0029: likes, comments, wall comments, replies, comment likes, @mentions, friend requests. Redeploy the function after pulling these changes: `supabase functions deploy send-push --no-verify-jwt`.
 
-**Use the built-in test.** Turn notifications on, then account menu → *Send a test notification*. It tells you which link is broken: device not saved, function not deployed or crashed (missing secrets), or VAPID keys that do not match. If the test arrives but real likes and comments do not, only the database webhook (step 3) is missing or has the wrong secret. The test needs the current version of the function, so deploy it again after updating.
