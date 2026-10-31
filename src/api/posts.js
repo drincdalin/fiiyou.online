@@ -8,25 +8,52 @@ export async function feed({ localityId = null, onlyFriends = false, before = nu
     p_kind: kind, p_place: placeId, p_upcoming: upcoming, p_no_events: noEvents }));
 }
 
-/** kind: status | ask | event (event needs eventAt; title is for events). Image is compressed before upload. */
-export async function createPost({ body, kind = 'status', title = null, localityId = null, placeId = null, visibility = 'public', eventAt = null, eventPlace = null, imageFile = null }) {
+export const MAX_IMAGES = 4;   // first image + up to 3 extra ones (see 0029_search_schedule_pins_images.sql)
+
+/** Uploads up to MAX_IMAGES files; the first becomes image_path, the rest extra_images. Cleans up after itself when one upload fails. */
+async function uploadAll(files, kind) {
+  const list = (files || []).filter(Boolean).slice(0, MAX_IMAGES); const paths = [];
+  try { for (const f of list) paths.push(await uploadImage(f, kind === 'event' ? 'event' : 'post')); }
+  catch (e) { await Promise.all(paths.map((x) => deleteImage(x).catch(() => {}))); throw e; }
+  return { image_path: paths[0] || null, extra_images: paths.slice(1), all: paths };
+}
+
+/** kind: status | ask | event (event needs eventAt; title is for events). Images (imageFiles, or the old single imageFile) are compressed before upload. */
+export async function createPost({ body, kind = 'status', title = null, localityId = null, placeId = null, visibility = 'public', eventAt = null, eventPlace = null, imageFile = null, imageFiles = null }) {
   const author_id = await uid();
-  const image_path = imageFile ? await uploadImage(imageFile, kind === 'event' ? 'event' : 'post') : null;
+  const up = await uploadAll(imageFiles || (imageFile ? [imageFile] : []), kind);
   const r = await supabase.from('posts').insert({ author_id, body, kind, title, locality_id: localityId, place_id: placeId, visibility,
-    event_at: eventAt, event_place: eventPlace, image_path }).select().single();
-  if (r.error && image_path) deleteImage(image_path).catch(() => {});
+    event_at: eventAt, event_place: eventPlace, image_path: up.image_path, ...(up.extra_images.length ? { extra_images: up.extra_images } : {}) }).select().single();   // the column only exists after 0029; single-photo posts keep working before it
+  if (r.error) await Promise.all(up.all.map((x) => deleteImage(x).catch(() => {})));
   return unwrap(r);
 }
 
-export async function updatePost(id, { body, title }, { removeImage = false, oldImage = null } = {}) {
-  const patch = { body }; if (title !== undefined) patch.title = title; if (removeImage) patch.image_path = null;
+/** Same fields as createPost plus publishAt (Date or ISO string). The post waits in scheduled_posts and is published at that time. */
+export async function schedulePost({ publishAt, body, kind = 'status', title = null, localityId = null, placeId = null, visibility = 'public', eventAt = null, eventPlace = null, imageFiles = null }) {
+  const author_id = await uid();
+  const up = await uploadAll(imageFiles, kind);
+  const r = await supabase.from('scheduled_posts').insert({ author_id, publish_at: new Date(publishAt).toISOString(), body, kind, title, locality_id: localityId, place_id: placeId,
+    visibility, event_at: eventAt, event_place: eventPlace, image_path: up.image_path, extra_images: up.extra_images }).select().single();
+  if (r.error) await Promise.all(up.all.map((x) => deleteImage(x).catch(() => {})));
+  return unwrap(r);
+}
+export const listScheduled = async () => unwrap(await supabase.from('scheduled_posts').select('id, kind, title, body, publish_at, image_path, extra_images, visibility').order('publish_at')) || [];
+export async function cancelScheduled(row) {
+  unwrap(await supabase.from('scheduled_posts').delete().eq('id', row.id));
+  await Promise.all([row.image_path, ...(row.extra_images || [])].filter(Boolean).map((x) => deleteImage(x).catch(() => {})));
+}
+/** Moves posts whose time has come into the feed. Safe to call as often as you like; returns how many were published. */
+export const publishDue = async () => Number(unwrap(await supabase.rpc('publish_due_posts')) || 0);
+
+export async function updatePost(id, { body, title }, { removeImage = false, oldImage = null, oldExtras = [] } = {}) {
+  const patch = { body }; if (title !== undefined) patch.title = title; if (removeImage) { patch.image_path = null; patch.extra_images = []; }
   const r = unwrap(await supabase.from('posts').update(patch).eq('id', id).select().single());
-  if (removeImage && oldImage) deleteImage(oldImage).catch(() => {});
+  if (removeImage) [oldImage, ...(oldExtras || [])].filter(Boolean).forEach((x) => deleteImage(x).catch(() => {}));
   return r;
 }
-export async function deletePost(id, imagePath) {
+export async function deletePost(id, imagePath, extraImages = []) {
   unwrap(await supabase.from('posts').delete().eq('id', id));
-  if (imagePath) deleteImage(imagePath).catch(() => {});
+  [imagePath, ...(extraImages || [])].filter(Boolean).forEach((x) => deleteImage(x).catch(() => {}));
 }
 export async function setLike(postId, on) {
   const user_id = await uid();
@@ -83,3 +110,13 @@ export async function tagFeed({ tag, before = null, limit = 20 } = {}) {
 }
 /** [{ tag, uses }] most used in public posts over the last `days` days. */
 export const trendingTags = async (days = 7, limit = 8) => unwrap(await supabase.rpc('trending_tags', { p_days: days, p_limit: limit })) || [];
+
+/** Public posts whose title or text contains `query` (diacritics ignored), newest first, same shape as feed() rows.
+ *  Works like tagFeed(): the database lists ids (0029), each post is then loaded through getPost(), which applies the visibility rules. */
+export async function searchPosts({ query, before = null, limit = 20 } = {}) {
+  const ids = unwrap(await supabase.rpc('search_post_ids', { p_query: query, p_before: before, p_limit: limit })) || [];
+  const rows = (await Promise.all(ids.map((r) => getPost(r.id).catch(() => null)))).filter(Boolean);
+  return { rows, cursor: ids.length ? ids[ids.length - 1].created_at : null, more: ids.length === limit };
+}
+/** [{ tag, uses }] hashtags starting with the query. */
+export const searchTags = async (query, limit = 8) => unwrap(await supabase.rpc('search_tags', { p_query: query, p_limit: limit })) || [];

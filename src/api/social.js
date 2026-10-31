@@ -35,6 +35,7 @@ export async function unreadNotifications() {
   const r = await supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('read', false);
   if (r.error) throw r.error; return r.count || 0;
 }
+export const markNotificationRead = async (id) => unwrap(await supabase.from('notifications').update({ read: true }).eq('id', id));
 export const markNotificationsRead = async () => unwrap(await supabase.from('notifications').update({ read: true }).eq('read', false));
 /** Live new notifications for me. Never throws; the bell also polls as a fallback. */
 export function onNotification(myId, cb) {
@@ -73,7 +74,7 @@ export const deletePlace = async (id) => unwrap(await supabase.from('places').de
 export const conversations = async () => unwrap(await supabase.rpc('conversations'));
 // reply_to points at the message being answered. `reply` ({id, sender_id, body} or null) is attached here instead of with a
 // PostgREST self-join, which is ambiguous on a self-referencing table and came back as an empty array for every message.
-const MSG_COLS = 'id, sender_id, body, created_at, reply_to, edited_at';
+const MSG_COLS = 'id, sender_id, body, created_at, reply_to, edited_at, read_at';
 /** A deleted message keeps its row (so replies that quote it still work) but its text becomes this marker (0027_message_edit_delete.sql). */
 export const DELETED_BODY = '[message deleted]';
 /** Edit the text of MY message. Returns the updated row (body, edited_at). */
@@ -102,7 +103,34 @@ export const unreadCount = async () => Number(unwrap(await supabase.rpc('unread_
 export function onMessage(myId, cb) {
   try {
     const ch = supabase.channel(`dm-${myId}-${Math.random().toString(36).slice(2)}`).on('postgres_changes',
-      { event: '*', schema: 'public', table: 'messages', filter: `recipient_id=eq.${myId}` }, cb).subscribe();
+      { event: '*', schema: 'public', table: 'messages', filter: `recipient_id=eq.${myId}` }, cb)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `sender_id=eq.${myId}` }, cb).subscribe();   // the second one: "seen" ticks
     return () => { try { supabase.removeChannel(ch); } catch { /* ignore */ } };
   } catch { return () => {}; }
 }
+
+
+// ---------- typing indicator (Realtime broadcast on a private channel, see 0029) ----------
+const typingTopic = (a, b) => `typing:${[a, b].sort().join(':')}`;
+/** Listens for "peer is typing" and lets me say that I am. Never throws; without Realtime nothing is shown.
+ *  Returns { ping(), off() }: call ping() on keystrokes (throttled here), onTyping() fires when the peer pings. */
+export function typingChannel(myId, peerId, onTyping) {
+  let ch = null, last = 0, ready = false;
+  try {
+    ch = supabase.channel(typingTopic(myId, peerId), { config: { private: true, broadcast: { self: false } } })
+      .on('broadcast', { event: 'typing' }, (m) => { if (m?.payload?.from === peerId) onTyping(); })
+      .subscribe((st) => { ready = st === 'SUBSCRIBED'; });
+  } catch { ch = null; }
+  return {
+    ping() { if (!ch || !ready || Date.now() - last < 2500) return; last = Date.now(); try { ch.send({ type: 'broadcast', event: 'typing', payload: { from: myId } }); } catch { /* ignore */ } },
+    off() { try { if (ch) supabase.removeChannel(ch); } catch { /* ignore */ } },
+  };
+}
+
+// ---------- pinned messages (private to me; at most 5 per conversation) and search in chats ----------
+/** My pinned messages with this person, newest pin first: [{ message_id, created_at, message: { id, sender_id, body, created_at } }] */
+export const listPins = async (peerId) => (unwrap(await supabase.from('message_pins').select('message_id, created_at, message:messages(id, sender_id, body, created_at)').eq('peer_id', peerId).order('created_at', { ascending: false })) || []).filter((r) => r.message);
+export const pinMessage = async (peerId, messageId) => unwrap(await supabase.from('message_pins').insert({ user_id: await uid(), peer_id: peerId, message_id: messageId }));
+export const unpinMessage = async (messageId) => unwrap(await supabase.from('message_pins').delete().eq('message_id', messageId));
+/** [{ id, peer_id, sender_id, body, created_at }] in my conversations (all, or only with peerId). Needs 2+ characters. */
+export const searchMessages = async (query, peerId = null) => unwrap(await supabase.rpc('search_messages', { p_query: query, p_peer: peerId, p_limit: 30 })) || [];

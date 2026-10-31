@@ -8,7 +8,8 @@ import { SharedPostCard, decodeSharedPost, previewText } from './PostShare.jsx';
 import { MessageMenu, MessageEditor } from './MessageMenu.jsx';
 import { ask } from './dialog.jsx';
 import { ErrorState, friendlyError } from './errors.jsx';
-import { ArrowBendUpLeft, PaperPlaneRight, X } from '@phosphor-icons/react';
+import { ArrowBendUpLeft, MagnifyingGlass, PaperPlaneRight, PushPin, X } from '@phosphor-icons/react';
+import './more.css';
 
 const useFeed = (args, notify) => {
   const [rows, setRows] = useState(null); const [more, setMore] = useState(false); const [err, setErr] = useState(null); const key = JSON.stringify(args);
@@ -18,6 +19,7 @@ const useFeed = (args, notify) => {
       setRows(append ? [...cur, ...r] : r); setMore(r.length === 20 && !args.upcoming); } catch (e) { if (append) notify(friendlyError(e), 'err'); else { setErr(e); setRows([]); } }
   }, [key]);
   useEffect(() => { setRows(null); load(false); }, [load]);
+  useEffect(() => { const h = () => load(false); addEventListener('fiiyou:published', h); return () => removeEventListener('fiiyou:published', h); }, [load]);   // a scheduled post just went out
   const img = useImages((rows || []).flatMap((p) => [p.image_path, p.author_avatar_path]));
   const change = (np) => setRows((r) => r.map((x) => (x.id === np.id ? np : x))); const drop = (id) => setRows((r) => r.filter((x) => x.id !== id));
   return { rows, more, load, img, change, drop, err };
@@ -145,12 +147,35 @@ export function MapView({ me, go, notify }) {
 /* ---------------- Messages ---------------- */
 const dayLabel = (iso) => { const d = new Date(iso), t = new Date(); const y = new Date(); y.setDate(t.getDate() - 1);
   return d.toDateString() === t.toDateString() ? 'Today' : d.toDateString() === y.toDateString() ? 'Yesterday' : d.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long' }); };
+/** Search box for messages. peerId = only inside that chat, otherwise all of my chats. Results come from search_messages() (0029). */
+function ChatSearch({ peerId = null, onPick, nameOf, autoFocus = false }) {
+  const [q, setQ] = useState(''); const [res, setRes] = useState(null); const seq = useRef(0);
+  useEffect(() => {
+    const t = q.trim(); const my = ++seq.current;
+    if (t.length < 2) { setRes(null); return undefined; }
+    const timer = setTimeout(() => social.searchMessages(t, peerId).then((r) => { if (my === seq.current) setRes(r); }).catch(() => { if (my === seq.current) setRes([]); }), 350);
+    return () => clearTimeout(timer);
+  }, [q, peerId]);
+  const clip = (b, t) => { const i = b.toLowerCase().indexOf(t.toLowerCase()); const from = Math.max(0, (i < 0 ? 0 : i) - 24); return (from ? '…' : '') + b.slice(from, from + 90) + (b.length > from + 90 ? '…' : ''); };
+  return (<div className="chatfind"><input type="search" autoFocus={autoFocus} value={q} maxLength={60} placeholder={peerId ? 'Search in this chat' : 'Search messages'} aria-label={peerId ? 'Search in this chat' : 'Search all messages'} onChange={(e) => setQ(e.target.value)} />
+    {res && <div className="fresults">{!res.length ? <p className="muted">No messages found.</p> : res.map((r) => <button key={r.id} type="button" onClick={() => { onPick(r); setQ(''); setRes(null); }}>
+      <b>{r.sender_id === r.peer_id ? nameOf(r.peer_id) : 'You'}{!peerId && <small> · {nameOf(r.peer_id)}</small>}</b><span>{clip(r.body, q.trim())}</span><small>{new Date(r.created_at).toLocaleDateString('ro-RO')}</small></button>)}</div>}</div>);
+}
+
 export function MessagesView({ me, peer, go, notify, refreshUnread }) {
   const [convs, setConvs] = useState([]); const [fl, setFl] = useState([]); const [cur, setCur] = useState(peer || null); const [msgs, setMsgs] = useState(null); const [txt, setTxt] = useState(''); const end = useRef(); const inp = useRef(); const [replyTo, setReplyTo] = useState(null); const [editing, setEditing] = useState(null);   // editing = id of the message being edited
+  const [pins, setPins] = useState([]); const [peerTyping, setPeerTyping] = useState(false); const [findOpen, setFindOpen] = useState(false); const typing = useRef(null); const typingT = useRef(); const pendingJump = useRef(null);
   const loadConvs = () => social.conversations().then(setConvs).catch(() => {});
   const loadThread = useCallback(async (id) => { try { setMsgs(await social.thread(id)); await social.markRead(id); loadConvs(); refreshUnread(); } catch (e) { notify(e.message, 'err'); } }, []);
   useEffect(() => { loadConvs(); friends.listFriends().then(setFl); }, []);
-  useEffect(() => { setMsgs(null); setReplyTo(null); setEditing(null); if (cur) loadThread(cur); }, [cur]);
+  useEffect(() => { setMsgs(null); setReplyTo(null); setEditing(null); setPins([]); setPeerTyping(false); setFindOpen(false); if (cur) { loadThread(cur); social.listPins(cur).then(setPins).catch(() => {}); } }, [cur]);
+  useEffect(() => {   // "is typing…": a private realtime channel between the two of us; silent when Realtime is not available
+    if (!cur) return undefined;
+    const ch = social.typingChannel(me.id, cur, () => { setPeerTyping(true); clearTimeout(typingT.current); typingT.current = setTimeout(() => setPeerTyping(false), 4000); });
+    typing.current = ch; return () => { ch.off(); typing.current = null; clearTimeout(typingT.current); };
+  }, [cur]);
+  useEffect(() => { setPeerTyping(false); }, [msgs?.length]);   // a new message from them ends the indicator
+  useEffect(() => { if (msgs && pendingJump.current) { const id = pendingJump.current; pendingJump.current = null; setTimeout(() => jump(id), 60); } }, [msgs]);
   useEffect(() => { const off = social.onMessage(me.id, () => { loadConvs(); if (cur) loadThread(cur); });
     const t = setInterval(() => { loadConvs(); if (cur) loadThread(cur); }, 12000); return () => { off(); clearInterval(t); }; }, [cur]);
   useEffect(() => { end.current?.scrollIntoView({ block: 'end' }); }, [msgs?.length, cur]);
@@ -159,6 +184,10 @@ export function MessagesView({ me, peer, go, notify, refreshUnread }) {
   const send = async (e) => { e.preventDefault(); const body = txt.trim(); if (!body) return; const rep = replyTo; setTxt(''); setReplyTo(null);
     try { const m = await social.sendMessage(cur, body, rep?.id); setMsgs((x) => [...(x || []), m]); loadConvs(); } catch (er) { setTxt(body); setReplyTo(rep); notify(er.message?.includes('rate_limit') ? 'Slow down a little.' : 'Could not send. Are you still friends?', 'err'); } };
   const startReply = (m) => { setReplyTo(m); inp.current?.focus(); };
+  const pinnedIds = new Set(pins.map((x) => x.message_id));
+  const togglePin = async (m) => { try { if (pinnedIds.has(m.id)) await social.unpinMessage(m.id); else await social.pinMessage(cur, m.id); setPins(await social.listPins(cur)); }
+    catch (er) { notify(String(er.message).includes('too_many_pins') ? 'You can pin up to 5 messages per chat.' : 'Could not change the pin.', 'err'); } };
+  const pickFound = (r) => { if (r.peer_id === cur) { setFindOpen(false); jump(r.id); } else { pendingJump.current = r.id; setCur(r.peer_id); } };
   /** an edited or deleted message of mine comes back from MessageMenu / MessageEditor: swap it in the list, refresh the conversation preview, fix a pending reply */
   const replaceMsg = (nm) => { setMsgs((list) => (list || []).map((x) => (x.id === nm.id ? { ...x, ...nm } : x))); setReplyTo((r) => (r && r.id === nm.id ? { ...r, ...nm } : r)); loadConvs(); };
   const nameOf = (m) => (m.sender_id === me.id ? 'You' : who?.display_name);
@@ -168,17 +197,23 @@ export function MessagesView({ me, peer, go, notify, refreshUnread }) {
     return mine ? (qm ? 'You replied to yourself' : `You replied to ${them}`) : (qm ? `${them} replied to you` : `${them} replied to themselves`); };
   /** scroll to the quoted message and flash it (only works while it is among the loaded messages) */
   const jump = (id) => { const el = document.getElementById(`m-${id}`); if (!el) return; el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1300); };
-  const replyBtn = (m) => <button type="button" className="replybtn" aria-label="Reply" title="Reply" onClick={() => startReply(m)}><ArrowBendUpLeft size={16} weight="bold" aria-hidden="true" /></button>;
+  const replyBtn = (m) => <><button type="button" className="replybtn" aria-label="Reply" title="Reply" onClick={() => startReply(m)}><ArrowBendUpLeft size={16} weight="bold" aria-hidden="true" /></button>
+    <button type="button" className={`replybtn pinbtn${pinnedIds.has(m.id) ? ' on' : ''}`} aria-label={pinnedIds.has(m.id) ? 'Unpin' : 'Pin'} aria-pressed={pinnedIds.has(m.id)} title={pinnedIds.has(m.id) ? 'Unpin' : 'Pin'} onClick={() => togglePin(m)}><PushPin size={16} weight={pinnedIds.has(m.id) ? 'fill' : 'bold'} aria-hidden="true" /></button></>;
+  const lastMineId = [...(msgs || [])].reverse().find((x) => x.sender_id === me.id && x.body !== social.DELETED_BODY)?.id;   // the "Seen" line sits under my newest message
   const fresh = fl.filter((f) => !convs.some((c) => c.id === f.id));
   return (<div className={`chat view${cur ? ' thread' : ''}`}>
     <aside className="clist"><h3>Messages</h3>
+      <ChatSearch onPick={pickFound} nameOf={(id) => convs.find((c) => c.id === id)?.display_name || fl.find((f) => f.id === id)?.display_name || 'Chat'} />
       {fresh.length > 0 && <select value="" onChange={(e) => e.target.value && setCur(e.target.value)}><option value="">New message…</option>{fresh.map((f) => <option key={f.id} value={f.id}>{f.display_name}</option>)}</select>}
       {!convs.length && !fresh.length && <p className="empty">Add friends to start chatting.</p>}
       {convs.map((c) => (<button key={c.id} className={`crow2${cur === c.id ? ' on' : ''}${c.unread > 0 ? ' unread' : ''}`} onClick={() => setCur(c.id)}><Avatar src={img[c.avatar_path]} size={44} />
         <span className="ctext"><span className="cl1"><b>{c.display_name}</b><small>{ago(c.last_at)}</small></span>
           <span className="cl2"><small className="prev">{c.last_mine ? 'You: ' : ''}{previewText(c.last_body)}</small>{c.unread > 0 && <em className="dotb">{c.unread}</em>}</span></span></button>))}</aside>
     <section className="cthread">{cur && who ? (<>
-      <header><button className="ghost sm back" onClick={() => setCur(null)}>‹</button><Avatar src={img[who.avatar_path]} size={34} /><button className="link" onClick={() => go('profile', who.username)}><b>{who.display_name}</b><small>@{who.username}</small></button></header>
+      <header><button className="ghost sm back" onClick={() => setCur(null)}>‹</button><Avatar src={img[who.avatar_path]} size={34} /><button className="link" onClick={() => go('profile', who.username)}><b>{who.display_name}</b><small>@{who.username}</small></button><button type="button" className="ghost sm findbtn" aria-label="Search in this chat" aria-expanded={findOpen} title="Search in this chat" onClick={() => setFindOpen(!findOpen)}><MagnifyingGlass size={18} weight="bold" aria-hidden="true" /></button></header>
+      {findOpen && <ChatSearch peerId={cur} autoFocus onPick={pickFound} nameOf={() => who.display_name} />}
+      {pins.filter((x) => x.message.body !== social.DELETED_BODY).length > 0 && <div className="pinbar" role="region" aria-label="Pinned messages"><PushPin size={14} weight="fill" aria-hidden="true" />
+        <div>{pins.filter((x) => x.message.body !== social.DELETED_BODY).map((x) => <button key={x.message_id} type="button" onClick={() => jump(x.message_id)} title="Go to the message"><b>{x.message.sender_id === me.id ? 'You' : who.display_name}:</b> {previewText(x.message.body)}</button>)}</div></div>}
       <div className="msgs">{msgs ? (msgs.length ? msgs.map((m, i) => { const mine = m.sender_id === me.id; const newDay = i === 0 || new Date(m.created_at).toDateString() !== new Date(msgs[i - 1].created_at).toDateString();
         const nx = msgs[i + 1]; const first = newDay || msgs[i - 1].sender_id !== m.sender_id;   // first / last bubble of a run from the same person
         const tail = !nx || nx.sender_id !== m.sender_id || new Date(nx.created_at).toDateString() !== new Date(m.created_at).toDateString();
@@ -186,9 +221,10 @@ export function MessagesView({ me, peer, go, notify, refreshUnread }) {
         const del = m.body === social.DELETED_BODY; const isEd = editing === m.id;
         const sp = del ? null : decodeSharedPost(m.body);   // a shared post: drawn as a card instead of text
         return (<Fragment key={m.id}>{newDay && <div className="dsep">{dayLabel(m.created_at)}</div>}<div className={`brow${mine ? ' mine' : ''}${first ? ' first' : ''}${tail ? ' tail' : ''}`} id={`m-${m.id}`}>{!mine && (tail ? <Avatar src={img[who.avatar_path]} size={26} /> : <span className="avsp" />)}{mine && <>{!del && !isEd && <MessageMenu m={m} me={me.id} notify={notify} canEdit={!sp} onEdit={() => setEditing(m.id)} onDeleted={replaceMsg} />}{!del && replyBtn(m)}</>}
-          <div className="bcol">{q && <button type="button" className="rq" onClick={() => jump(q.id)} aria-label="Go to the original message"><span className="rqlab"><ArrowBendUpLeft size={12} weight="bold" aria-hidden="true" />{replyLabel(m, q)}</span><span className="rqtxt">{previewText(q.body)}</span></button>}<div className={`bub${mine ? ' mine' : ''}${sp ? ' hasshare' : ''}${del ? ' msgdeleted' : ''}${isEd ? ' editing' : ''}`}>{isEd ? <MessageEditor m={m} notify={notify} onCancel={() => setEditing(null)} onSaved={(nm) => { replaceMsg(nm); setEditing(null); }} /> : del ? <p>This message was deleted</p> : sp ? <><SharedPostCard data={sp.data} go={go} />{sp.note && <p>{sp.note}</p>}</> : <p>{m.body}</p>}{!isEd && <small>{new Date(m.created_at).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}{m.edited_at && !del && <span className="msgedited"> · edited</span>}</small>}</div></div>{!mine && !del && replyBtn(m)}</div></Fragment>); }) : <p className="empty">Say hi.</p>) : <div className="boot">…</div>}<div ref={end} /></div>
+          <div className="bcol">{q && <button type="button" className="rq" onClick={() => jump(q.id)} aria-label="Go to the original message"><span className="rqlab"><ArrowBendUpLeft size={12} weight="bold" aria-hidden="true" />{replyLabel(m, q)}</span><span className="rqtxt">{previewText(q.body)}</span></button>}<div className={`bub${mine ? ' mine' : ''}${sp ? ' hasshare' : ''}${del ? ' msgdeleted' : ''}${isEd ? ' editing' : ''}`}>{isEd ? <MessageEditor m={m} notify={notify} onCancel={() => setEditing(null)} onSaved={(nm) => { replaceMsg(nm); setEditing(null); }} /> : del ? <p>This message was deleted</p> : sp ? <><SharedPostCard data={sp.data} go={go} />{sp.note && <p>{sp.note}</p>}</> : <p>{m.body}</p>}{!isEd && <small>{new Date(m.created_at).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}{m.edited_at && !del && <span className="msgedited"> · edited</span>}</small>}</div>{mine && m.id === lastMineId && m.read_at && <small className="seen">Seen {new Date(m.read_at).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}</small>}</div>{!mine && !del && replyBtn(m)}</div></Fragment>); }) : <p className="empty">Say hi.</p>) : <div className="boot">…</div>}<div ref={end} /></div>
+      {peerTyping && <div className="typing" role="status" aria-live="polite"><span className="tdots" aria-hidden="true"><i /><i /><i /></span>{who.display_name} is typing…</div>}
       {replyTo && <div className="replybar"><ArrowBendUpLeft className="ric" size={18} weight="bold" aria-hidden="true" /><div><b>Replying to {nameOf(replyTo)}</b><span>{previewText(replyTo.body)}</span></div><button type="button" aria-label="Cancel reply" title="Cancel reply" onClick={() => setReplyTo(null)}><X size={16} weight="bold" aria-hidden="true" /></button></div>}
-      <form className="inline" onSubmit={send}><input ref={inp} value={txt} maxLength={1000} placeholder="Write a message…" onChange={(e) => setTxt(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && replyTo && setReplyTo(null)} autoFocus /><button className="primary sendbtn" aria-label="Send" title="Send" disabled={!txt.trim()}><PaperPlaneRight size={20} weight="fill" aria-hidden="true" /></button></form></>)
+      <form className="inline" onSubmit={send}><input ref={inp} value={txt} maxLength={1000} placeholder="Write a message…" onChange={(e) => { setTxt(e.target.value); if (e.target.value) typing.current?.ping(); }} onKeyDown={(e) => e.key === 'Escape' && replyTo && setReplyTo(null)} autoFocus /><button className="primary sendbtn" aria-label="Send" title="Send" disabled={!txt.trim()}><PaperPlaneRight size={20} weight="fill" aria-hidden="true" /></button></form></>)
       : <p className="empty">Pick a conversation.</p>}</section></div>);
 }
 

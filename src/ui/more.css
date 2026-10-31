@@ -1,0 +1,95 @@
+/* Styles for: password meter, search page, composer extras (photos / draft / schedule), notification grouping,
+   chat extras (pins, typing, seen, message search), push hints. Colours come from the app theme variables only. */
+
+/* password meter */
+.pwmeter { display: flex; align-items: center; gap: 10px; margin: -2px 0 2px; }
+.pwbars { display: inline-flex; gap: 4px; flex: none; }
+.pwbars i { width: 34px; height: 5px; border-radius: 99px; background: var(--g3); transition: background .2s; }
+.pwmeter[data-score="1"] .pwbars i.on { background: var(--red-fg); }
+.pwmeter[data-score="2"] .pwbars i.on { background: var(--muted); }
+.pwmeter[data-score="3"] .pwbars i.on, .pwmeter[data-score="4"] .pwbars i.on { background: var(--accent-fg); }
+.pwmeter[data-score="0"] .pwbars i { background: var(--g3); }
+.pwmeter small { color: var(--muted); }
+
+/* composer extras */
+.cthumbs { display: flex; flex-wrap: wrap; gap: 8px; }
+.cthumb { position: relative; width: 72px; height: 72px; border-radius: var(--rad-m); overflow: hidden; border: 2px solid var(--g3); }
+.cthumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cthumb button { position: absolute; top: 3px; right: 3px; width: 22px; height: 22px; padding: 0; display: grid; place-items: center; border-radius: 50%; border: 0; background: var(--scrim-hi); color: var(--ink); cursor: pointer; }
+.filebtn.off { opacity: .5; cursor: not-allowed; }
+.laterbox { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 700; }
+.laterbox input { width: auto; }
+.draftnote { color: var(--muted); }
+.draftnote .link { color: var(--link-fg); text-decoration: underline; padding: 0; }
+.schedlist { padding: 8px 12px; display: grid; gap: 8px; }
+.schedlist ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.schedlist li { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.schedlist li small { color: var(--muted); overflow-wrap: anywhere; }
+/* several photos in one post: a swipeable strip */
+.pimgs { position: relative; min-width: 0; }
+.pslides { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; border-radius: 18px; outline-offset: 2px; }
+.pslides::-webkit-scrollbar { display: none; }
+.pslides .pslide { flex: 0 0 100%; min-width: 0; scroll-snap-align: center; scroll-snap-stop: always; border-radius: 0; }
+.pslideph { display: block; aspect-ratio: 4 / 3; }
+.pnav { position: absolute; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; padding: 0; display: grid; place-items: center; border-radius: 50%; border: 0; background: var(--scrim-hi); color: var(--ink); cursor: pointer; opacity: 0; transition: opacity .15s; }
+.pnav.l { left: 8px; } .pnav.r { right: 8px; }
+.pimgs:hover .pnav, .pnav:focus-visible { opacity: 1; }
+@media (hover: none) { .pnav { display: none; } }
+.pcount { position: absolute; top: 10px; right: 10px; padding: 2px 10px; border-radius: 999px; background: var(--scrim-hi); color: var(--ink); font-size: .8rem; font-weight: 800; pointer-events: none; }
+.pdots { position: absolute; bottom: 10px; left: 0; right: 0; display: flex; justify-content: center; gap: 6px; pointer-events: none; }
+.pdots i { width: 7px; height: 7px; border-radius: 50%; background: color-mix(in srgb, var(--ink) 40%, transparent); }
+.pdots i.on { background: var(--ink); }
+.lbimg { touch-action: pan-y; }
+
+/* notifications page (the list used to live inside the account menu) */
+.npanel { padding: 6px; }
+.npage .nlist { max-height: none; overflow: visible; list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.npage .nhead { display: flex; align-items: center; gap: 8px; padding: 6px 10px 8px; font-size: .82rem; font-weight: 700; color: var(--muted); text-transform: none; letter-spacing: 0; }
+.npage .nmarkall { margin-left: auto; }
+.nitem { position: relative; }
+.npage .nrow { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 8px 52px 8px 12px; background: none; border: 0; border-radius: var(--rad-m); text-align: left; color: var(--ink2); font-weight: 600; cursor: pointer; }
+.npage .nrow:hover { background: var(--hover); color: var(--ink); }
+.npage .nrow.new { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.npage .nrow.new:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.npage .nread { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; padding: 0; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--g3); background: var(--g2); color: var(--muted); cursor: pointer; }
+.npage .nread:hover { color: var(--ink); border-color: var(--g4); background: var(--hover); }
+.mcount { margin-left: auto; min-width: 20px; padding: 1px 7px; border-radius: 999px; background: var(--accent); color: var(--on-accent); font-size: .72rem; font-style: normal; font-weight: 800; line-height: 18px; text-align: center; }
+
+/* settings page */
+.settings { display: grid; gap: 10px; align-content: start; }
+.settings h2 { margin: 0 0 4px; }
+.sgroup { padding: 0; overflow: hidden; }
+.srow { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; }
+.srow + .srow { border-top: 1px solid var(--g3); }
+.srow b { display: block; }
+.srow small { display: block; margin-top: 2px; color: var(--muted); line-height: 1.35; }
+.srow button { flex: none; }
+
+/* chat extras */
+.chatfind { position: relative; margin: 0 0 8px; }
+.chatfind input { width: 100%; }
+.fresults { margin-top: 6px; border: 1px solid var(--g3); border-radius: var(--rad-m); background: var(--g1); max-height: 280px; overflow-y: auto; display: grid; }
+.fresults > p { margin: 0; padding: 10px 12px; }
+.fresults button { text-align: left; display: grid; gap: 2px; padding: 8px 12px; background: none; border: 0; border-bottom: 1px solid var(--g3); cursor: pointer; }
+.fresults button:last-child { border-bottom: 0; }
+.fresults button:hover { background: var(--hover); }
+.fresults button span { color: var(--ink2); overflow-wrap: anywhere; }
+.fresults button small { color: var(--muted); }
+.cthread > .chatfind { margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--g3); }
+.findbtn { margin-left: auto; }
+.pinbar { display: flex; gap: 8px; align-items: flex-start; padding: 6px 12px; border-bottom: 1px solid var(--g3); background: var(--g2); color: var(--muted); font-size: .9rem; }
+.pinbar > svg { flex: none; margin-top: 3px; }
+.pinbar > div { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.pinbar button { text-align: left; background: none; border: 0; padding: 2px 0; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.pinbar button:hover { color: var(--ink); }
+.pinbtn.on { opacity: 1; color: var(--accent-fg); }
+.typing { display: flex; align-items: center; gap: 8px; padding: 2px 14px 6px; color: var(--muted); font-size: .85rem; }
+.tdots { display: inline-flex; gap: 3px; }
+.tdots i { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); animation: tdot 1s infinite ease-in-out; }
+.tdots i:nth-child(2) { animation-delay: .15s; } .tdots i:nth-child(3) { animation-delay: .3s; }
+@keyframes tdot { 0%, 80%, 100% { opacity: .3; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) { .tdots i { animation: none; opacity: .7; } }
+.bcol .seen { align-self: flex-end; color: var(--muted); font-size: .75rem; padding: 2px 4px 0; }
+
+
+.shead { margin: 12px 0 0; font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }

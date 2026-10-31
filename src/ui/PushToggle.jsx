@@ -1,24 +1,26 @@
 import { useEffect, useState } from 'react';
-import { BellRinging, BellSlash } from '@phosphor-icons/react';
 import { pushStatus, enablePush, disablePush } from './push.js';
 
-/** One line in the account menu: turn push notifications on or off for this device. Hidden where push cannot work. */
+/** Settings row: push notifications on this device. It never vanishes silently; when push cannot work it says why. */
 export default function PushToggle({ notify }) {
   const [st, setSt] = useState(null); const [busy, setBusy] = useState(false);
   useEffect(() => { pushStatus().then(setSt).catch(() => setSt('unsupported')); }, []);
-  if (!st || st === 'noconfig' || st === 'unsupported') return null;
-  if (st === 'install') return <p className="muted pushhint">To get notifications on iPhone: tap Share, then “Add to Home Screen”, and open fiiyou from there.</p>;
-  if (st === 'denied') return <p className="muted pushhint">Notifications are blocked for this site. Allow them in your browser’s site settings to turn them on.</p>;
-  const on = st === 'on';
   const toggle = async () => {
     setBusy(true);
     try {
-      if (on) { await disablePush(); setSt('off'); notify('Push notifications off'); }
+      if (st === 'on') { await disablePush(); setSt('off'); notify('Push notifications off'); }
       else { await enablePush(); setSt('on'); notify('Push notifications on'); }
-    } catch (e) { if (e?.message === 'denied') setSt('denied'); else notify('Could not change notifications', 'err'); }
+    } catch (e) { if (e?.message === 'denied') setSt('denied'); else notify(`Could not turn notifications on: ${e?.message || 'unknown error'}`, 'err'); }
     setBusy(false);
   };
-  return (<button type="button" role="menuitem" disabled={busy} onClick={toggle}>
-    {on ? <BellSlash size={18} weight="bold" aria-hidden="true" /> : <BellRinging size={18} weight="bold" aria-hidden="true" />}
-    {on ? 'Turn off push notifications' : 'Turn on push notifications'}</button>);
+  const text = {
+    noconfig: 'Not set up on this server yet (the site was built without a VAPID key, see docs/PUSH_SETUP.md).',
+    unsupported: 'This browser cannot show push notifications.',
+    install: 'On iPhone: tap Share, then “Add to Home Screen”, and open fiiyou from there.',
+    denied: 'Blocked for this site. Allow notifications in your browser’s site settings.',
+    off: 'Get a notification on this device when someone likes, comments or messages you.',
+    on: 'On for this device.',
+  }[st];
+  return (<div className="srow"><div><b>Push notifications</b><small>{text || 'Checking…'}</small></div>
+    {(st === 'on' || st === 'off') && <button type="button" className={st === 'on' ? 'ghost sm' : 'primary sm'} disabled={busy} onClick={toggle}>{st === 'on' ? 'Turn off' : 'Turn on'}</button>}</div>);
 }
