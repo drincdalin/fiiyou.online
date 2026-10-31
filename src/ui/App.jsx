@@ -27,6 +27,7 @@ import NotificationsView, { NotificationList, useNotifCount } from './Notificati
 import SettingsView from './SettingsView.jsx';
 import { PasswordMeter } from './PasswordMeter.jsx';
 import { registerSW, forgetDevice, syncPush } from './push.js';
+import GithubActivity from './GithubActivity.jsx';
 import { Bell, Eye, EyeSlash, Check, GearSix, Heart, MagnifyingGlass, PencilSimple, ShareNetwork, SignOut, Trash, UserPlus } from '@phosphor-icons/react';
 
 const BASE = import.meta.env.BASE_URL;
@@ -247,6 +248,7 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
         </aside>
         <div className="divider" />
         <div className="cards" ref={cardsRef}>{flowShown.map((c) => <CardView key={c.id} c={c} d={d} img={img} go={go} openPhoto={setLb} own={own} meName={meName} notify={notify}>{stickersOn(c.id)}</CardView>)}
+          {profile.github_repo && <div className="cw"><GithubActivity repo={profile.github_repo} /></div>}
           {stickersOn(null)}</div>
       {stickersOn('frame')}
       </main>

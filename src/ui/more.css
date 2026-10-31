@@ -151,3 +151,43 @@
   .nav .more .menu .ntxt > span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
   .nav .more .menu .nav2 { flex: none; }
 }
+
+/* ---- official account: GitHub card (commits, contributors ranked by commits, latest commits) ---- */
+.gh .ghhead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.gh .ghrepo { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; font-size: .8em; font-weight: 500; color: inherit; opacity: .75; text-decoration: none; }
+.gh .ghrepo:hover, .gh .ghall:hover { opacity: 1; text-decoration: underline; }
+.gh .ghstats { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 2px 0 10px; opacity: .85; }
+.gh .ghstats b { font-size: 1.35em; font-weight: 800; color: var(--accent); margin-right: 4px; }
+.gh .ghsub { margin: 14px 0 6px; font-size: .78em; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; opacity: .65; }
+.gh .ghpeople { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.gh .ghp { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; min-width: 0; }
+.gh .ghp:hover .ghname { text-decoration: underline; }
+.gh .ghrank { flex: none; width: 1.4em; text-align: center; font-weight: 800; opacity: .6; }
+.gh .ghpeople li:nth-child(-n+3) .ghrank { opacity: 1; color: var(--accent); }
+.gh .ghp img, .gh .ghp i { flex: none; width: 28px; height: 28px; border-radius: 50%; object-fit: cover; background: color-mix(in srgb, currentColor 15%, transparent); }
+.gh .ghname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.gh .ghn { flex: none; font-variant-numeric: tabular-nums; font-weight: 800; }
+.gh .ghbar { display: block; height: 4px; margin: 4px 0 0 calc(1.4em + 38px); border-radius: 99px; background: color-mix(in srgb, currentColor 12%, transparent); overflow: hidden; }
+.gh .ghbar i { display: block; height: 100%; border-radius: 99px; background: var(--accent); }
+.gh .ghmore { margin-top: 8px; }
+.gh .ghall { display: inline-flex; align-items: center; gap: 4px; margin-top: 12px; font-size: .85em; font-weight: 700; color: inherit; opacity: .8; text-decoration: none; }
+/* the square commit graph */
+.gh { --ghc: 11px; --ghg: 3px; }
+.gh .ghtotal { margin: 2px 0 8px; opacity: .85; } .gh .ghtotal b { font-size: 1.15em; font-weight: 800; }
+.gh .ghcal { display: flex; gap: 6px; align-items: flex-start; }
+.gh .ghdow { flex: none; display: grid; grid-template-rows: repeat(7, var(--ghc)); gap: var(--ghg); margin-top: calc(14px + var(--ghg)); font-size: 10px; line-height: var(--ghc); opacity: .65; }
+.gh .ghdow span:nth-child(1) { grid-row: 2; } .gh .ghdow span:nth-child(2) { grid-row: 4; } .gh .ghdow span:nth-child(3) { grid-row: 6; }
+.gh .ghscroll { min-width: 0; overflow-x: auto; padding-bottom: 4px; overscroll-behavior-x: contain; }
+.gh .ghmonths { display: grid; grid-auto-flow: column; gap: var(--ghg); height: 14px; margin-bottom: var(--ghg); font-size: 10px; line-height: 14px; opacity: .65; }
+.gh .ghmonths span { white-space: nowrap; overflow: visible; }
+.gh .ghgrid { display: grid; grid-template-rows: repeat(7, var(--ghc)); grid-auto-flow: column; grid-auto-columns: var(--ghc); gap: var(--ghg); width: max-content; }
+.gh .ghc { display: block; width: var(--ghc); height: var(--ghc); border-radius: 2px; background: color-mix(in srgb, currentColor 11%, transparent); }
+.gh .ghc.off { visibility: hidden; }
+.gh .ghc.l1 { background: color-mix(in srgb, var(--accent) 30%, transparent); }
+.gh .ghc.l2 { background: color-mix(in srgb, var(--accent) 52%, transparent); }
+.gh .ghc.l3 { background: color-mix(in srgb, var(--accent) 76%, transparent); }
+.gh .ghc.l4 { background: var(--accent); }
+.gh .ghlegend { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 6px; font-size: 10px; opacity: .75; }
+.gh .ghlegend .ghc { display: inline-block; }
+.gh .ghlegend .ghc:first-of-type { margin-left: 4px; } .gh .ghlegend .ghc:last-of-type { margin-right: 4px; }
+.gh .ghstats { margin-top: 14px; }
