@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { repoActivity } from '../api/github.js';
 import './githubActivity.css';
 
@@ -6,7 +6,6 @@ import './githubActivity.css';
 
 const DAY = 86400000;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const MIN_WEEKS = 16;
 
 const level = (n, max) => {
   if (!n) return 0;
@@ -18,10 +17,7 @@ const label = (ms) => new Date(ms).toLocaleDateString('en-US', { month: 'short',
 /** GitHub's weeks (UTC Sundays, 52 of them) -> only the weeks worth showing, with a cell per day. */
 function buildGrid(weeks) {
   const now = Date.now();
-  let from = weeks.findIndex((w) => w.days.some((n) => n > 0));
-  if (from < 0) from = weeks.length - MIN_WEEKS;
-  from = Math.max(0, Math.min(from, weeks.length - MIN_WEEKS));
-  const shown = weeks.slice(from);
+  const shown = weeks;
 
   let max = 0, total = 0, lastMonth = -1;
   shown.forEach((w) => w.days.forEach((n) => { max = Math.max(max, n); total += n; }));
@@ -52,6 +48,8 @@ export default function GithubActivity({ repo }) {
   }, [repo]);
 
   const grid = useMemo(() => (data?.weeks ? buildGrid(data.weeks) : null), [data]);
+  const scroller = useRef(null);
+  useEffect(() => { if (scroller.current) scroller.current.scrollLeft = scroller.current.scrollWidth; }, [grid]);   // newest weeks in view on small screens
 
   if (err) {
     return (
@@ -87,12 +85,12 @@ export default function GithubActivity({ repo }) {
       <ul className="gha__stats">
         <li><strong>{data.commits}</strong> commits</li>
         <li><strong>{data.contributors.length}</strong> contributors</li>
-        {grid && <li><strong>{grid.total}</strong> in the last {grid.count} weeks</li>}
+        {grid && <li><strong>{grid.total}</strong> commits in the last year</li>}
       </ul>
 
       {grid ? (
-        <>
-          <div className="gha__scroll">
+        <div className="gha__box">
+          <div className="gha__scroll" ref={scroller}>
             <div className="gha__graph" style={{ '--weeks': grid.count }}>
               <div className="gha__months" aria-hidden="true">
                 {grid.months.map((m) => <span key={m.col} style={{ gridColumn: m.col + 1 }}>{m.text}</span>)}
@@ -100,7 +98,7 @@ export default function GithubActivity({ repo }) {
               <div className="gha__days" aria-hidden="true">
                 <span style={{ gridRow: 2 }}>Mon</span><span style={{ gridRow: 4 }}>Wed</span><span style={{ gridRow: 6 }}>Fri</span>
               </div>
-              <div className="gha__grid" role="img" aria-label={`${grid.total} commits in the last ${grid.count} weeks`}>
+              <div className="gha__grid" role="img" aria-label={`${grid.total} commits in the last year`}>
                 {grid.cols.map((col) => col.map((c) => (
                   c.future
                     ? <span key={c.key} className="gha__cell gha__cell--none" />
@@ -112,7 +110,7 @@ export default function GithubActivity({ repo }) {
           <div className="gha__legend" aria-hidden="true">
             <span>Less</span>{[0, 1, 2, 3, 4].map((l) => <span key={l} className={`gha__cell l${l}`} />)}<span>More</span>
           </div>
-        </>
+        </div>
       ) : (
         <p className="gha__note">GitHub is still preparing the activity graph. Reload in a minute.</p>
       )}

@@ -185,3 +185,47 @@
 .gha__cell--none { background: transparent; outline: none; }
 .gha__note { margin: 4px 0 0; color: #8b949e; font-size: 0.9rem; }
 .gha > .gha__title { margin-bottom: 8px; }
+
+/* ---- beat the app's global link styles ---- */
+.gha a.gha__repo, .gha a.gha__more { color: #8b949e; text-decoration: none; }
+.gha a.gha__repo:hover, .gha a.gha__more:hover { color: var(--gh-4); text-decoration: underline; }
+.gha a.gha__login { color: #e6edf3; text-decoration: none; }
+.gha a.gha__login:hover { color: var(--gh-4); }
+
+/* ---- tighter contributor rows, heat map left-aligned ---- */
+.gha__people { margin-top: 20px; gap: 12px; }
+.gha__people li { row-gap: 6px; }
+.gha__graph { margin-inline: 0; }
+.gha__legend { justify-content: flex-start; }
+
+/* classic GitHub contribution box */
+.gha__scroll { padding: 14px 16px 10px; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; }
+.gha__legend { padding: 0 4px; }
+
+/* ---- fit the graph to the panel instead of a fixed pixel width ---- */
+.gha .gha__scroll { width: fit-content; max-width: 100%; }
+.gha .gha__graph {
+  --gap: 3px;
+  width: 760px;              /* about 13px cells at 100% zoom; shrinks with the panel */
+  max-width: 100%;
+  min-width: 560px;          /* narrower than this the box scrolls sideways instead */
+  grid-template-columns: 30px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+}
+.gha .gha__months { grid-template-columns: repeat(var(--weeks), minmax(0, 1fr)); column-gap: var(--gap); }
+.gha .gha__grid {
+  grid-template-columns: repeat(var(--weeks), minmax(0, 1fr));
+  grid-template-rows: repeat(7, auto);
+  grid-auto-columns: auto;
+  gap: var(--gap);
+}
+.gha .gha__grid .gha__cell { width: 100%; height: auto; aspect-ratio: 1; }
+.gha .gha__days { grid-template-rows: repeat(7, 1fr); row-gap: var(--gap); line-height: 1; align-items: center; }
+.gha .gha__days span { align-self: center; }
+
+/* ---- final layout: graph fills the panel like on github.com, legend inside the box ---- */
+.gha .gha__box { border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 14px 16px 10px; }
+.gha .gha__scroll { width: 100%; border: 0; padding: 0; border-radius: 0; }
+.gha .gha__graph { width: 100%; max-width: none; min-width: 640px; }
+.gha .gha__legend { justify-content: flex-end; margin-top: 10px; padding: 0; }
+.gha .gha__legend .gha__cell { width: 12px; height: 12px; }
