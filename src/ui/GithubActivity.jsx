@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { repoActivity } from '../lib/github.js';
+import { repoActivity } from '../api/github.js';
 import './githubActivity.css';
 
 // Drop-in replacement for src/ui/GithubActivity.jsx. Same default export and the same `repo` prop that App.jsx already passes.
-// NOTE: the import path of github.js is a guess ('../lib/github.js'). Change it to wherever github.js lives.
 
 const DAY = 86400000;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
