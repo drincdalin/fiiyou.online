@@ -48,13 +48,14 @@ export function useNotifCount(meId) {
 }
 
 /** The list that sits inside the account menu. `onRead(remainingUnread)` keeps the badge in step. */
-export function NotificationList({ go, notify, tick, onRead }) {
+export function NotificationList({ go, notify, tick, onRead, limit }) {
   const [rows, setRows] = useState(null);
   const load = useCallback(() => social.listNotifications().then((r) => setRows(r || [])).catch(() => { setRows((x) => x || []); notify('Could not load notifications', 'err'); }), []);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [tick]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const groups = useMemo(() => groupNotifications(rows || []), [rows]);
   const img = useImages(groups.map((g) => g.latest.actor?.avatar_path));
+  const shown = limit ? groups.slice(0, limit) : groups;   // the account menu shows the latest few; the page shows all
   const unreadTotal = (rows || []).filter((r) => !r.read).length;
 
   // optimistic: mark in the list first, ask the database, put it back if that fails
@@ -81,13 +82,14 @@ export function NotificationList({ go, notify, tick, onRead }) {
     <div className="nhead">{unreadTotal > 0 ? `${unreadTotal} unread` : 'All caught up'}
       {unreadTotal > 0 && <button type="button" className="ghost sm nmarkall" onClick={markAll}>Mark all as read</button>}</div>
     {!rows ? <div className="boot">…</div> : !groups.length ? <p className="muted nempty">Nothing yet. Likes, replies and mentions will show up here.</p>
-      : <ul className="nlist">{groups.map((g) => { const [Icon, single] = KINDS[g.type] || [Bell, 'did something']; const text = g.targetCount > 1 && PLURAL[g.type] ? PLURAL[g.type] : single; const r = g.latest; const count = g.rows.length; return (
+      : <ul className="nlist">{shown.map((g) => { const [Icon, single] = KINDS[g.type] || [Bell, 'did something']; const text = g.targetCount > 1 && PLURAL[g.type] ? PLURAL[g.type] : single; const r = g.latest; const count = g.rows.length; return (
         <li key={g.key} className="nitem">
           <button type="button" className={`nrow${g.unread ? ' new' : ''}`} onClick={() => visit(g)}>
             <span className="nav2"><Avatar src={img[r.actor?.avatar_path]} size={36} /><i className="nic"><Icon size={10} weight="fill" aria-hidden="true" /></i></span>
             <span className="ntxt"><span><b>{actorsLabel(g.actors)}</b>{g.actors.length === 1 && g.actors[0].official && <Verified />} {text}{count > g.actors.length && g.actors.length === 1 && g.targetCount <= 1 ? ` (${count})` : ''}</span><small>{ago(r.created_at)}</small></span></button>
           {g.unread && <button type="button" className="nread" aria-label="Mark as read" title="Mark as read" onClick={() => markIds(g.unreadIds)}><Check size={14} weight="bold" aria-hidden="true" /></button>}
         </li>); })}</ul>}
+    {limit && groups.length > limit && <button type="button" className="nseeall" onClick={() => go('notifications')}>See all notifications</button>}
   </section>);
 }
 

@@ -113,3 +113,46 @@
 .composer .crow > .ghost.sm { padding: 0 1.1rem; }
 .composer .crow > .primary { padding: 0 1.4rem; }
 .cm > .ghost.sm, .gb > .ghost.sm { min-height: 0; padding: 0; }
+
+/* ---- nav icons: same box, same optical size; the unread badge floats on the corner and never touches the icon ---- */
+.navlinks .navicw { position: relative; display: grid; place-items: center; width: 1.6em; height: 1.6em; flex: none; }
+.navlinks .navicw .navic { width: 1.4em; height: 1.4em; flex: none; transition: transform .2s var(--ease); }
+.navlinks .navic-messages { transform: scale(1.12); }   /* the round bubble looks smaller than the house or the pin at the same size */
+.navlinks .navic-map { transform: scale(1.04); }
+.navlinks .navic-people { transform: scale(.95); }
+.navlinks button:hover .navic { transform: scale(1.08); }
+.navlinks button:hover .navic-messages { transform: scale(1.2); }
+.navlinks .navicw .dotb { position: absolute; top: -6px; right: -9px; margin: 0; min-width: 17px; line-height: 17px; animation: dotpop .22s var(--ease); pointer-events: none; }
+@keyframes dotpop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .navlinks .navicw .navic, .navlinks .navicw .dotb { transition: none; animation: none; } }
+
+/* ---- notifications inside the account menu: only the list scrolls, never the whole menu ---- */
+.nav .more .menu .nsec .nlist { max-height: min(320px, 40dvh); overflow-y: auto; overscroll-behavior: contain; }
+.menu .nseeall { justify-content: center; margin-top: 2px; color: var(--accent-fg); font-weight: 700; }
+@media (max-width: 700px) {
+  .nav .more .menu { display: flex; flex-direction: column; overflow: hidden; max-height: calc(100dvh - var(--nav-h) - 20px); }
+  .nav .more .menu > * { flex: none; }
+  .nav .more .menu > .nsec { flex: 0 1 auto; min-height: 0; }
+  .nav .more .menu .nsec .nlist { max-height: min(30dvh, 220px); }
+  .nav .more .menu .nrow { min-height: 50px; padding-top: 5px; padding-bottom: 5px; }
+  .nav .more .menu .mhead { padding: .4rem .55rem; }
+  .nav .more .menu .msep { margin: 4px 4px; }
+  .nav .more .menu > button:not(.mhead) { padding: .55rem .8rem; }
+  .npage .nhead { padding-top: 2px; padding-bottom: 4px; }
+}
+
+/* ---- phone: a compact card, not a wide sheet ---- */
+@media (max-width: 700px) {
+  .nav .more .menu { width: min(290px, calc(100vw - 16px)); min-width: 0; max-width: calc(100vw - 16px); padding: 6px; font-size: .9rem; }
+  .nav .more .menu button, .nav .more .menu .nrow { white-space: normal; font-size: .9rem; }
+  .nav .more .menu > button:not(.mhead) { white-space: nowrap; }
+  .nav .more .menu .nsec, .nav .more .menu .nlist, .nav .more .menu .nitem { min-width: 0; max-width: 100%; }
+  .nav .more .menu .nsec .nlist { overflow-x: hidden; }
+  .nav .more .menu .nrow { gap: 8px; padding-left: 8px; padding-right: 40px; }
+  .nav .more .menu .ntxt { min-width: 0; overflow: hidden; line-height: 1.25; }
+  .nav .more .menu .ntxt > span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  .nav .more .menu .nav2 { flex: none; }
+  .nav .more .menu .npage .nread { right: 6px; width: 26px; height: 26px; }
+  .nav .more .menu .nhead { font-size: .78rem; }
+  .nav .more .menu .nmarkall { padding: .2rem .6rem; min-height: 30px; font-size: .8rem; }
+}

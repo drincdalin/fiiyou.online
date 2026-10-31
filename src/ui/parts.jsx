@@ -208,5 +208,5 @@ function ScheduledList({ version, notify }) {
 const NAV_ICONS = { home: House, profile: User, map: MapPin, messages: ChatCircle, people: UsersThree, admin: ShieldCheck };
 export function NavIcon({ name, active }) {
   const Icon = NAV_ICONS[name];
-  return <Icon className="navic" size="1.4em" weight={active ? 'fill' : 'regular'} aria-hidden="true" />;
+  return <Icon className={`navic navic-${name}`} size="1.4em" weight={active ? 'fill' : 'regular'} aria-hidden="true" />;
 }
