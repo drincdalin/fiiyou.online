@@ -1,68 +1,136 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { GithubLogo, ArrowSquareOut } from '@phosphor-icons/react';
-import { repoActivity } from '../api/github.js';
+import { useEffect, useMemo, useState } from 'react';
+import { repoActivity } from '../lib/github.js';
+import './githubActivity.css';
 
+// Drop-in replacement for src/ui/GithubActivity.jsx. Same default export and the same `repo` prop that App.jsx already passes.
+// NOTE: the import path of github.js is a guess ('../lib/github.js'). Change it to wherever github.js lives.
+
+const DAY = 86400000;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const fmt = (ts) => new Date(ts * 1000).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+const MIN_WEEKS = 16;
 
-/** The GitHub-style square graph: one column per week (oldest left), one row per weekday (Sunday on top), darker = more commits that day. */
-function CommitGraph({ weeks }) {
-  const sc = useRef(null);
-  const today = Math.floor(Date.now() / 1000);
-  const { total, max, labels } = useMemo(() => {
-    let t = 0; let m = 0; const l = []; let prev = -1;
-    weeks.forEach((w, i) => {
-      w.days.forEach((n) => { t += n; if (n > m) m = n; });
-      const mon = new Date(w.start * 1000).getUTCMonth();
-      if (mon !== prev && i < weeks.length - 1) l.push({ col: i + 1, text: MONTHS[mon] });   // the month name sits over the first week that starts in it
-      prev = mon;
+const level = (n, max) => {
+  if (!n) return 0;
+  const r = n / max;
+  return r <= 0.25 ? 1 : r <= 0.5 ? 2 : r <= 0.75 ? 3 : 4;
+};
+const label = (ms) => new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+
+/** GitHub's weeks (UTC Sundays, 52 of them) -> only the weeks worth showing, with a cell per day. */
+function buildGrid(weeks) {
+  const now = Date.now();
+  let from = weeks.findIndex((w) => w.days.some((n) => n > 0));
+  if (from < 0) from = weeks.length - MIN_WEEKS;
+  from = Math.max(0, Math.min(from, weeks.length - MIN_WEEKS));
+  const shown = weeks.slice(from);
+
+  let max = 0, total = 0, lastMonth = -1;
+  shown.forEach((w) => w.days.forEach((n) => { max = Math.max(max, n); total += n; }));
+
+  const months = [];
+  const cols = shown.map((w, col) => {
+    const startMs = w.start * 1000;
+    const m = new Date(startMs).getUTCMonth();
+    if (m !== lastMonth) { months.push({ col, text: MONTHS[m] }); lastMonth = m; }
+    return Array.from({ length: 7 }, (_, d) => {
+      const ms = startMs + d * DAY;
+      const n = w.days[d] || 0;
+      return { key: `${w.start}-${d}`, future: ms > now, n, lvl: level(n, max), title: `${n ? `${n} commit${n === 1 ? '' : 's'}` : 'No commits'} on ${label(ms)}` };
     });
-    return { total: t, max: m, labels: l };
-  }, [weeks]);
-  useEffect(() => { if (sc.current) sc.current.scrollLeft = sc.current.scrollWidth; }, [weeks]);   // phones: start at today, scroll back for older weeks
-  const level = (n) => (n <= 0 ? 0 : Math.min(4, Math.ceil((n / max) * 4)));
-
-  return (<div className="ghgraph">
-    <p className="ghtotal"><b>{total.toLocaleString('en')}</b> commit{total === 1 ? '' : 's'} in the last year</p>
-    <div className="ghcal">
-      <div className="ghdow" aria-hidden="true"><span>Mon</span><span>Wed</span><span>Fri</span></div>
-      <div className="ghscroll" ref={sc}>
-        <div className="ghmonths" aria-hidden="true" style={{ gridTemplateColumns: `repeat(${weeks.length}, var(--ghc))` }}>{labels.map((m) => <span key={m.col} style={{ gridColumn: m.col }}>{m.text}</span>)}</div>
-        <div className="ghgrid" role="img" aria-label={`${total} commits in the last year`}>
-          {weeks.flatMap((w) => w.days.map((n, d) => { const ts = w.start + d * 86400; return ts > today
-            ? <i key={ts} className="ghc off" />
-            : <i key={ts} className={`ghc l${level(n)}`} title={`${n ? `${n} commit${n === 1 ? '' : 's'}` : 'No commits'} on ${fmt(ts)}`} />; }))}
-        </div>
-      </div>
-    </div>
-    <div className="ghlegend" aria-hidden="true">Less<i className="ghc l0" /><i className="ghc l1" /><i className="ghc l2" /><i className="ghc l3" /><i className="ghc l4" />More</div>
-  </div>);
+  });
+  return { cols, months, total, count: shown.length };
 }
 
-/** The official account's GitHub card: commit graph for the last year, total commits, and contributors ranked by their number of commits.
- *  Shown on any profile whose github_repo is set (only the dashboard can set it, see 0031_official_github.sql). */
 export default function GithubActivity({ repo }) {
-  const [d, setD] = useState(null); const [err, setErr] = useState(null); const [all, setAll] = useState(false);
-  const load = useCallback(() => { setErr(null); setD(null); repoActivity(repo).then(setD).catch((e) => setErr(e)); }, [repo]);
-  useEffect(() => { load(); }, [load]);
+  const [data, setData] = useState(null);
+  const [err, setErr] = useState(null);
 
-  const top = d?.contributors[0]?.count || 1;
-  const list = d ? (all ? d.contributors : d.contributors.slice(0, 5)) : [];
-  return (<section className="card gh" aria-label="GitHub activity">
-    <h2 className="ghhead"><GithubLogo size={18} weight="fill" aria-hidden="true" />Built in the open
-      <a className="ghrepo" href={`https://github.com/${repo}`} target="_blank" rel="noopener noreferrer">{repo}<ArrowSquareOut size={12} weight="bold" aria-hidden="true" /></a></h2>
-    {err ? <p className="muted">{err.message === 'rate_limit' ? 'GitHub is busy right now. ' : 'Could not load GitHub activity. '}<button type="button" className="link" onClick={load}>Try again</button></p>
-      : !d ? <p className="muted">Loading…</p> : (<>
-        {d.weeks ? <CommitGraph weeks={d.weeks} /> : <p className="muted">GitHub is still preparing the commit graph. <button type="button" className="link" onClick={load}>Check again</button></p>}
-        <div className="ghstats"><span><b>{d.commits.toLocaleString('en')}</b> commit{d.commits === 1 ? '' : 's'} in total</span><span><b>{d.contributors.length}</b> contributor{d.contributors.length === 1 ? '' : 's'}</span></div>
-        <h3 className="ghsub">Contributors</h3>
-        <ol className="ghpeople">{list.map((p, i) => (<li key={p.login}>
-          <a href={p.url || undefined} target="_blank" rel="noopener noreferrer" className="ghp">
-            <span className="ghrank">{i + 1}</span>{p.avatar ? <img src={`${p.avatar}${p.avatar.includes('?') ? '&' : '?'}s=64`} alt="" loading="lazy" /> : <i />}
-            <span className="ghname">{p.login}</span><span className="ghn">{p.count.toLocaleString('en')}</span></a>
-          <span className="ghbar" aria-hidden="true"><i style={{ width: `${Math.max(4, Math.round((p.count / top) * 100))}%` }} /></span></li>))}</ol>
-        {d.contributors.length > 5 && <button type="button" className="link ghmore" onClick={() => setAll(!all)}>{all ? 'Show fewer' : `Show all ${d.contributors.length}`}</button>}
-        <a className="ghall" href={`${d.url}/commits`} target="_blank" rel="noopener noreferrer">Full commit history on GitHub<ArrowSquareOut size={12} weight="bold" aria-hidden="true" /></a>
-      </>)}
-  </section>);
+  useEffect(() => {
+    let live = true;
+    setData(null); setErr(null);
+    repoActivity(repo).then((d) => live && setData(d)).catch((e) => live && setErr(e.message || 'failed'));
+    return () => { live = false; };
+  }, [repo]);
+
+  const grid = useMemo(() => (data?.weeks ? buildGrid(data.weeks) : null), [data]);
+
+  if (err) {
+    return (
+      <section className="gha">
+        <h3 className="gha__title">Built in the open</h3>
+        <p className="gha__note">{err === 'rate_limit' ? 'GitHub is limiting requests right now. Try again in a few minutes.' : 'Couldn’t load the repository activity.'}</p>
+      </section>
+    );
+  }
+  if (!data) {
+    return (
+      <section className="gha" aria-busy="true">
+        <h3 className="gha__title">Built in the open</h3>
+        <p className="gha__note">Loading…</p>
+      </section>
+    );
+  }
+
+  const top = data.contributors[0]?.count || 1;
+
+  return (
+    <section className="gha" aria-labelledby="gha-title">
+      <header className="gha__head">
+        <h3 id="gha-title" className="gha__title">
+          <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" fill="currentColor">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
+          </svg>
+          Built in the open
+        </h3>
+        {data.url && <a className="gha__repo" href={data.url} target="_blank" rel="noreferrer noopener">{data.repo}</a>}
+      </header>
+
+      <ul className="gha__stats">
+        <li><strong>{data.commits}</strong> commits</li>
+        <li><strong>{data.contributors.length}</strong> contributors</li>
+        {grid && <li><strong>{grid.total}</strong> in the last {grid.count} weeks</li>}
+      </ul>
+
+      {grid ? (
+        <>
+          <div className="gha__scroll">
+            <div className="gha__graph" style={{ '--weeks': grid.count }}>
+              <div className="gha__months" aria-hidden="true">
+                {grid.months.map((m) => <span key={m.col} style={{ gridColumn: m.col + 1 }}>{m.text}</span>)}
+              </div>
+              <div className="gha__days" aria-hidden="true">
+                <span style={{ gridRow: 2 }}>Mon</span><span style={{ gridRow: 4 }}>Wed</span><span style={{ gridRow: 6 }}>Fri</span>
+              </div>
+              <div className="gha__grid" role="img" aria-label={`${grid.total} commits in the last ${grid.count} weeks`}>
+                {grid.cols.map((col) => col.map((c) => (
+                  c.future
+                    ? <span key={c.key} className="gha__cell gha__cell--none" />
+                    : <span key={c.key} className={`gha__cell l${c.lvl}`} title={c.title} />
+                )))}
+              </div>
+            </div>
+          </div>
+          <div className="gha__legend" aria-hidden="true">
+            <span>Less</span>{[0, 1, 2, 3, 4].map((l) => <span key={l} className={`gha__cell l${l}`} />)}<span>More</span>
+          </div>
+        </>
+      ) : (
+        <p className="gha__note">GitHub is still preparing the activity graph. Reload in a minute.</p>
+      )}
+
+      <ol className="gha__people">
+        {data.contributors.map((p, i) => (
+          <li key={p.login}>
+            <span className="gha__rank">{i + 1}</span>
+            {p.avatar ? <img className="gha__avatar" src={p.avatar} alt="" width="32" height="32" loading="lazy" /> : <span className="gha__avatar gha__avatar--empty" aria-hidden="true" />}
+            {p.url ? <a className="gha__login" href={p.url} target="_blank" rel="noreferrer noopener">{p.login}</a> : <span className="gha__login">{p.login}</span>}
+            <span className="gha__count">{p.count}</span>
+            <span className="gha__bar" aria-hidden="true"><span style={{ width: `${Math.max(4, (p.count / top) * 100)}%` }} /></span>
+          </li>
+        ))}
+      </ol>
+
+      {data.url && <a className="gha__more" href={`${data.url}/commits`} target="_blank" rel="noreferrer noopener">Full commit history on GitHub</a>}
+    </section>
+  );
 }
