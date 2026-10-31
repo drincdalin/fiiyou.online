@@ -24,6 +24,11 @@ Supabase Dashboard → Database → Webhooks → Create:
 - Type: Supabase Edge Function → `send-push` (or HTTP Request to the function's URL), method POST
 - HTTP header: `x-webhook-secret` = the same `WEBHOOK_SECRET` as above
 
+### 3b. A second webhook, for chat messages (required for message notifications)
+Chat messages are not rows in `public.notifications`, so the webhook above never sees them. Create another one:
+- Table: `public.messages`, event: **Insert**, same function `send-push`, same `x-webhook-secret` header.
+Then redeploy the function: `supabase functions deploy send-push --no-verify-jwt`.
+
 ## 4. Website
 Vercel → Environment Variables → `VITE_VAPID_PUBLIC_KEY` = the public key → redeploy.
 

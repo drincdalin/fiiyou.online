@@ -63,7 +63,7 @@ export default function SearchView({ me, go, notify, onInvite, initialQuery = ''
     if (sentTo(p.id)) return <small>Request sent</small>;
     return <button className="primary sm" onClick={() => act(() => friends.sendRequest(p.id), 'Request sent')}>Add</button>;
   };
-  const person = (p) => (<div className="row" key={p.id}><Avatar src={img[p.avatar_path]} size={44} />
+  const person = (p) => (<div className="row" key={p.id}><button type="button" className="who" aria-label="Open profile" onClick={() => go('profile', p.username)}><Avatar src={img[p.avatar_path]} size={44} /></button>
     <button className="link" onClick={() => go('profile', p.username)}>{p.display_name}<small>{[p.headline, lname(p.locality_id)].filter(Boolean).join(' · ') || `@${p.username}`}</small></button>{status(p)}</div>);
 
   const postList = (list) => list.map((p) => <PostCard key={p.id} p={p} me={me} img={img} go={go} onChange={change} onDelete={drop} notify={notify} />);

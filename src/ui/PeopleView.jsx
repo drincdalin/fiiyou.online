@@ -14,7 +14,7 @@ export function PeopleView({ me, go, notify, onInvite }) {
 
   const img = useImages([...(fl || []), ...inc.map((r) => r.from)].map((p) => p?.avatar_path));
   const act = (fn, msg) => fn().then(() => { notify(msg); loadF(); }).catch((e) => notify(friendlyError(e), 'err'));
-  const row = (p, extra) => (<div className="row" key={p.id}><Avatar src={img[p.avatar_path]} size={44} /><button className="link" onClick={() => go('profile', p.username)}>{p.display_name}<small>@{p.username}</small></button>{extra}</div>);
+  const row = (p, extra) => (<div className="row" key={p.id}><button type="button" className="who" aria-label="Open profile" onClick={() => go('profile', p.username)}><Avatar src={img[p.avatar_path]} size={44} /></button><button className="link" onClick={() => go('profile', p.username)}>{p.display_name}<small>@{p.username}</small></button>{extra}</div>);
 
   return (<div className="plain view"><div className="tabs">
     {[['discover', 'Discover'], ['friends', 'Friends'], ['requests', 'Requests']].map(([k, l]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l} {k === 'friends' && fl && <span className="count">{fl.length}</span>}{k === 'requests' && inc.length > 0 && <span className="count hot">{inc.length}</span>}</button>)}

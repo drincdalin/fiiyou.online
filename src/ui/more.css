@@ -99,3 +99,17 @@
 .sdanger .sico { color: var(--red-fg); background: color-mix(in srgb, var(--red) 14%, transparent); border-color: color-mix(in srgb, var(--red) 30%, var(--g3)); }
 .empty small { display: block; margin-top: 4px; }
 .sview { display: grid; gap: 14px; }
+
+/* ---- buttons: one size and one look wherever they sit next to each other ---- */
+.snaptop { width: 100%; color: inherit; cursor: pointer; text-align: left; }
+.snaptop:hover b { text-decoration: underline; }
+.who { cursor: pointer; flex: none; }
+.ghost.sm, .primary.sm { min-height: 38px; padding: .35rem 1rem; font-size: .95rem; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: var(--rad-m); }
+.ghost.sm { border: 1px solid var(--g3); background: var(--g1); color: var(--ink); }
+.ghost.sm:hover { border-color: var(--accent-fg); background: var(--g2); }
+.tabs > .ghost.sm, .tabs > .primary.sm { min-height: 42px; font-size: 1rem; }
+.composer .crow > .filebtn, .composer .crow > select, .composer .crow > .ghost.sm, .composer .crow > .primary { min-height: 42px; box-sizing: border-box; border-radius: var(--rad-m); }
+.composer .crow > .filebtn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 0 1.1rem; font-size: .95rem; border: 1px solid var(--g3); background: var(--g1); color: var(--ink); }
+.composer .crow > .ghost.sm { padding: 0 1.1rem; }
+.composer .crow > .primary { padding: 0 1.4rem; }
+.cm > .ghost.sm, .gb > .ghost.sm { min-height: 0; padding: 0; }
