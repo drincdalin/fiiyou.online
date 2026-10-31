@@ -8,7 +8,7 @@ import { ErrorState, friendlyError } from './errors.jsx';
  *  - nothing typed: trending hashtags + people to discover (random or newest, any locality)
  *  - something typed: people, posts and hashtags (people can be narrowed to a locality)
  *  Posts are the PUBLIC ones whose text contains the words; friends-only posts are never searched (see 0029_search_schedule_pins_images.sql). */
-export default function SearchView({ me, go, notify, onInvite, initialQuery = '', initialTag = '' }) {
+export default function SearchView({ me, go, notify, onInvite, initialQuery = '', initialTag = '', embedded = false }) {
   const [q, setQ] = useState(initialQuery); const [tag, setTag] = useState(initialTag);   // tag = a hashtag page; q = a text search
   const [tab, setTab] = useState('all'); const [loc, setLoc] = useState(''); const [locs, setLocs] = useState([]); const [mode, setMode] = useState('random');
   const [people, setPeople] = useState(null); const [tags, setTags] = useState(null); const [rows, setRows] = useState(null); const [cursor, setCursor] = useState(null); const [more, setMore] = useState(false);
@@ -20,7 +20,7 @@ export default function SearchView({ me, go, notify, onInvite, initialQuery = ''
   const loadF = useCallback(() => Promise.all([friends.listFriends().then(setFl), friends.incomingRequests().then(setInc), friends.outgoingRequests().then(setOut)]).catch(() => {}), []);
   useEffect(() => { posts.trendingTags(7, 8).then(setTrending).catch(() => {}); discover.listLocalities().then(setLocs).catch(() => {}); loadF(); }, [loadF]);
   // keep the address bar in step with what is shown (replace, so Back does not step through every keystroke)
-  useEffect(() => { try { const base = import.meta.env.BASE_URL.replace(/\/$/, ''); history.replaceState(null, '', tag ? `${base}/tag/${encodeURIComponent(tag)}` : term ? `${base}/search?q=${encodeURIComponent(term)}` : `${base}/search`); } catch { /* ignore */ } }, [tag, term]);
+  useEffect(() => { if (embedded) return; try { const base = import.meta.env.BASE_URL.replace(/\/$/, ''); history.replaceState(null, '', tag ? `${base}/tag/${encodeURIComponent(tag)}` : term ? `${base}/search?q=${encodeURIComponent(term)}` : `${base}/search`); } catch { /* ignore */ } }, [tag, term, embedded]);
 
   const loadDisc = useCallback(() => {
     const my = ++dseq.current; setDerr(null); setDisc(null);
@@ -71,9 +71,9 @@ export default function SearchView({ me, go, notify, onInvite, initialQuery = ''
   const none = !loading && !err && (searching || tag) && !(people?.length || tags?.length || rows?.length);
 
   const chip = (t) => <button key={t.tag} type="button" onClick={() => openTag(t.tag)}>#{t.tag} <span className="count">{Number(t.uses)}</span></button>;
-  return (<div className="plain view">
+  return (<div className={embedded ? 'sview' : 'plain view'}>
     <div className="inline" role="search">
-      <input autoFocus={!initialQuery && !initialTag} type="search" inputMode="search" enterKeyHint="search" value={tag ? `#${tag}` : q} maxLength={80} placeholder="Search people, posts and #hashtags"
+      <input autoFocus={!embedded && !initialQuery && !initialTag} type="search" inputMode="search" enterKeyHint="search" value={tag ? `#${tag}` : q} maxLength={80} placeholder="Search people, posts and #hashtags"
         aria-label="Search" onChange={(e) => { if (tag) setTag(''); setQ(e.target.value); setTab('all'); }} />
       {!tag && <select value={loc} onChange={(e) => setLoc(e.target.value)} aria-label="Show people from"><option value="">People: anywhere</option>{locs.map((l) => <option key={l.id} value={l.id}>People: {l.name}</option>)}</select>}
       {(q || tag) && <button type="button" className="ghost sm" onClick={() => { setQ(''); setTag(''); }}>Clear</button>}
