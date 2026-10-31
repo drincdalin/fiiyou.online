@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Bell, Check, Heart, ChatCircle, UserPlus, UsersThree, ArrowBendUpLeft, At } from '@phosphor-icons/react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Bell, ArrowRight, Heart, ChatCircle, UserPlus, UsersThree, ArrowBendUpLeft, At } from '@phosphor-icons/react';
 import { social } from '../index.js';
 import { Avatar, ago, useImages } from './shared.jsx';
 import { Verified } from './parts.jsx';
@@ -12,11 +12,11 @@ import { groupNotifications, actorsLabel } from '../lib/notifGroups.js';
 //   types: post_like, photo_like, comment, wall_comment, friend_request, friend_accept,
 //          comment_like, reply, mention (in a post), comment_mention (in a comment)  <- 0028_comment_likes_replies_mentions.sql
 //   social.unreadNotifications()      -> number
-//   social.markNotificationRead(id)   -> marks ONE notification as read
-//   social.markNotificationsRead()    -> marks all of my notifications as read
+//   social.markNotificationsReadIds(ids) -> marks those notifications as read
 //   social.onNotification(meId, cb)   -> realtime hook, returns an unsubscribe function
 // Notifications of the same kind on the same post / photo / comment are shown as one line ("Ana and 3 others liked your post").
-// Nothing is marked read just because the menu was opened: tap a line, tap its check mark, or use "Mark all as read".
+// Opening the list IS seeing it: everything shown is marked read straight away (no buttons to tap). Lines that were new when the list
+// opened keep their highlight until it is closed, so you can still tell what is new.
 // ---------------------------------------------------------------------------------------------
 const KINDS = {
   post_like: [Heart, 'liked your post'],
@@ -47,49 +47,43 @@ export function useNotifCount(meId) {
   return { n, setN, tick };
 }
 
-/** The list that sits inside the account menu. `onRead(remainingUnread)` keeps the badge in step. */
+/** The list that sits inside the account menu (and on the /notifications page). Opening it marks what it shows as read. `onRead(remainingUnread)` keeps the badge in step. */
 export function NotificationList({ go, notify, tick, onRead, limit }) {
   const [rows, setRows] = useState(null);
-  const load = useCallback(() => social.listNotifications().then((r) => setRows(r || [])).catch(() => { setRows((x) => x || []); notify('Could not load notifications', 'err'); }), []);   // eslint-disable-line react-hooks/exhaustive-deps
+  const fresh = useRef(new Set());   // ids that were unread when they arrived here: they stay highlighted while this list is open
+  const load = useCallback(() => social.listNotifications().then((r) => {
+    const list = r || [];
+    const unseen = list.filter((x) => !x.read).map((x) => x.id);
+    unseen.forEach((id) => fresh.current.add(id));
+    setRows(list.map((x) => ({ ...x, read: !fresh.current.has(x.id) })));   // "read" here only drives the highlight
+    if (unseen.length) {   // seen by opening the list: tell the database and the badge (only these ids, never ones that arrive a moment later)
+      onRead(0);
+      social.markNotificationsReadIds(unseen).catch(() => onRead(unseen.length));
+    }
+  }).catch(() => { setRows((x) => x || []); notify('Could not load notifications', 'err'); }), []);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [tick]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const groups = useMemo(() => groupNotifications(rows || []), [rows]);
   const img = useImages(groups.map((g) => g.latest.actor?.avatar_path));
   const shown = limit ? groups.slice(0, limit) : groups;   // the account menu shows the latest few; the page shows all
-  const unreadTotal = (rows || []).filter((r) => !r.read).length;
 
-  // optimistic: mark in the list first, ask the database, put it back if that fails
-  const markIds = async (ids) => {
-    if (!ids.length) return;
-    const set = new Set(ids); const before = rows;
-    const next = (rows || []).map((r) => (set.has(r.id) ? { ...r, read: true } : r)); setRows(next); onRead(next.filter((r) => !r.read).length);
-    try { await Promise.all(ids.map((id) => social.markNotificationRead(id))); }
-    catch { setRows(before); onRead((before || []).filter((r) => !r.read).length); notify('Could not mark as read', 'err'); }
-  };
-  const markAll = async () => {
-    const before = rows; setRows((rows || []).map((r) => ({ ...r, read: true }))); onRead(0);
-    try { await social.markNotificationsRead(); } catch { setRows(before); onRead((before || []).filter((r) => !r.read).length); notify('Could not mark as read', 'err'); }
-  };
   // Post likes / post comments open the post. Wall comments and photo likes happened on MY profile, so they open my profile.
   const visit = (g) => {
-    const r = g.latest; markIds(g.unreadIds);
+    const r = g.latest;
     if (r.post_id) go('post', r.post_id);
     else if ((r.type === 'wall_comment' || r.type === 'photo_like') && r.profile_username) go('profile', r.profile_username);
     else if (r.actor) go('profile', r.actor.username);
   };
 
   return (<section className="nsec npage" aria-label="Notifications">
-    <div className="nhead">{unreadTotal > 0 ? `${unreadTotal} unread` : 'All caught up'}
-      {unreadTotal > 0 && <button type="button" className="ghost sm nmarkall" onClick={markAll}>Mark all as read</button>}</div>
     {!rows ? <div className="boot">…</div> : !groups.length ? <p className="muted nempty">Nothing yet. Likes, replies and mentions will show up here.</p>
       : <ul className="nlist">{shown.map((g) => { const [Icon, single] = KINDS[g.type] || [Bell, 'did something']; const text = g.targetCount > 1 && PLURAL[g.type] ? PLURAL[g.type] : single; const r = g.latest; const count = g.rows.length; return (
         <li key={g.key} className="nitem">
           <button type="button" className={`nrow${g.unread ? ' new' : ''}`} onClick={() => visit(g)}>
             <span className="nav2"><Avatar src={img[r.actor?.avatar_path]} size={36} /><i className="nic"><Icon size={10} weight="fill" aria-hidden="true" /></i></span>
             <span className="ntxt"><span><b>{actorsLabel(g.actors)}</b>{g.actors.length === 1 && g.actors[0].official && <Verified />} {text}{count > g.actors.length && g.actors.length === 1 && g.targetCount <= 1 ? ` (${count})` : ''}</span><small>{ago(r.created_at)}</small></span></button>
-          {g.unread && <button type="button" className="nread" aria-label="Mark as read" title="Mark as read" onClick={() => markIds(g.unreadIds)}><Check size={14} weight="bold" aria-hidden="true" /></button>}
         </li>); })}</ul>}
-    {limit && groups.length > limit && <button type="button" className="nseeall" onClick={() => go('notifications')}>See all notifications</button>}
+    {limit && groups.length > limit && <button type="button" className="nseeall" onClick={() => go('notifications')}>See all notifications<ArrowRight size={14} weight="bold" aria-hidden="true" /></button>}
   </section>);
 }
 

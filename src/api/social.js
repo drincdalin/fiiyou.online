@@ -36,6 +36,7 @@ export async function unreadNotifications() {
   if (r.error) throw r.error; return r.count || 0;
 }
 export const markNotificationRead = async (id) => unwrap(await supabase.from('notifications').update({ read: true }).eq('id', id));
+export const markNotificationsReadIds = async (ids) => (ids?.length ? unwrap(await supabase.from('notifications').update({ read: true }).in('id', ids)) : null);
 export const markNotificationsRead = async () => unwrap(await supabase.from('notifications').update({ read: true }).eq('read', false));
 /** Live new notifications for me. Never throws; the bell also polls as a fallback. */
 export function onNotification(myId, cb) {
@@ -49,6 +50,17 @@ export function onNotification(myId, cb) {
 // ---------- push (this device's address for system notifications, see 0018_push.sql) ----------
 export const savePushSubscription = async (sub) => unwrap(await supabase.rpc('save_push_subscription',
   { p_endpoint: sub.endpoint, p_p256dh: sub.keys.p256dh, p_auth: sub.keys.auth, p_ua: String(navigator.userAgent).slice(0, 200) }));
+/** Asks the send-push function to send ONE test notification to this person's own devices. -> { devices, sent, failed, errors } */
+export async function sendTestPush() {
+  const { data, error } = await supabase.functions.invoke('send-push', { body: { test: true } });
+  if (error) {
+    let msg = error.message;
+    try { const j = await error.context?.json?.(); if (j?.error) msg = j.error; } catch { /* keep the generic message */ }
+    if (/not found|404/i.test(msg)) msg = 'The send-push function is not deployed on the server.';
+    throw new Error(msg);
+  }
+  return data;
+}
 export const removePushSubscription = async (endpoint) => unwrap(await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint));
 
 // ---------- places ----------

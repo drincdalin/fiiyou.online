@@ -26,7 +26,7 @@ const InviteModal = lazy(() => import('./InviteModal.jsx'));
 import NotificationsView, { NotificationList, useNotifCount } from './Notifications.jsx';
 import SettingsView from './SettingsView.jsx';
 import { PasswordMeter } from './PasswordMeter.jsx';
-import { registerSW, forgetDevice } from './push.js';
+import { registerSW, forgetDevice, syncPush } from './push.js';
 import { Bell, Eye, EyeSlash, Check, GearSix, Heart, MagnifyingGlass, PencilSimple, ShareNetwork, SignOut, Trash, UserPlus } from '@phosphor-icons/react';
 
 const BASE = import.meta.env.BASE_URL;
@@ -309,6 +309,7 @@ export default function App() {
     });
   }, []);
   useEffect(() => { registerSW(); }, []);
+  useEffect(() => { if (me?.id) syncPush(); }, [me?.id]);   // keep this device's push address on the server in step with who is signed in
   // scheduled posts: publish the ones that are due when the app opens and then every minute (a database job does it too when pg_cron is available)
   useEffect(() => {
     if (!me?.id) return undefined;

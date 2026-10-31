@@ -79,7 +79,7 @@ self.addEventListener('push', (event) => {
   event.waitUntil((async () => {
     // the app is open and in front: the in-app badge already shows it, so no system notification is needed
     const open = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    if (open.some((c) => c.visibilityState === 'visible' && c.focused)) return;
+    if (!d.force && open.some((c) => c.visibilityState === 'visible' && c.focused)) return;   // d.force: the "Send test" button in Settings
     await self.registration.showNotification(d.title || 'fiiyou', {
       body: d.body || '',
       icon: `${scope}icon-192.png`,

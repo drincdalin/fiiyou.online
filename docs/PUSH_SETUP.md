@@ -33,7 +33,9 @@ Then redeploy the function: `supabase functions deploy send-push --no-verify-jwt
 Vercel → Environment Variables → `VITE_VAPID_PUBLIC_KEY` = the public key → redeploy.
 
 ## 5. Test
-Sign in on a phone or desktop browser, account menu → Settings → Push notifications → Turn on. From a second account, like a post of the first. With the first app in the background you get a notification; tapping it opens `/post/<id>` (or the person's profile for friend requests). In the foreground no system notification is shown (the in-app badge already does that).
+Fastest check: Settings → Notifications → **Send test** (shown once push is on). It goes through the Edge Function and shows a system notification even with the app open, and the toast says which step is broken: "the server does not know this device" (turn push off and on), "the push service refused it" (the VAPID keys in the secrets and in the build are not the same pair), or a message about the function / keys. If the test works but real likes and messages never arrive, the webhooks in step 3 / 3b are missing.
+
+Full check: Sign in on a phone or desktop browser, account menu → Settings → Push notifications → Turn on. From a second account, like a post of the first. With the first app in the background you get a notification; tapping it opens `/post/<id>` (or the person's profile for friend requests). In the foreground no system notification is shown (the in-app badge already does that).
 iPhone: the site must be added to the Home Screen first (Share → Add to Home Screen), then opened from there.
 Logs: Dashboard → Edge Functions → `send-push` → Logs. Expired devices (404/410) are removed automatically.
 
