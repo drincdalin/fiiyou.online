@@ -28,7 +28,7 @@ input[type=checkbox], input[type=radio], input[type=range] { accent-color: var(-
 
 /* ---------- navigation ---------- */
 .nav { background: var(--g1); backdrop-filter: none; border-bottom: 2px solid var(--g3); }
-.nav .logo { font-weight: 850; font-size: 1.3rem; letter-spacing: -.035em; }
+.nav .logo { font-weight: 850; font-size: 1.3rem; letter-spacing: normal; }
 .nav .logo:hover { transform: none; }
 .navlinks { background: var(--g0); border: 2px solid var(--g3); border-radius: var(--rad-l); padding: 4px; gap: 4px; }
 .navlinks button { border-radius: var(--rad-s); }

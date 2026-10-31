@@ -31,10 +31,6 @@
 .pslides::-webkit-scrollbar { display: none; }
 .pslides .pslide { flex: 0 0 100%; min-width: 0; scroll-snap-align: center; scroll-snap-stop: always; border-radius: 0; }
 .pslideph { display: block; aspect-ratio: 4 / 3; }
-.pnav { position: absolute; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; padding: 0; display: grid; place-items: center; border-radius: 50%; border: 0; background: var(--scrim-hi); color: var(--ink); cursor: pointer; opacity: 0; transition: opacity .15s; }
-.pnav.l { left: 8px; } .pnav.r { right: 8px; }
-.pimgs:hover .pnav, .pnav:focus-visible { opacity: 1; }
-@media (hover: none) { .pnav { display: none; } }
 .pcount { position: absolute; top: 10px; right: 10px; padding: 2px 10px; border-radius: 999px; background: var(--scrim-hi); color: var(--ink); font-size: .8rem; font-weight: 800; pointer-events: none; }
 .pdots { position: absolute; bottom: 10px; left: 0; right: 0; display: flex; justify-content: center; gap: 6px; pointer-events: none; }
 .pdots i { width: 7px; height: 7px; border-radius: 50%; background: color-mix(in srgb, var(--ink) 40%, transparent); }
@@ -93,3 +89,41 @@
 
 
 .shead { margin: 12px 0 0; font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+
+/* ---- top bar: search, notifications, account ---- */
+.navtools { justify-self: end; display: flex; align-items: center; gap: 8px; }
+.navsearch { display: flex; align-items: center; gap: 8px; height: 40px; width: 200px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--g3); background: var(--g1); color: var(--muted); transition: width .2s var(--ease), border-color .15s; }
+.navsearch:focus-within { width: 260px; border-color: var(--accent-fg); color: var(--ink); }
+.navsearch svg { flex: none; }
+.nav .navsearch input { flex: 1; min-width: 0; width: 100%; height: auto; padding: 0; margin: 0; border: 0; border-radius: 0; outline: 0; box-shadow: none; background: none; color: var(--ink); font: inherit; -webkit-appearance: none; appearance: none; }
+.nav .navsearch input::-webkit-search-cancel-button { display: none; }
+.navsearchbtn { display: none; }
+.navpopw { position: relative; }
+.navic { position: relative; width: 40px; height: 40px; padding: 0; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--g3); background: var(--g1); color: var(--ink2); cursor: pointer; transition: border-color .15s, color .15s, background .15s, transform .18s var(--ease); }
+.navic:hover { border-color: var(--accent-fg); color: var(--ink); }
+.navic.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.navpopw .avdot { top: -5px; right: -5px; }
+@media (max-width: 1100px) { .navsearch { display: none; } .navsearchbtn { display: grid; } }
+
+.npop { position: absolute; top: calc(100% + 10px); right: 0; z-index: 50; width: min(380px, calc(100vw - 24px)); display: flex; flex-direction: column; padding: 8px; background: var(--g1); border: 1px solid var(--g3); border-radius: var(--rad-l); box-shadow: 0 14px 40px -16px color-mix(in srgb, var(--shade) 75%, transparent); transform-origin: top right; animation: rise .16s var(--ease); }
+.npoptitle { padding: 8px 10px 2px; font-weight: 850; font-size: 1.02rem; color: var(--ink); }
+.npop .npage .nlist { max-height: min(420px, 56vh); overflow-y: auto; overscroll-behavior: contain; }
+.npop .npage .nrow { min-height: 56px; }
+.npopall { margin-top: 6px; padding: .6rem; border: 0; border-top: 1px solid var(--g3); border-radius: 0 0 var(--rad-m) var(--rad-m); background: none; color: var(--accent-fg); font-weight: 700; cursor: pointer; }
+.npopall:hover { background: var(--hover); }
+@media (max-width: 700px) {
+  .navtools { gap: 4px; }
+  .navic { width: 38px; height: 38px; }
+  .nav .navtools .more > .avbtn { width: 40px; height: 40px; }
+  .npop { position: fixed; left: 12px; right: 12px; top: auto; bottom: calc(var(--nav-h) + 10px); width: auto; transform-origin: bottom center; }
+  .npop .npage .nlist { max-height: 55vh; }
+}
+
+/* ---- settings ---- */
+.settings h2 { margin: 0; }
+.srow { gap: 14px; }
+.srow > div { flex: 1; min-width: 0; }
+.sico { flex: none; width: 40px; height: 40px; display: grid; place-items: center; border-radius: var(--rad-m); background: var(--g2); border: 1px solid var(--g3); color: var(--ink2); }
+.sdanger { border-color: color-mix(in srgb, var(--red) 40%, var(--g3)); }
+.sdanger .sico { color: var(--red-fg); background: color-mix(in srgb, var(--red) 14%, transparent); border-color: color-mix(in srgb, var(--red) 30%, var(--g3)); }
+.empty small { display: block; margin-top: 4px; }

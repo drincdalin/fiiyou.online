@@ -23,7 +23,7 @@ const SearchView = lazy(() => import('./SearchView.jsx'));
 const AdminView = lazy(() => import('./Admin.jsx'));   // only admins ever open it
 const ShareSheet = lazy(() => import('./ShareSheet.jsx'));
 const InviteModal = lazy(() => import('./InviteModal.jsx'));
-import NotificationsView, { useNotifCount } from './Notifications.jsx';
+import NotificationsView, { NotificationList, useNotifCount } from './Notifications.jsx';
 import SettingsView from './SettingsView.jsx';
 import { PasswordMeter } from './PasswordMeter.jsx';
 import { registerSW, forgetDevice } from './push.js';
@@ -284,7 +284,7 @@ function toRoute(path) {
 export default function App() {
   const [session, setSession] = useState(undefined); const [me, setMe] = useState(null); const path = usePath(); const route = useMemo(() => toRoute(path), [path]);
   const [isAdmin, setIsAdmin] = useState(false); const [recovery, setRecovery] = useState(false);
-  const [menu, setMenu] = useState(false); const { n: nCount, setN: setNCount, tick: nTick } = useNotifCount(me?.id); const [toast, setToast] = useState(null); const [unread, setUnread] = useState(0);
+  const [menu, setMenu] = useState(false); const [bell, setBell] = useState(false); const [navQ, setNavQ] = useState(''); const { n: nCount, setN: setNCount, tick: nTick } = useNotifCount(me?.id); const [toast, setToast] = useState(null); const [unread, setUnread] = useState(0);
   const refreshMe = useCallback(() => profiles.getMyProfile().then(setMe).catch(() => {}), []);
   const [meErr, setMeErr] = useState(null); const [inviteOpen, setInviteOpen] = useState(false);
   const loadMe = useCallback(() => {
@@ -330,9 +330,9 @@ export default function App() {
     const key = (e) => { const t = e.target; if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey || t?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t?.tagName || '')) return; e.preventDefault(); navigate('/search'); };
     addEventListener('keydown', key); return () => removeEventListener('keydown', key);
   }, [me?.id]);
-  const menuRef = useRef();
-  useEffect(() => { if (!menu) return; const out = (e) => { if (!menuRef.current?.contains(e.target)) setMenu(false); }; const esc = (e) => e.key === 'Escape' && setMenu(false);
-    addEventListener('pointerdown', out); addEventListener('keydown', esc); return () => { removeEventListener('pointerdown', out); removeEventListener('keydown', esc); }; }, [menu]);
+  const menuRef = useRef(); const bellRef = useRef();
+  useEffect(() => { if (!menu && !bell) return; const out = (e) => { if (!menuRef.current?.contains(e.target)) setMenu(false); if (!bellRef.current?.contains(e.target)) setBell(false); }; const esc = (e) => { if (e.key === 'Escape') { setMenu(false); setBell(false); } };
+    addEventListener('pointerdown', out); addEventListener('keydown', esc); return () => { removeEventListener('pointerdown', out); removeEventListener('keydown', esc); }; }, [menu, bell]);
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 3200); return () => clearTimeout(t); }, [toast]);
   if (session === undefined) return <Boot />;
   if (recovery && session) return <NewPassword onDone={() => setRecovery(false)} />;
@@ -349,29 +349,41 @@ export default function App() {
       : v === 'tag' ? `/tag/${encodeURIComponent(username)}`
       : v === 'search' ? (username ? `/search?q=${encodeURIComponent(username)}` : '/search')
       : v === 'home' ? '/' : `/${v}`;
-    setMenu(false); navigate(to); };
+    setMenu(false); setBell(false); navigate(to); };
   const NAV = [['home', 'Home'], ['profile', 'Me'], ['map', 'Map'], ['messages', 'Chat'], ['people', 'People'], ...(isAdmin ? [['admin', 'Admin']] : [])];
   const active = (v) => (v === 'profile' ? route.v === 'profile' && (!route.username || route.username === me.username.toLowerCase()) : route.v === v);
   return (<div className="app">
     <nav className="nav"><button className="logo" onClick={() => go('home')}>fiiyou</button>
       <div className="navlinks">{NAV.map(([v, l]) => <button key={v} className={active(v) ? 'on' : ''} aria-label={l} title={l} aria-current={active(v) ? 'page' : undefined} onClick={() => go(v)}><NavIcon name={v} active={active(v)} />{v === 'messages' && unread > 0 && <em className="dotb">{unread > 99 ? '99+' : unread}</em>}</button>)}</div>
-      <div className="more" ref={menuRef}><button className="avbtn" onClick={() => setMenu(!menu)} aria-label={nCount > 0 ? `Account menu (${nCount} new notifications)` : 'Account menu'} aria-expanded={menu}><Avatar src={myImg[me.avatar_path]} size={34} /></button>{nCount > 0 && <em className="avdot" aria-hidden="true">{nCount > 9 ? '9+' : nCount}</em>}{menu && <div className="menu" role="menu">
-        <button className="mhead" role="menuitem" onClick={() => go('profile')}><Avatar src={myImg[me.avatar_path]} size={44} /><span><b>{me.display_name || me.username}</b><small>@{me.username}</small></span></button>
-        <hr className="msep" />
-        <button role="menuitem" onClick={() => go('notifications')}><Bell size={18} weight="bold" aria-hidden="true" />Notifications{nCount > 0 && <em className="mcount">{nCount > 99 ? '99+' : nCount}</em>}</button>
-        <button role="menuitem" onClick={() => go('search')}><MagnifyingGlass size={18} weight="bold" aria-hidden="true" />Search</button>
-        <button role="menuitem" onClick={() => { setMenu(false); setInviteOpen(true); }}><UserPlus size={18} weight="bold" aria-hidden="true" />Invite friends</button>
-        <button role="menuitem" onClick={() => go('settings')}><GearSix size={18} weight="bold" aria-hidden="true" />Settings</button>
-        <hr className="msep" />
-        <button role="menuitem" onClick={async () => { setMenu(false); await forgetDevice(); auth.signOut(); }}><SignOut size={18} weight="bold" aria-hidden="true" />Sign out</button>
-      </div>}</div></nav>
+      <div className="navtools">
+        {route.v !== 'search' && <form className="navsearch" role="search" onSubmit={(e) => { e.preventDefault(); const t = navQ.trim(); setNavQ(''); go('search', t || undefined); }}>
+          <MagnifyingGlass size={16} weight="bold" aria-hidden="true" />
+          <input type="search" value={navQ} onChange={(e) => setNavQ(e.target.value)} placeholder="Search" aria-label="Search people, posts and hashtags" maxLength={80} enterKeyHint="search" /></form>}
+        <button type="button" className={`navic navsearchbtn${route.v === 'search' ? ' on' : ''}`} aria-label="Search" title="Search" onClick={() => go('search')}><MagnifyingGlass size={20} weight="bold" aria-hidden="true" /></button>
+        <div className="navpopw" ref={bellRef}>
+          <button type="button" className={`navic${bell ? ' on' : ''}`} aria-label={nCount > 0 ? `Notifications (${nCount} new)` : 'Notifications'} title="Notifications" aria-expanded={bell} onClick={() => { setMenu(false); setBell(!bell); }}><Bell size={20} weight={bell ? 'fill' : 'bold'} aria-hidden="true" /></button>
+          {nCount > 0 && <em className="avdot" aria-hidden="true">{nCount > 9 ? '9+' : nCount}</em>}
+          {bell && <div className="npop" role="dialog" aria-label="Notifications">
+            <div className="npoptitle">Notifications</div>
+            <NotificationList go={go} notify={notify} tick={nTick} onRead={setNCount} />
+            <button type="button" className="npopall" onClick={() => go('notifications')}>See all notifications</button></div>}
+        </div>
+        <div className="more" ref={menuRef}><button className="avbtn" onClick={() => { setBell(false); setMenu(!menu); }} aria-label="Account menu" aria-expanded={menu}><Avatar src={myImg[me.avatar_path]} size={34} /></button>{menu && <div className="menu" role="menu">
+          <button className="mhead" role="menuitem" onClick={() => go('profile')}><Avatar src={myImg[me.avatar_path]} size={44} /><span><b>{me.display_name || me.username}</b><small>@{me.username}</small></span></button>
+          <hr className="msep" />
+          <button role="menuitem" onClick={() => { setMenu(false); setInviteOpen(true); }}><UserPlus size={18} weight="bold" aria-hidden="true" />Invite friends</button>
+          <button role="menuitem" onClick={() => go('settings')}><GearSix size={18} weight="bold" aria-hidden="true" />Settings</button>
+          <hr className="msep" />
+          <button role="menuitem" onClick={async () => { setMenu(false); await forgetDevice(); auth.signOut(); }}><SignOut size={18} weight="bold" aria-hidden="true" />Sign out</button>
+        </div>}</div>
+      </div></nav>
     {route.v === 'home' && <HomeView me={me} go={go} notify={notify} unread={unread} />}
     {route.v === 'map' && <MapView me={me} go={go} notify={notify} />}
     {route.v === 'messages' && <MessagesView key={route.peer || 'all'} me={me} peer={route.peer} go={go} notify={notify} refreshUnread={refreshUnread} />}
     {route.v === 'admin' && isAdmin && <Suspense fallback={<Boot />}><AdminView go={go} notify={notify} /></Suspense>}
-    {route.v === 'search' && <Suspense fallback={<Boot />}><SearchView key={`${route.tag || ''}|${route.q || ''}`} me={me} go={go} notify={notify} initialQuery={route.q || ''} initialTag={route.tag || ''} /></Suspense>}
+    {route.v === 'search' && <Suspense fallback={<Boot />}><SearchView key={`${route.tag || ''}|${route.q || ''}`} me={me} go={go} notify={notify} initialQuery={route.q || ''} initialTag={route.tag || ''} onInvite={() => setInviteOpen(true)} /></Suspense>}
     {route.v === 'notifications' && <NotificationsView go={go} notify={notify} tick={nTick} onRead={setNCount} />}
-    {route.v === 'settings' && <SettingsView notify={notify} />}
+    {route.v === 'settings' && <SettingsView notify={notify} go={go} />}
     {route.v === 'people' && <PeopleView me={me} go={go} notify={notify} onInvite={() => setInviteOpen(true)} />}
     {route.v === 'post' && <PostView key={route.id} id={route.id} me={me} go={go} notify={notify} />}
     {route.v === 'profile' && <ProfileView key={route.username || me.username} username={route.username || me.username} go={go} notify={notify} refreshMe={refreshMe} meName={me.username} autoEdit={!!route.edit} />}

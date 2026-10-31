@@ -216,7 +216,7 @@ img { image-rendering: auto; }
 }
 .authcard { width: 100%; max-width: 400px; padding: 32px 28px 24px; gap: 16px; border-radius: 16px; background: var(--g1); border: 1px solid var(--g3); box-shadow: none; }
 .authhead { display: grid; gap: 6px; justify-items: start; text-align: left; margin-bottom: 2px; }
-.authhead .brand { margin: 0; font-size: 2.4rem; line-height: 1; letter-spacing: -.04em; font-weight: 800; }
+.authhead .brand { margin: 0; font-size: 2.4rem; line-height: 1; letter-spacing: normal; font-weight: 800; }
 .authlead { margin: 0; font-size: .95rem; font-weight: 500; color: var(--muted); }
 /* plain text tabs with an underline, like a normal sign-in form */
 .authtabs { display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding: 0; border: 0; border-bottom: 1px solid var(--g3); border-radius: 0; background: none; }

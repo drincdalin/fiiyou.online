@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Bell } from '@phosphor-icons/react';
 import { pushStatus, enablePush, disablePush } from './push.js';
 
 /** Settings row: push notifications on this device. It never vanishes silently; when push cannot work it says why. */
@@ -21,6 +22,6 @@ export default function PushToggle({ notify }) {
     off: 'Get a notification on this device when someone likes, comments or messages you.',
     on: 'On for this device.',
   }[st];
-  return (<div className="srow"><div><b>Push notifications</b><small>{text || 'Checking…'}</small></div>
+  return (<div className="srow"><span className="sico"><Bell size={20} weight="bold" aria-hidden="true" /></span><div><b>Push notifications</b><small>{text || 'Checking…'}</small></div>
     {(st === 'on' || st === 'off') && <button type="button" className={st === 'on' ? 'ghost sm' : 'primary sm'} disabled={busy} onClick={toggle}>{st === 'on' ? 'Turn off' : 'Turn on'}</button>}</div>);
 }

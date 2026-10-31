@@ -44,7 +44,7 @@ export function Lightbox({ items, index, onClose, onIndex, onLike, onLikers }) {
   </div></div>);
 }
 
-/** Several photos of one post: swipe (touch), scroll (trackpad), drag or use the arrows (mouse) right inside the post. A tap opens the big viewer. */
+/** Several photos of one post: swipe (touch), scroll (trackpad), drag (mouse) or use the arrow keys right inside the post. A tap opens the big viewer. */
 function PostImages({ srcs, onOpen }) {
   const box = useRef(null); const down = useRef(null); const dragged = useRef(false); const [i, setI] = useState(0); const n = srcs.length;
   const to = (k) => { const el = box.current; if (el) el.scrollTo({ left: el.clientWidth * Math.max(0, Math.min(n - 1, k)), behavior: 'smooth' }); };
@@ -59,8 +59,6 @@ function PostImages({ srcs, onOpen }) {
       {srcs.map((u, k) => <button key={k} type="button" className="pimg pslide" style={u ? { '--bgimg': `url("${u}")` } : undefined} onClick={() => onOpen(k)} aria-label={`Open photo ${k + 1} of ${n}`}>
         {u ? <img src={u} alt="" loading={k ? 'lazy' : undefined} draggable="false" /> : <span className="pslideph" />}</button>)}
     </div>
-    {i > 0 && <button type="button" className="pnav l" aria-label="Previous photo" onClick={() => to(i - 1)}><CaretLeft size={18} weight="bold" aria-hidden="true" /></button>}
-    {i < n - 1 && <button type="button" className="pnav r" aria-label="Next photo" onClick={() => to(i + 1)}><CaretRight size={18} weight="bold" aria-hidden="true" /></button>}
     <span className="pcount" aria-hidden="true">{i + 1}/{n}</span>
     <div className="pdots" aria-hidden="true">{srcs.map((_, k) => <i key={k} className={k === i ? 'on' : ''} />)}</div>
   </div>);
