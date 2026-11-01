@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ShareNetwork, DownloadSimple, LinkSimple, X, Check } from '@phosphor-icons/react';
 import { renderPromo, availablePromos, promoShareText } from './promoImage.js';
 import { profileUrl } from './storyImage.js';
+import { supabase } from '../lib/client.js';
+import { signedUrls } from '../api/media.js';
 import './ShareSheet.css';
 
 /**
@@ -42,6 +44,40 @@ export default function ShareSheet({ data: incoming, onClose }) {
   const guestCount = data.guestbook?.length || 0;
   const safeGuest = guestIndex < guestCount ? guestIndex : 0;
 
+  // Guestbook authors' pictures: the buckets are private, so a path has to become a signed URL before a canvas can draw it.
+  // Works whatever the parent passes: a ready `src`, an `avatar_path` (or author.avatar_path), or just a username (looked up here).
+  const [avatars, setAvatars] = useState({});     // username -> signed url
+  const [avatarsReady, setAvatarsReady] = useState(false);
+  useEffect(() => {
+    let stale = false;
+    (async () => {
+      try {
+        const list = data.guestbook || [];
+        const paths = {};                         // username -> storage path
+        const unknown = [];
+        for (const e of list) {
+          if (!e || e.src || !e.username) continue;
+          const p = e.avatar_path || e.author?.avatar_path;
+          if (p) paths[e.username] = p; else unknown.push(e.username);
+        }
+        const ask = [...new Set(unknown)].filter((u) => !paths[u]);
+        if (ask.length) {
+          const { data: rows } = await supabase.from('profiles').select('username, avatar_path').in('username', ask);
+          for (const r of rows || []) if (r.avatar_path) paths[r.username] = r.avatar_path;
+        }
+        const urls = Object.keys(paths).length ? await signedUrls(Object.values(paths)) : {};
+        if (stale) return;
+        setAvatars(Object.fromEntries(Object.entries(paths).map(([u, p]) => [u, urls[p]]).filter(([, v]) => v)));
+      } catch { /* the card falls back to the initial */ }
+      if (!stale) setAvatarsReady(true);
+    })();
+    return () => { stale = true; };
+  }, [data.guestbook]);
+  const guestbook = useMemo(
+    () => (data.guestbook || []).map((e) => (e.src || !e.username || !avatars[e.username] ? e : { ...e, src: avatars[e.username] })),
+    [data.guestbook, avatars],
+  );
+
   const [preview, setPreview] = useState(null); // { url, ratio }
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
@@ -53,11 +89,12 @@ export default function ShareSheet({ data: incoming, onClose }) {
 
   // Re-render the preview whenever the style (or the featured guestbook message) changes. `stale` drops outdated results.
   useEffect(() => {
+    if (!avatarsReady) return undefined;          // wait for the pictures so the card is drawn once, with them
     let stale = false;
     setBusy(true); setError(''); setNote('');
     (async () => {
       try {
-        const canvas = await renderPromo({ ...data, template, guestIndex: safeGuest, slug });
+        const canvas = await renderPromo({ ...data, guestbook, template, guestIndex: safeGuest, slug });
         const blob = await new Promise((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej(new Error('Could not create the image.'))), 'image/png'));
         if (stale) return;
         const file = new File([blob], `fiiyou-${template}-${slug}.png`, { type: 'image/png' });
@@ -72,7 +109,7 @@ export default function ShareSheet({ data: incoming, onClose }) {
       }
     })();
     return () => { stale = true; };
-  }, [data, template, safeGuest, slug]);
+  }, [data, guestbook, avatarsReady, template, safeGuest, slug]);
 
   useEffect(() => () => { if (built.current) URL.revokeObjectURL(built.current.url); }, []);
 

@@ -137,9 +137,10 @@ export async function renderStory({
   } catch { /* fonts are best effort */ }
 
   const shownPhotos = photos.slice(0, 12), shownFriends = topFriends.slice(0, 8), shownGuest = guestbook.slice(0, 3);
-  const [avatar, bg, cover, photoImgs, friendImgs, stickerImgs] = await Promise.all([
+  const [avatar, bg, cover, photoImgs, friendImgs, stickerImgs, guestImgs] = await Promise.all([
     loadImg(avatarSrc), loadImg(bgSrc), loadImg(music?.coverSrc),
     Promise.all(shownPhotos.map((p) => loadImg(p.src))), Promise.all(shownFriends.map((f) => loadImg(f.src))), Promise.all(stickers.map((s) => loadImg(s.src))),
+    Promise.all(shownGuest.map((e) => loadImg(e.src || e.avatarSrc || e.avatar_url || e.avatar || (e.username && e.username === profile.username ? avatarSrc : null)))),
   ]);
 
   const out = document.createElement('canvas'); out.width = W; out.height = H;
@@ -288,11 +289,11 @@ export async function renderStory({
       return { levels: shownGuest.length, make: (lv) => {
         const n = lv + 1, AV = 48, tx = AV + 16, tw = CIW - tx, fs = base - 2, lh = Math.round(fs * 1.4), nameH = Math.round(fs * 1.35), lines = lv === 0 && shownGuest.length > 1 ? 1 : 2, gap = 20;
         g.font = `500 ${fs}px ${bodyStack}`;
-        const ents = shownGuest.slice(0, n).map((e) => { const ls = wrap(g, e.body, tw, lines); return { e, ls, h: Math.max(AV, nameH + 4 + ls.length * lh) }; });
+        const ents = shownGuest.slice(0, n).map((e, ei) => { const ls = wrap(g, e.body, tw, lines); return { e, im: guestImgs[ei], ls, h: Math.max(AV, nameH + 4 + ls.length * lh) }; });
         return card(c.title, inner(ents.reduce((a, b) => a + b.h, 0) + (ents.length - 1) * gap, (x, y) => {
           let yy = y;
-          for (const { e, ls, h } of ents) {
-            initialTile(x, yy, AV, AV / 2, initial(e.name));
+          for (const { e, im, ls, h } of ents) {
+            if (im) { g.save(); rr(g, x, yy, AV, AV, AV / 2); g.clip(); drawCover(g, im, x, yy, AV, AV); g.restore(); } else initialTile(x, yy, AV, AV / 2, initial(e.name));
             g.font = `700 ${fs}px ${bodyStack}`; const nm = ellipsize(g, e.name || e.username || '', tw * 0.7); text(nm, x + tx, yy, g.font, ink);
             const nw = g.measureText(nm).width; g.font = `500 ${fs - 4}px ${bodyStack}`;
             if (e.username && nw + 14 < tw * 0.95) text(ellipsize(g, `@${e.username}`, tw - nw - 14), x + tx + nw + 12, yy + 3, g.font, soft);

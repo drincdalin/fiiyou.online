@@ -553,7 +553,13 @@ export async function renderPromo({ template = 'card', ...args }) {
     loadImg(avatarSrc),
     loadImg(bgSrc),
     template === 'vibe' || template === 'card' ? loadImg(music?.coverSrc) : null,
-    loadImg(entry?.src),
+    loadImg(
+      entry?.src ||
+        entry?.avatarSrc ||
+        entry?.avatar_url ||
+        entry?.avatar ||
+        (entry?.username && entry.username === profile.username ? avatarSrc : null)
+    ),
     Promise.all(
       (template === 'top8' ? friends : []).map((friend) => loadImg(friend.src))
     ),
@@ -1367,151 +1373,147 @@ export async function renderPromo({ template = 'card', ...args }) {
 
     const titleSize = 58;
     const titleLH = 66;
-
-    g.font = `800 ${titleSize}px ${nameStack}`;
-
-    const titleLines = wrap(g, music.title || 'Unknown title', CIW, 2);
-
     const artistSize = 36;
     const artistBox = 48;
+    const gapCover = 32;
+    const gapArtist = 6;
+    const gapControls = 44;
+    const controlsH = 132; // progress bar + prev / play / next: the play circle ends exactly here, so the bottom padding equals the side padding
+
+    // who is listening
+    const oAW = 88;
+    const oAH = avatarHeightFor(oAW);
+    const ownerH = oAH + cpad * 2;
+
+    // The cover is a square. Its size is whatever the height budget allows; the whole column (cover, title,
+    // bar, controls, owner) is exactly that wide, so every left / right edge lines up. The frame hugs the column.
+    let col = Math.min(CIW, 760);
+    let titleLines;
+    let fixed;
+    let cs;
+
+    for (let pass = 0; pass < 3; pass++) {
+      g.font = `800 ${titleSize}px ${nameStack}`;
+      titleLines = wrap(g, music.title || 'Unknown title', col, 2);
+
+      fixed =
+        cpad * 2 +
+        gapCover +
+        titleLines.length * titleLH +
+        (music.artist ? gapArtist + artistBox : 0) +
+        gapControls +
+        controlsH;
+
+      cs = clamp(maxH - ownerH - GAP - fixed, 420, Math.min(CIW, 760));
+      col = cs;
+    }
 
     g.font = `500 ${artistSize}px ${bodyStack}`;
 
-    const artist = music.artist ? ellipsize(g, music.artist, CIW) : '';
-
-    const gapCover = 30;
-    const gapArtist = 8;
-    const gapControls = 40;
-    const controlsH = 150; // progress bar + prev / play / next
-
+    const artist = music.artist ? ellipsize(g, music.artist, col) : '';
     const textH = titleLines.length * titleLH;
-
-    const fixed =
-      cpad * 2 +
-      gapCover +
-      textH +
-      (artist ? gapArtist + artistBox : 0) +
-      gapControls +
-      controlsH;
-
-    // who is listening
-    const oAW = 96;
-    const oAH = avatarHeightFor(oAW);
-    const ownerH = oAH + 36;
-
-    const cs = clamp(maxH - ownerH - GAP - fixed, 360, CIW);
-    const playerH = fixed + cs;
+    const cardW = col + cpad * 2;
+    const playerH = fixed + col;
 
     return {
       h: playerH + GAP + ownerH,
+      w: cardW,
 
       draw(x, y) {
-        cardBox(x, y, IW, playerH, undefined, undefined, 'player');
+        cardBox(x, y, cardW, playerH, undefined, undefined, 'player');
 
+        const cx0 = x + cpad; // left edge of the column
         let yy = y + cpad;
 
-        pic(
-          cover,
-          x + cpad + (CIW - cs) / 2,
-          yy,
-          cs,
-          cs,
-          r3,
-          '♪',
-          t.border_color,
-          Math.min(lw, 3)
-        );
+        pic(cover, cx0, yy, col, col, r3, '♪', t.border_color, Math.min(lw, 3));
 
-        yy += cs + gapCover;
+        yy += col + gapCover;
 
-        para(
-          titleLines,
-          x + cpad,
-          yy,
-          titleLH,
-          `800 ${titleSize}px ${nameStack}`,
-          ink
-        );
+        para(titleLines, cx0, yy, titleLH, `800 ${titleSize}px ${nameStack}`, ink);
 
         yy += textH;
 
         if (artist) {
           yy += gapArtist;
-          put(artist, x + cpad, yy + artistBox / 2, `500 ${artistSize}px ${bodyStack}`, soft);
+          put(artist, cx0, yy + artistBox / 2, `500 ${artistSize}px ${bodyStack}`, soft);
           yy += artistBox;
         }
 
         yy += gapControls;
 
-        // progress bar, then prev / play / next, like the page's mini player
+        // progress bar (inset by the thumb radius so the thumb never pokes out of the column)
         const barY = yy + 8;
 
-        rr(g, x + cpad, barY - 6, CIW, 12, 6);
+        rr(g, cx0, barY - 6, col, 12, 6);
         g.fillStyle = rgba(t.text_color, 0.18);
         g.fill();
 
-        rr(g, x + cpad, barY - 6, CIW * 0.38, 12, 6);
+        rr(g, cx0, barY - 6, col * 0.38, 12, 6);
         g.fillStyle = t.accent_color;
         g.fill();
 
         g.beginPath();
-        g.arc(x + cpad + CIW * 0.38, barY, 14, 0, Math.PI * 2);
+        g.arc(cx0 + col * 0.38, barY, 14, 0, Math.PI * 2);
         g.fillStyle = t.accent_color;
         g.fill();
 
-        const cy = yy + 24 + 26 + 48;
-        const mx = x + IW / 2;
+        // prev / play / next, centred under the column
+        const cy = barY + 14 + 22 + 44;
+        const mx = cx0 + col / 2;
 
         g.beginPath();
-        g.arc(mx, cy, 48, 0, Math.PI * 2);
+        g.arc(mx, cy, 44, 0, Math.PI * 2);
         g.fillStyle = t.accent_color;
         g.fill();
 
+        // triangle: width 30, centroid (1/3 of the width from the left edge) sits 2px right of the circle centre
         g.beginPath();
-        g.moveTo(mx - 14 + 4, cy - 24);
-        g.lineTo(mx + 24 + 4, cy);
-        g.lineTo(mx - 14 + 4, cy + 24);
+        g.moveTo(mx - 12, cy - 21);
+        g.lineTo(mx + 18, cy);
+        g.lineTo(mx - 12, cy + 21);
         g.closePath();
         g.fillStyle = onAccent;
         g.fill();
 
         g.fillStyle = ink;
 
-        // previous: bar + triangle pointing left
+        const off = Math.min(170, col * 0.26);
+
+        // previous
         g.beginPath();
-        g.rect(mx - 170 - 20, cy - 18, 6, 36);
-        g.moveTo(mx - 170 + 20, cy - 18);
-        g.lineTo(mx - 170 + 20, cy + 18);
-        g.lineTo(mx - 170 - 14, cy);
+        g.rect(mx - off - 20, cy - 18, 6, 36);
+        g.moveTo(mx - off + 20, cy - 18);
+        g.lineTo(mx - off + 20, cy + 18);
+        g.lineTo(mx - off - 14, cy);
         g.closePath();
         g.fill();
 
-        // next: triangle pointing right + bar
+        // next
         g.beginPath();
-        g.rect(mx + 170 + 14, cy - 18, 6, 36);
-        g.moveTo(mx + 170 - 20, cy - 18);
-        g.lineTo(mx + 170 - 20, cy + 18);
-        g.lineTo(mx + 170 + 14, cy);
+        g.rect(mx + off + 14, cy - 18, 6, 36);
+        g.moveTo(mx + off - 20, cy - 18);
+        g.lineTo(mx + off - 20, cy + 18);
+        g.lineTo(mx + off + 14, cy);
         g.closePath();
         g.fill();
 
-        /* owner */
+        /* owner: same width and left edge as the player, avatar inset by the card padding */
         const oy = y + playerH + GAP;
 
-        cardBox(x, oy, IW, ownerH, undefined, undefined, 'nameplate');
+        cardBox(x, oy, cardW, ownerH, undefined, undefined, 'nameplate');
 
-        ownerAvatar(x + 18, oy + 18, oAW);
+        ownerAvatar(cx0, oy + cpad, oAW);
 
-        const tx = x + 18 + oAW + 24;
-        const nameFit = fitName(x + IW - cpad - tx, 42, 28);
+        const tx = cx0 + oAW + 22;
+        const nameFit = fitName(x + cardW - cpad - tx, 42, 28);
 
-        nameFit.draw(tx, oy + ownerH / 2 - 20);
+        nameFit.draw(tx, oy + ownerH / 2 - 22);
 
         g.font = `500 30px ${bodyStack}`;
         put(
-          ellipsize(g, `@${profile.username}`, x + IW - cpad - tx),
+          ellipsize(g, `@${profile.username}`, x + cardW - cpad - tx),
           tx,
-          oy + ownerH / 2 + 24,
+          oy + ownerH / 2 + 22,
           `500 30px ${bodyStack}`,
           soft
         );
@@ -1530,17 +1532,18 @@ export async function renderPromo({ template = 'card', ...args }) {
     const length = body.length;
 
     const AV = 104;
-    const authorGap = 30;
+    const titleGap = 18; // air between the card title and the author row
+    const authorGap = 34;
 
     const oAW = 92;
     const oAH = avatarHeightFor(oAW);
-    const ownerH = oAH + 36;
+    const ownerH = oAH + cpad * 2;
 
     const inputH = 64;
     const inputBlock = inputH + 36; // the real "Write something… / Send" row under the message
 
-    const fixed = cpad * 2 + TITLE_H + AV + authorGap + inputBlock;
-    const textRoom = maxH - ownerH - GAP - fixed - 10;
+    const fixed = cpad * 2 + TITLE_H + titleGap + AV + authorGap + inputBlock;
+    const textRoom = maxH - ownerH - GAP - fixed - 4;
 
     const display = length <= 24;
     const stack = display ? nameStack : bodyStack;
@@ -1565,7 +1568,7 @@ export async function renderPromo({ template = 'card', ...args }) {
     if (lines.length > maxLines) lines = wrap(g, body, CIW, maxLines);
 
     const textH = lines.length * lineH;
-    const cardH = Math.max(420, fixed + textH + 10);
+    const cardH = Math.max(420, fixed + textH + 4);
 
     return {
       h: cardH + GAP + ownerH,
@@ -1573,7 +1576,7 @@ export async function renderPromo({ template = 'card', ...args }) {
       draw(x, y) {
         cardBox(x, y, IW, cardH, titleOf('guestbook', 'Guestbook'));
 
-        const ay = y + cpad + TITLE_H;
+        const ay = y + cpad + TITLE_H + titleGap;
         const ax = x + cpad;
 
         pic(
@@ -1624,7 +1627,7 @@ export async function renderPromo({ template = 'card', ...args }) {
         const iyy = y + cardH - cpad - inputH;
 
         g.fillStyle = rgba(t.border_color, 0.9);
-        g.fillRect(ax, iyy - 18, CIW, Math.max(1, Math.min(lw, 2)));
+        g.fillRect(ax, iyy - 24, CIW, Math.max(1, Math.min(lw, 2)));
 
         panel(ax, iyy, iwid, inputH, r3, t.card_color, 0.9);
         outline(ax, iyy, iwid, inputH, r3, t.border_color, Math.min(lw, 2));
@@ -1640,19 +1643,19 @@ export async function renderPromo({ template = 'card', ...args }) {
 
         cardBox(x, oy, IW, ownerH, undefined, undefined, 'nameplate');
 
-        ownerAvatar(x + 18, oy + 18, oAW);
+        ownerAvatar(x + cpad, oy + cpad, oAW);
 
-        const ox = x + 18 + oAW + 24;
+        const ox = x + cpad + oAW + 24;
         const orm = x + IW - cpad - ox;
         const nameFit = fitName(orm, 40, 28);
 
-        nameFit.draw(ox, oy + ownerH / 2 - 20);
+        nameFit.draw(ox, oy + ownerH / 2 - 22);
 
         g.font = `500 30px ${bodyStack}`;
         put(
           ellipsize(g, `on @${profile.username}'s wall`, orm),
           ox,
-          oy + ownerH / 2 + 24,
+          oy + ownerH / 2 + 22,
           `500 30px ${bodyStack}`,
           soft
         );
@@ -1672,7 +1675,8 @@ export async function renderPromo({ template = 'card', ...args }) {
   let k = 1;
   let built;
 
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < (template === 'vibe' ? 1 : 12); i++) {
+    if (template === 'vibe') { k = 1; }
     IW = (FW - fpad * 2) / k;
     CIW = IW - cpad * 2;
     built = builders[template](maxContent / k);
@@ -1688,20 +1692,29 @@ export async function renderPromo({ template = 'card', ...args }) {
     }
   }
 
+  // safety net: if the loop ended while still too tall, keep shrinking until it fits
+  for (let i = 0; i < 20 && template !== 'vibe' && built.h * k > maxContent && k > 0.3; i++) {
+    k *= (maxContent / (built.h * k)) * 0.985;
+    IW = (FW - fpad * 2) / k;
+    CIW = IW - cpad * 2;
+    built = builders[template](maxContent / k);
+  }
+
   const frameH = Math.min(maxContent + fpad * 2, built.h * k + fpad * 2);
   const groupH = frameH + CTA_GAP + CTA_H;
 
-  const FX = SIDE;
+  const FWd = built.w ? Math.min(FW, built.w * k + fpad * 2) : FW;
+  const FX = Math.round((W - FWd) / 2);
   const FY = Math.round(SAFE_TOP + (SAFE_BOT - SAFE_TOP - groupH) / 2);
 
   setText(null);
 
   // The frame and everything in it share one layer, so the frame's tilt / filter / opacity apply to all of it.
   const FRE = edgeFor('frame');
-  const frameHandle = fx.begin({ x: FX, y: FY, w: FW, h: frameH, r: FRE.r }, FRE.b, FRE.b.shadow ?? t.shadow);
+  const frameHandle = fx.begin({ x: FX, y: FY, w: FWd, h: frameH, r: FRE.r }, FRE.b, FRE.b.shadow ?? t.shadow);
 
-  panel(FX, FY, FW, frameH, FRE.r, FRE.bg[0], FRE.bg[1]);
-  outline(FX, FY, FW, frameH, FRE.r, FRE.color, FRE.bw, FRE.style);
+  panel(FX, FY, FWd, frameH, FRE.r, FRE.bg[0], FRE.bg[1]);
+  outline(FX, FY, FWd, frameH, FRE.r, FRE.color, FRE.bw, FRE.style);
 
   g.save();
   g.translate(FX + fpad, FY + fpad);
