@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { X, DownloadSimple, ShareNetwork, PaperPlaneRight, Check, ImageSquare, ChatCircle } from '@phosphor-icons/react';
 import { friends, social } from '../index.js';
-import { Avatar, useImages } from './shared.jsx';
+import { Avatar, useImages, ListSkeleton } from './shared.jsx';
 import './PostShare.css';
 
 // ---------------------------------------------------------------------------------------------
@@ -224,7 +224,7 @@ export default function PostShareModal({ p, img, onClose, notify }) {
       <input value={note} maxLength={200} placeholder="Add a message (optional)" onChange={(e) => setNote(e.target.value)} aria-label="Message" />
       <input value={q} placeholder="Search friends…" onChange={(e) => setQ(e.target.value)} aria-label="Search friends" />
       <div className="pslist">
-        {!list ? <p className="empty">Loading…</p> : !shown.length ? <p className="empty">{list.length ? 'No match.' : 'Add some friends to send posts to.'}</p>
+        {!list ? <ListSkeleton n={3} /> : !shown.length ? <p className="empty">{list.length ? 'No match.' : 'Add some friends to send posts to.'}</p>
           : shown.map((f) => (<div className="row" key={f.id}><Avatar src={av[f.avatar_path]} size={40} />
             <span className="link"><b>{f.display_name || f.username}</b><small>@{f.username}</small></span>
             <button className={sent[f.id] ? 'ghost sm' : 'primary sm'} disabled={busy === f.id || sent[f.id]} onClick={() => send(f)}>

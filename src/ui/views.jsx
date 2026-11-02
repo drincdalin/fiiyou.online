@@ -2,7 +2,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { posts, social, friends, discover, profiles } from '../index.js';
-import { useImages, Avatar, ago } from './shared.jsx';
+import { useImages, Avatar, ago, FeedSkeleton, PostSkeleton, SnapshotSkeleton } from './shared.jsx';
 import { PostCard, Composer, Lightbox } from './parts.jsx';
 import { SharedPostCard, decodeSharedPost, previewText } from './PostShare.jsx';
 import { MessageMenu, MessageEditor } from './MessageMenu.jsx';
@@ -20,11 +20,11 @@ const useFeed = (args, notify) => {
   }, [key]);
   useEffect(() => { setRows(null); load(false); }, [load]);
   useEffect(() => { const h = () => load(false); addEventListener('fiiyou:published', h); return () => removeEventListener('fiiyou:published', h); }, [load]);   // a scheduled post just went out
-  const img = useImages((rows || []).flatMap((p) => [p.image_path, p.author_avatar_path]));
+  const img = useImages((rows || []).flatMap((p) => [p.image_path, p.author_avatar_path, ...(p.extra_images || [])]));
   const change = (np) => setRows((r) => r.map((x) => (x.id === np.id ? np : x))); const drop = (id) => setRows((r) => r.filter((x) => x.id !== id));
   return { rows, more, load, img, change, drop, err };
 };
-const List = ({ f, me, go, notify, empty }) => !f.rows ? <div className="boot">Loading…</div> : f.err && !f.rows.length ? <ErrorState error={f.err} onRetry={() => f.load(false)} title="Could not load posts" /> : (<>
+const List = ({ f, me, go, notify, empty }) => !f.rows ? <FeedSkeleton /> : f.err && !f.rows.length ? <ErrorState error={f.err} onRetry={() => f.load(false)} title="Could not load posts" /> : (<>
   {!f.rows.length && <p className="empty">{empty}</p>}
   {f.rows.map((p) => <PostCard key={p.id} p={p} me={me} img={f.img} go={go} onChange={f.change} onDelete={f.drop} notify={notify} />)}
   {f.more && <button className="ghost wide" onClick={() => f.load(true, f.rows)}>Load more</button>}</>);
@@ -37,23 +37,23 @@ export function PostView({ id, me, go, notify }) {
   useEffect(() => { fetchPost(); }, [fetchPost]);
   const img = useImages(p ? [p.image_path, p.author_avatar_path] : []);
   if (err) return <ErrorState error={err} onRetry={fetchPost} title="Could not load this post" />;
-  if (p === undefined) return <div className="boot">Loading…</div>;
+  if (p === undefined) return <div className="plain view"><PostSkeleton /></div>;
   return (<div className="plain view"><div className="phead"><button className="ghost sm iconbtn" onClick={() => (history.length > 1 ? history.back() : go('home'))}><CaretLeft size={16} weight="bold" aria-hidden="true" />Back</button></div>
     {p ? <PostCard p={p} me={me} img={img} go={go} onChange={setP} onDelete={() => go('home')} notify={notify} />
       : <p className="empty">This post is not available. It may have been deleted, or it is only visible to friends.</p>}</div>);
 }
 
 /* ---------------- Home ---------------- */
-function Snapshot({ go, unread }) {
-  const [me, setMe] = useState(null); const [req, setReq] = useState(0); const [views, setViews] = useState(null); const [fresh, setFresh] = useState([]);
+function Snapshot({ me: meProp, go, unread }) {
+  const [me, setMe] = useState(meProp || null); const [req, setReq] = useState(0); const [views, setViews] = useState(null); const [fresh, setFresh] = useState([]);
   useEffect(() => { profiles.getMyProfile().then((p) => { setMe(p); profiles.myViews(p.id).then(setViews).catch(() => {}); }).catch(() => {});
     friends.incomingRequests().then((r) => setReq(r.length)).catch(() => {}); discover.discover({ mode: 'new', limit: 3 }).then(setFresh).catch(() => {}); }, []);
   const img = useImages([me?.avatar_path, ...fresh.map((p) => p.avatar_path)]);
-  if (!me) return <aside className="snap panel"><div className="boot">…</div></aside>;
-  return (<aside className="snap panel"><button type="button" className="snaptop who" onClick={() => go('profile')} aria-label="Open my profile"><Avatar src={img[me.avatar_path]} size={64} /><span><b>{me.display_name}</b><small>{me.headline || 'No mood set yet'}</small></span></button>
+  if (!me) return <SnapshotSkeleton />;
+  return (<aside className="snap panel"><button type="button" className="snaptop who" onClick={() => go('profile')} aria-label="Open my profile"><Avatar src={img[me.avatar_path]} size={64} name={me.display_name || me.username} /><span><b>{me.display_name}</b><small>{me.headline || 'No mood set yet'}</small></span></button>
     <div className="stats3"><button onClick={() => go('messages')}><b>{unread}</b><small>messages</small></button><button onClick={() => go('people')}><b>{req}</b><small>requests</small></button><span><b>{views ?? '–'}</b><small>views</small></span></div>
     <button className="primary wide" onClick={() => go('profile', null, null, true)}>Edit my profile</button>
-    {fresh.length > 0 && <><h4>Cool new people</h4><div className="newp">{fresh.map((p) => <button key={p.id} onClick={() => go('profile', p.username)}><Avatar src={img[p.avatar_path]} size={52} /><small>{p.display_name}</small></button>)}</div></>}
+    {fresh.length > 0 && <><h4>Cool new people</h4><div className="newp">{fresh.map((p) => <button key={p.id} onClick={() => go('profile', p.username)}><Avatar src={img[p.avatar_path]} size={52} name={p.display_name} /><small>{p.display_name}</small></button>)}</div></>}
   </aside>);
 }
 
@@ -61,7 +61,7 @@ export function HomeView({ me, go, notify, unread }) {
   const [tab, setTab] = useState('nearby'); const [loc, setLoc] = useState(''); const [locs, setLocs] = useState([]); const [places, setPlaces] = useState([]);
   useEffect(() => { discover.listLocalities().then(setLocs); social.listPlaces().then(setPlaces).catch(() => {}); }, []);
   const f = useFeed(tab === 'events' ? { kind: 'event', upcoming: true, localityId: loc ? +loc : null } : { onlyFriends: tab === 'friends', localityId: loc ? +loc : null }, notify);
-  return (<div className="plain wide view"><div className="homegrid"><Snapshot go={go} unread={unread} />
+  return (<div className="plain wide view"><div className="homegrid"><Snapshot me={me} go={go} unread={unread} />
     <div className="homemain"><Composer me={me} places={places} onPosted={() => f.load(false)} notify={notify} />
       <div className="tabs"><button className={tab === 'nearby' ? 'on' : ''} onClick={() => setTab('nearby')}>Around you</button><button className={tab === 'friends' ? 'on' : ''} onClick={() => setTab('friends')}>Friend updates</button><button className={tab === 'events' ? 'on' : ''} onClick={() => setTab('events')}>Events</button>
         <select value={loc} onChange={(e) => setLoc(e.target.value)} aria-label="Place"><option value="">All localities</option>{locs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></div>
@@ -76,7 +76,7 @@ function PlaceSheet({ place, me, go, notify, onClose, onChanged }) {
   const [rows, setRows] = useState(null); const [lb, setLb] = useState(null);
   const load = () => posts.feed({ placeId: place.id, limit: 30 }).then(setRows).catch((e) => { notify(e.message, 'err'); setRows([]); });
   useEffect(() => { setRows(null); load(); }, [place.id]);
-  const img = useImages((rows || []).flatMap((p) => [p.image_path, p.author_avatar_path]));
+  const img = useImages((rows || []).flatMap((p) => [p.image_path, p.author_avatar_path, ...(p.extra_images || [])]));
   const here = [...new Map((rows || []).filter((p) => p.author_is_friend).map((p) => [p.author_id, p])).values()];
   const pics = (rows || []).filter((p) => p.image_path && img[p.image_path]);
   const change = (np) => setRows((r) => r.map((x) => (x.id === np.id ? np : x))); const drop = (id) => setRows((r) => r.filter((x) => x.id !== id));
@@ -84,7 +84,7 @@ function PlaceSheet({ place, me, go, notify, onClose, onChanged }) {
     {here.length > 0 && <div><h4>Friends who have been here</h4><div className="mlist">{here.map((p) => <button key={p.author_id} className="chip" onClick={() => go('profile', p.author_username)}><Avatar src={img[p.author_avatar_path]} size={26} />{p.author_display_name}</button>)}</div></div>}
     {pics.length > 0 && <div className="pstrip">{pics.map((p, i) => <button key={p.id} onClick={() => setLb(i)}><img src={img[p.image_path]} alt="" /></button>)}</div>}
     <Composer me={me} fixedPlace={place.id} onPosted={() => { load(); onChanged(); }} notify={notify} />
-    {rows ? (rows.length ? rows.map((p) => <PostCard key={p.id} p={p} me={me} img={img} go={go} onChange={change} onDelete={drop} notify={notify} />) : <p className="empty">Nobody has posted here yet.</p>) : <div className="boot">Loading…</div>}
+    {rows ? (rows.length ? rows.map((p) => <PostCard key={p.id} p={p} me={me} img={img} go={go} onChange={change} onDelete={drop} notify={notify} />) : <p className="empty">Nobody has posted here yet.</p>) : <FeedSkeleton n={2} />}
     {place.created_by === me.id && <button className="ghost sm danger" onClick={async () => { if (!(await ask({ title: 'Delete this place?', message: 'Posts stay, but lose the place tag.', confirmLabel: 'Delete', danger: true }))) return; try { await social.deletePlace(place.id); onChanged(); onClose(); notify('Place deleted'); } catch (e) { notify(e.message, 'err'); } }}>Delete place</button>}
     {lb != null && <Lightbox items={pics.map((p) => ({ id: p.id, src: img[p.image_path], caption: p.body }))} index={lb} onClose={() => setLb(null)} onIndex={setLb} />}
   </aside>);

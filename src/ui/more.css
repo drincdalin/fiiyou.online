@@ -227,3 +227,25 @@
 .gh .ghlegend .ghc { display: inline-block; }
 .gh .ghlegend .ghc:first-of-type { margin-left: 4px; } .gh .ghlegend .ghc:last-of-type { margin-right: 4px; }
 .gh .ghstats { margin-top: 14px; }
+
+/* ---- skeletons (progressive loading) ---- */
+@keyframes sk-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.sk { display: inline-block; background: linear-gradient(100deg, var(--g2) 30%, color-mix(in srgb, var(--ink) 10%, var(--g2)) 50%, var(--g2) 70%) 0 0 / 200% 100%; animation: sk-shimmer 1.4s linear infinite; }
+.sk-row { display: flex; align-items: center; gap: 12px; } .sk-col { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
+.sk-post { pointer-events: none; }
+.sk-lb { position: absolute; inset: 0; border-radius: 0; z-index: 0; }
+.lbimg { position: relative; } .lbhide { opacity: 0; }
+.pslide.sk { min-height: 260px; } .pslide.sk img { opacity: 0; } .pslide img { transition: opacity .2s; }
+@media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+
+/* ---- avatar initials fallback (no empty circle / flicker) ---- */
+.av--ini { display: inline-grid; place-items: center; flex: none; color: #fff; font-weight: 800; line-height: 1; letter-spacing: .02em; user-select: none; background: hsl(var(--avh, 220) 45% 38%); }
+.av .ini { display: block; }
+
+/* ---- multi-image hover arrows (desktop / fine pointer): solid, high-contrast, theme-independent ---- */
+@media (hover: hover) and (pointer: fine) {
+  .pnav { width: 42px; height: 42px; background: rgb(0 0 0 / .62); color: #fff; border: 1px solid rgb(255 255 255 / .35); box-shadow: 0 2px 12px rgb(0 0 0 / .45); }
+  .pimgs .pnav:hover { background: rgb(0 0 0 / .85); border-color: #fff; }
+  .pimgs:hover .pnav:not([aria-disabled="true"]), .pimgs:focus-within .pnav:not([aria-disabled="true"]) { opacity: 1; transform: translateY(-50%) scale(1); }
+  .pnav svg { display: block; pointer-events: none; }
+}

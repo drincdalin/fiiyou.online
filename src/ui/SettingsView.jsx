@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LockKey, Trash, Prohibit } from '@phosphor-icons/react';
 import { auth, safety } from '../index.js';
-import { useImages, Avatar } from './shared.jsx';
+import { useImages, Avatar, ListSkeleton } from './shared.jsx';
 import { ask } from './dialog.jsx';
 import { ErrorState, friendlyError } from './errors.jsx';
 import PushToggle from './PushToggle.jsx';
@@ -21,7 +21,7 @@ function Blocked({ notify, go }) {
     setBusy(null);
   };
   if (err) return <ErrorState error={err} onRetry={load} title="Could not load your blocked list" />;
-  if (rows === null) return <p className="empty" role="status">Loading…</p>;
+  if (rows === null) return <ListSkeleton />;
   if (!rows.length) return <div className="empty"><p>You have not blocked anyone.</p><small>People you block can no longer see or contact you. Block someone from their profile.</small></div>;
   return (<>{rows.map(({ user: u }) => (<div className="row" key={u.id}><Avatar src={img[u.avatar_path]} size={44} />
     <span className="link" style={{ textAlign: 'left' }}>{u.display_name}<small>@{u.username}</small></span>

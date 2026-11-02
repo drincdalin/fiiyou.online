@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { auth, admin as adminApi, posts, profiles, cards as cardsApi, friends, wall, social, safety, media, errorCode } from '../index.js';
-import { useImages, Boot, Avatar, Rich } from './shared.jsx';
+import { useImages, Boot, Avatar, Rich, ListSkeleton } from './shared.jsx';
 import { toCss } from './customCss.js';
 import { Lightbox, LikersModal, ReportModal, Verified, NavIcon, spamMessage } from './parts.jsx';
 import { HomeView, MapView, MessagesView, PostView } from './views.jsx';
@@ -358,8 +358,8 @@ export default function App() {
   return (<div className="app">
     <nav className="nav"><button className="logo" onClick={() => go('home')}>fiiyou</button>
       <div className="navlinks">{NAV.map(([v, l]) => <button key={v} className={active(v) ? 'on' : ''} aria-label={l} title={l} aria-current={active(v) ? 'page' : undefined} onClick={() => go(v)}><span className="navicw"><NavIcon name={v} active={active(v)} />{v === 'messages' && unread > 0 && <em className="dotb">{unread > 99 ? '99+' : unread}</em>}</span></button>)}</div>
-      <div className="more" ref={menuRef}><button className="avbtn" onClick={() => setMenu(!menu)} aria-label={nCount > 0 ? `Account menu (${nCount} new notifications)` : 'Account menu'} aria-expanded={menu}><Avatar src={myImg[me.avatar_path]} size={34} /></button>{nCount > 0 && <em className="avdot" aria-hidden="true">{nCount > 9 ? '9+' : nCount}</em>}{menu && <div className="menu" role="menu">
-        <button className="mhead" role="menuitem" onClick={() => go('profile')}><Avatar src={myImg[me.avatar_path]} size={44} /><span><b>{me.display_name || me.username}</b><small>@{me.username}</small></span></button>
+      <div className="more" ref={menuRef}><button className="avbtn" onClick={() => setMenu(!menu)} aria-label={nCount > 0 ? `Account menu (${nCount} new notifications)` : 'Account menu'} aria-expanded={menu}><Avatar src={myImg[me.avatar_path]} size={34} name={me.display_name || me.username} /></button>{nCount > 0 && <em className="avdot" aria-hidden="true">{nCount > 9 ? '9+' : nCount}</em>}{menu && <div className="menu" role="menu">
+        <button className="mhead" role="menuitem" onClick={() => go('profile')}><Avatar src={myImg[me.avatar_path]} size={44} name={me.display_name || me.username} /><span><b>{me.display_name || me.username}</b><small>@{me.username}</small></span></button>
         <hr className="msep" />
         <NotificationList go={go} notify={notify} tick={nTick} onRead={setNCount} limit={5} />
         <hr className="msep" />
@@ -371,8 +371,8 @@ export default function App() {
     {route.v === 'home' && <HomeView me={me} go={go} notify={notify} unread={unread} />}
     {route.v === 'map' && <MapView me={me} go={go} notify={notify} />}
     {route.v === 'messages' && <MessagesView key={route.peer || 'all'} me={me} peer={route.peer} go={go} notify={notify} refreshUnread={refreshUnread} />}
-    {route.v === 'admin' && isAdmin && <Suspense fallback={<Boot />}><AdminView go={go} notify={notify} /></Suspense>}
-    {route.v === 'search' && <Suspense fallback={<Boot />}><SearchView key={`${route.tag || ''}|${route.q || ''}`} me={me} go={go} notify={notify} initialQuery={route.q || ''} initialTag={route.tag || ''} /></Suspense>}
+    {route.v === 'admin' && isAdmin && <Suspense fallback={<div className="plain view"><ListSkeleton /></div>}><AdminView go={go} notify={notify} /></Suspense>}
+    {route.v === 'search' && <Suspense fallback={<div className="plain view"><ListSkeleton /></div>}><SearchView key={`${route.tag || ''}|${route.q || ''}`} me={me} go={go} notify={notify} initialQuery={route.q || ''} initialTag={route.tag || ''} /></Suspense>}
     {route.v === 'notifications' && <NotificationsView go={go} notify={notify} tick={nTick} onRead={setNCount} />}
     {route.v === 'settings' && <SettingsView notify={notify} go={go} />}
     {route.v === 'people' && <PeopleView me={me} go={go} notify={notify} onInvite={() => setInviteOpen(true)} />}

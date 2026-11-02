@@ -28,7 +28,7 @@ const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select
 /** Pop-up viewer. items: [{id, src, caption, likes, liked}]. Pass onLike to show the like button.
  *  Keyboard: Esc closes, arrows browse, Home/End jump, Tab stays inside. Focus moves in on open and returns to the opener on close. */
 export function Lightbox({ items, index, onClose, onIndex, onLike, onLikers }) {
-  const it = items[index]; const n = items.length; const sx = useRef(null); const root = useRef(null); const closeBtn = useRef(null); const [bad, setBad] = useState(false);
+  const it = items[index]; const n = items.length; const sx = useRef(null); const root = useRef(null); const closeBtn = useRef(null); const [bad, setBad] = useState(false); const [ready, setReady] = useState(false);
   const step = (d) => { if (n > 1) onIndex((index + d + n) % n); };
   const swipeEnd = (e) => { if (sx.current == null || n < 2) return; const dx = e.clientX - sx.current; sx.current = null; if (Math.abs(dx) > 50) step(dx < 0 ? 1 : -1); };
   useEffect(() => {
@@ -47,7 +47,7 @@ export function Lightbox({ items, index, onClose, onIndex, onLike, onLikers }) {
     const back = document.activeElement; closeBtn.current?.focus({ preventScroll: true });
     return () => { if (back instanceof HTMLElement && back.isConnected) back.focus({ preventScroll: true }); };
   }, []);
-  useEffect(() => { setBad(false); }, [index]);
+  useEffect(() => { setBad(false); setReady(false); }, [index, it?.src]);
   useEffect(() => {   // warm the neighbours so browsing feels instant
     if (n < 2) return; [index + 1, index - 1].forEach((k) => { const u = items[(k + n) % n]?.src; if (u) { const im = new Image(); im.src = u; } });
   }, [index, n]);   // eslint-disable-line react-hooks/exhaustive-deps
@@ -63,9 +63,9 @@ export function Lightbox({ items, index, onClose, onIndex, onLike, onLikers }) {
     <button className="lbx ghost" ref={closeBtn} onClick={onClose} aria-label="Close" title="Close (Esc)"><X size={18} weight="bold" aria-hidden="true" /></button>
     <div className="lbimg" onPointerDown={(e) => { sx.current = e.clientX; }} onPointerUp={swipeEnd} onPointerCancel={() => { sx.current = null; }}>
       {n > 1 && <button className="arrow l" onClick={() => step(-1)} aria-label="Previous photo" title="Previous (←)"><CaretLeft size={22} weight="bold" aria-hidden="true" /></button>}
-      {!it.src ? <div className="boot" role="status" aria-label="Loading photo">…</div>
-        : bad ? <div className="lbbad" role="img" aria-label="This photo could not be loaded"><ImageSquare size={40} weight="light" aria-hidden="true" /><span>Could not load this photo</span></div>
-        : <img key={it.id ?? index} className="lbfade" src={it.src} alt={it.caption || `Photo ${index + 1} of ${n}`} draggable="false" onError={() => setBad(true)} />}
+      {(!it.src || (!ready && !bad)) && <span className="sk sk-lb" role="status" aria-label="Loading photo" />}
+      {it.src && !bad && <img key={`${it.id ?? index}|${it.src}`} className={`lbfade${ready ? '' : ' lbhide'}`} src={it.src} alt={it.caption || `Photo ${index + 1} of ${n}`} decoding="async" draggable="false" onLoad={() => setReady(true)} onError={() => setBad(true)} />}
+      {bad && <div className="lbbad" role="img" aria-label="This photo could not be loaded"><ImageSquare size={40} weight="light" aria-hidden="true" /><span>Could not load this photo</span></div>}
       {n > 1 && <button className="arrow r" onClick={() => step(1)} aria-label="Next photo" title="Next (→)"><CaretRight size={22} weight="bold" aria-hidden="true" /></button>}</div>
     <div className="lbfoot">{it.caption && <p>{it.caption}</p>}
       <div className="lbbar">{onLike && <button className={`like${it.liked ? ' on' : ''}`} onClick={() => onLike(it)} aria-pressed={!!it.liked} aria-label={it.liked ? `Unlike (${it.likes})` : `Like (${it.likes})`}><Heart size={16} weight={it.liked ? 'fill' : 'bold'} aria-hidden="true" />{it.likes}</button>}{!onLike && onLikers && it.likes > 0 && <button className="like" onClick={() => onLikers(it)} aria-label={`See who liked (${it.likes})`}><Heart size={16} weight="fill" aria-hidden="true" />{it.likes}</button>}<small aria-live="polite">{index + 1} / {n}</small></div></div>
@@ -94,15 +94,20 @@ function PostImages({ srcs, onOpen }) {
   const pdown = (e) => { dragged.current = false; down.current = e.pointerType === 'mouse' && e.button === 0 ? e.clientX : null; };
   const pup = (e) => { if (down.current == null) return; const dx = e.clientX - down.current; down.current = null; if (Math.abs(dx) > 40) { dragged.current = true; to(dx < 0 ? i + 1 : i - 1); } };
   const atStart = i <= 0; const atEnd = i >= n - 1;
+  const [loaded, setLoaded] = useState(() => new Set());
+  const mark = (k) => setLoaded((s) => (s.has(k) ? s : new Set(s).add(k)));
+  useEffect(() => {   // warm the neighbours so the next swipe / arrow click is instant
+    [i + 1, i - 1].forEach((k) => { const u = srcs[k]; if (u) { const im = new Image(); im.decoding = 'async'; im.src = u; } });
+  }, [i, srcs.join('|')]);   // eslint-disable-line react-hooks/exhaustive-deps
   return (<div className="pimgs" onKeyDown={key}>
     <div className="pslides" ref={box} onScroll={onScroll} onPointerDown={pdown} onPointerUp={pup} onPointerCancel={() => { down.current = null; }} onPointerLeave={() => { down.current = null; }}
       onClickCapture={(e) => { if (dragged.current) { e.stopPropagation(); e.preventDefault(); dragged.current = false; } }}
       tabIndex={0} role="group" aria-roledescription="carousel" aria-label={`${n} photos`}>
-      {srcs.map((u, k) => <button key={k} type="button" className="pimg pslide" tabIndex={k === i ? 0 : -1} style={u ? { '--bgimg': `url("${u}")` } : undefined} onClick={() => onOpen(k)} aria-label={`Open photo ${k + 1} of ${n}`}>
-        {u ? <img src={u} alt="" loading={k ? 'lazy' : undefined} decoding="async" draggable="false" /> : <span className="pslideph" />}</button>)}
+      {srcs.map((u, k) => <button key={k} type="button" className={`pimg pslide${u && loaded.has(k) ? '' : ' sk'}`} tabIndex={k === i ? 0 : -1} style={u ? { '--bgimg': `url("${u}")` } : undefined} onClick={() => u && onOpen(k)} aria-label={`Open photo ${k + 1} of ${n}`}>
+        {u ? <img src={u} alt="" loading={k === 0 ? 'eager' : 'lazy'} decoding="async" draggable="false" onLoad={() => mark(k)} ref={(el) => { if (el?.complete && el.naturalWidth) mark(k); }} /> : <span className="pslideph" />}</button>)}
     </div>
-    <button type="button" className="pnav l" onClick={() => !atStart && to(i - 1)} aria-label="Previous photo" aria-disabled={atStart} tabIndex={atStart ? -1 : 0} title="Previous photo"><CaretLeft size={20} weight="bold" aria-hidden="true" /></button>
-    <button type="button" className="pnav r" onClick={() => !atEnd && to(i + 1)} aria-label="Next photo" aria-disabled={atEnd} tabIndex={atEnd ? -1 : 0} title="Next photo"><CaretRight size={20} weight="bold" aria-hidden="true" /></button>
+    <button type="button" className="pnav l" onClick={(e) => { e.stopPropagation(); if (!atStart) to(i - 1); }} aria-label="Previous photo" aria-disabled={atStart} tabIndex={atStart ? -1 : 0} title="Previous photo"><CaretLeft size={22} weight="bold" aria-hidden="true" /></button>
+    <button type="button" className="pnav r" onClick={(e) => { e.stopPropagation(); if (!atEnd) to(i + 1); }} aria-label="Next photo" aria-disabled={atEnd} tabIndex={atEnd ? -1 : 0} title="Next photo"><CaretRight size={22} weight="bold" aria-hidden="true" /></button>
     <span className="pcount" aria-hidden="true">{i + 1}/{n}</span>
     <span className="sronly" role="status" aria-live="polite">Photo {i + 1} of {n}</span>
     <div className="pdots">{srcs.map((_, k) => <button key={k} type="button" className={k === i ? 'on' : ''} onClick={() => to(k)} aria-label={`Go to photo ${k + 1}`} aria-current={k === i ? 'true' : undefined} />)}</div>
@@ -112,14 +117,14 @@ function PostImages({ srcs, onOpen }) {
 export function PostCard({ p, me, img, go, onChange, onDelete, notify }) {
   const [edit, setEdit] = useState(false); const [body, setBody] = useState(p.body); const [title, setTitle] = useState(p.title || '');
   const [open, setOpen] = useState(false); const [zoom, setZoom] = useState(false); const [rep, setRep] = useState(false); const [shr, setShr] = useState(false); const [menu, setMenu] = useState(false); const [zi, setZi] = useState(0);
-  const extra = p.extra_images || []; const xi = useImages(extra); const own = p.author_id === me.id; const fail = (e) => notify(spamMessage(e) || e.message || 'Something went wrong', 'err');
+  const extra = p.extra_images || []; const xi = useImages(extra.filter((x) => !img[x])); const pic = (x) => img[x] || xi[x] || null; const own = p.author_id === me.id; const fail = (e) => notify(spamMessage(e) || e.message || 'Something went wrong', 'err');
   const like = async () => { const on = !p.liked; onChange({ ...p, liked: on, like_count: p.like_count + (on ? 1 : -1) }); try { await posts.setLike(p.id, on); } catch (e) { onChange(p); fail(e); } };
   const save = async () => { try { const r = await posts.updatePost(p.id, { body, title: p.kind === 'event' ? title : undefined }); onChange({ ...p, body: r.body, title: r.title, edited_at: r.edited_at }); setEdit(false); notify('Post updated'); } catch (e) { fail(e); } };
   const dropImg = async () => { try { await posts.updatePost(p.id, { body: p.body }, { removeImage: true, oldImage: p.image_path, oldExtras: extra }); onChange({ ...p, image_path: null, extra_images: [] }); } catch (e) { fail(e); } };
   const del = async () => { if (!(await ask({ title: 'Delete this post?', message: 'This cannot be undone.', confirmLabel: 'Delete', danger: true }))) return; try { await posts.deletePost(p.id, p.image_path, extra); onDelete(p.id); notify('Post deleted'); } catch (e) { fail(e); } };
   const src = img[p.image_path];
   return (<article className={`post${p.author_official ? ' official' : ''}`}>
-    <header><button className="who" onClick={() => go('profile', p.author_username)}><Avatar src={img[p.author_avatar_path]} />
+    <header><button className="who" onClick={() => go('profile', p.author_username)}><Avatar src={img[p.author_avatar_path]} name={p.author_display_name || p.author_username} />
       <span><b>{p.author_display_name}{p.author_official && <Verified />}</b><small>@{p.author_username} · {ago(p.created_at)}{p.edited_at && ' · edited'}</small></span></button>
       {!edit && <div className="pmenuwrap"><button className="ghost pmore" onClick={() => setMenu(!menu)} aria-label="More options" aria-expanded={menu}><DotsThree size={24} weight="bold" aria-hidden="true" /></button>
         {menu && <><div className="pmenuback" onClick={() => setMenu(false)} /><div className="pmenu" role="menu">
@@ -127,8 +132,8 @@ export function PostCard({ p, me, img, go, onChange, onDelete, notify }) {
             <button role="menuitem" className="danger" onClick={() => { setMenu(false); del(); }}><Trash size={18} weight="bold" aria-hidden="true" />Delete</button></>
             : <button role="menuitem" onClick={() => { setMenu(false); setRep(true); }}><Flag size={18} weight="bold" aria-hidden="true" />Report</button>}</div></>}</div>}</header>
     <div className={`pmain${p.image_path && src ? ' has' : ''}`}>
-      {p.image_path && src && (extra.length ? <PostImages srcs={[src, ...extra.map((x) => xi[x])]} onOpen={(k) => { setZi(k); setZoom(true); }} />
-        : <button className="pimg" style={{ '--bgimg': `url("${src}")` }} onClick={() => setZoom(true)} aria-label="Open photo"><img src={src} alt="" loading="lazy" /></button>)}
+      {p.image_path && src && (extra.length ? <PostImages srcs={[src, ...extra.map(pic)]} onOpen={(k) => { setZi(k); setZoom(true); }} />
+        : <button className="pimg" style={{ '--bgimg': `url("${src}")` }} onClick={() => setZoom(true)} aria-label="Open photo"><img src={src} alt="" loading="lazy" decoding="async" /></button>)}
       <div className="ptext">
         {p.kind === 'event' && <div className="evmeta"><CalendarBlank size={14} weight="bold" aria-hidden="true" />{new Date(p.event_at).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' })}{p.event_place && ` · ${p.event_place}`}</div>}
         {p.place_name && <div className="chipline"><MapPin size={14} weight="bold" aria-hidden="true" />At {p.place_name}</div>}
@@ -144,7 +149,7 @@ export function PostCard({ p, me, img, go, onChange, onDelete, notify }) {
       {p.visibility !== 'friends' && <button className="ghost sm pshare" onClick={() => setShr(true)} aria-label="Share"><ShareNetwork size={16} weight="bold" aria-hidden="true" /><span className="lbl">Share</span></button>}</footer>
     {open && <Comments postId={p.id} postAuthorId={p.author_id} me={me} go={go} notify={notify} fail={fail} onTag={(t) => go('tag', t)}
       onDelta={(d) => onChange({ ...p, comment_count: Math.max(0, p.comment_count + d) })} />}
-    {zoom && <Lightbox items={[{ id: p.id, src, caption: p.body }, ...extra.map((x) => ({ id: `${p.id}:${x}`, src: xi[x], caption: p.body }))]} index={zi} onClose={() => setZoom(false)} onIndex={setZi} />}
+    {zoom && <Lightbox items={[{ id: p.id, src, caption: p.body }, ...extra.map((x) => ({ id: `${p.id}:${x}`, src: pic(x), caption: p.body }))]} index={zi} onClose={() => setZoom(false)} onIndex={setZi} />}
     {rep && <ReportModal target={{ type: 'post', id: p.id }} onClose={() => setRep(false)} notify={notify} />}
     {shr && <PostShareModal p={p} img={img} onClose={() => setShr(false)} notify={notify} />}
   </article>);
