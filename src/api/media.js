@@ -60,12 +60,6 @@ export async function signedUrls(paths, bucket = BUCKET) {
   }
   return Object.fromEntries(paths.filter(Boolean).map((p) => [p, cache.get(key(p))?.url ?? null]));
 }
-/** Synchronous cache read: lets components render an already-known image URL on the first paint (no blank frame). */
-export function peekSignedUrls(paths, bucket = BUCKET) {
-  const now = Date.now(), out = {};
-  for (const p of paths) if (p) { const c = cache.get(`${bucket}/${p}`); if (c?.exp > now) out[p] = c.url; }
-  return out;
-}
 export async function signedUrl(path, bucket = BUCKET) { return path ? (await signedUrls([path], bucket))[path] : null; }
 
 const AUDIO_TYPES = ['audio/mpeg', 'audio/ogg', 'audio/mp4', 'audio/x-m4a', 'audio/aac', 'audio/wav', 'audio/webm'];

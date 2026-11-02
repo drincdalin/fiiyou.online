@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { posts, discover, friends } from '../index.js';
-import { useImages, Avatar, ListSkeleton } from './shared.jsx';
+import { useImages, Avatar } from './shared.jsx';
 import { PostCard } from './parts.jsx';
 import { ErrorState, friendlyError } from './errors.jsx';
 
@@ -84,7 +84,7 @@ export default function SearchView({ me, go, notify, onInvite, initialQuery = ''
       <div className="tabs"><p className="muted" style={{ margin: 0, marginRight: 'auto' }}>Discover people</p>
         {[['random', 'Random'], ['new', 'Newest']].map(([k, l]) => <button key={k} type="button" className={mode === k ? 'on' : ''} aria-pressed={mode === k} onClick={() => setMode(k)}>{l}</button>)}</div>
       {derr ? <ErrorState error={derr} onRetry={loadDisc} title="Could not load people" />
-        : disc === null ? <ListSkeleton />
+        : disc === null ? <p className="empty" role="status">Loading…</p>
         : !disc.length ? <div className="empty"><p>{loc ? `No one new in ${lname(+loc) || 'this locality'} yet.` : 'No one to show yet.'}</p>{onInvite && <button className="primary" onClick={onInvite}>Invite someone</button>}</div>
         : disc.map(person)}
       {q.trim().length === 1 && <p className="muted" role="status">Type at least 2 letters to search.</p>}
@@ -96,7 +96,7 @@ export default function SearchView({ me, go, notify, onInvite, initialQuery = ''
       {[['all', 'All'], ['people', 'People'], ['posts', 'Posts'], ['tags', 'Hashtags']].map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}</div>}
 
     {err && <ErrorState error={err} onRetry={run} title="Search failed" />}
-    {loading && <ListSkeleton n={3} />}
+    {loading && <p className="empty" role="status">Searching…</p>}
     {none && <p className="empty">{tag ? 'No public posts with this hashtag yet.' : `Nothing found for “${term}”.`}</p>}
 
     {searching && !loading && !err && (tab === 'all' || tab === 'people') && !!people?.length && (<>

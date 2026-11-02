@@ -25,53 +25,18 @@
 .schedlist ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .schedlist li { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .schedlist li small { color: var(--muted); overflow-wrap: anywhere; }
-/* several photos in one post: a swipeable strip.
-   Touch: swipe. Mouse: drag, or the Previous/Next buttons (only on devices that can hover; they also appear on keyboard focus). */
+/* several photos in one post: a swipeable strip */
 .pimgs { position: relative; min-width: 0; }
-.pslides { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; border-radius: 18px; outline-offset: 2px; -webkit-user-select: none; user-select: none; }
+.pslides { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; border-radius: 18px; outline-offset: 2px; }
 .pslides::-webkit-scrollbar { display: none; }
 .pslides .pslide { flex: 0 0 100%; min-width: 0; scroll-snap-align: center; scroll-snap-stop: always; border-radius: 0; }
 .pslideph { display: block; aspect-ratio: 4 / 3; }
-.pcount { z-index: 2; position: absolute; top: 10px; right: 10px; padding: 2px 10px; border-radius: 999px; background: var(--scrim-hi); color: var(--ink); font-size: .8rem; font-weight: 800; pointer-events: none; font-variant-numeric: tabular-nums; }
-.sronly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
-/* dots: a small pill that stays readable on bright photos; each dot is a real button with a 22px hit area */
-.pdots { z-index: 2; position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 0; padding: 0 4px; border-radius: 999px; background: var(--scrim); pointer-events: none; max-width: calc(100% - 24px); }
-.pdots button { pointer-events: auto; position: relative; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; display: grid; place-items: center; }
-.pdots button::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: color-mix(in srgb, var(--ink) 40%, transparent); transition: transform .2s var(--ease), background .2s; }
-.pdots button.on::before { background: var(--ink); transform: scale(1.25); }
-.pdots button:hover::before { background: color-mix(in srgb, var(--ink) 75%, transparent); }
-.pdots button.on:hover::before { background: var(--ink); }
-.pdots button:focus-visible { outline: 2px solid var(--accent-fg, var(--ink)); outline-offset: -2px; }
-/* previous / next: hidden on touch-only devices (swipe instead) */
-.pnav { display: none; }
-@media (hover: hover) and (pointer: fine) {
-  .pnav { position: absolute; top: 50%; z-index: 2; width: 40px; height: 40px; padding: 0; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--ink) 28%, transparent); background: var(--scrim); color: var(--ink);
-    display: grid; place-items: center; cursor: pointer; opacity: 0; transform: translateY(-50%) scale(.88);
-    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); box-shadow: 0 2px 10px rgb(0 0 0 / .35);
-    transition: opacity .2s var(--ease), transform .2s var(--ease), background .15s, border-color .15s; }
-  .pnav.l { left: 10px; } .pnav.r { right: 10px; }
-  .pimgs:hover .pnav, .pimgs:focus-within .pnav { opacity: 1; transform: translateY(-50%) scale(1); }
-  .pimgs .pnav:hover { background: var(--scrim-hi); border-color: var(--accent-fg, var(--ink)); }
-  .pimgs .pnav:active { transform: translateY(-50%) scale(.94); }
-  .pimgs .pnav:focus-visible { outline: 2px solid var(--accent-fg, var(--ink)); outline-offset: 2px; opacity: 1; }
-  .pimgs .pnav[aria-disabled="true"] { opacity: 0; pointer-events: none; transform: translateY(-50%) scale(.88); }
-  /* soft edge shading so the buttons read on any photo */
-  .pimgs::before, .pimgs::after { content: ""; position: absolute; top: 0; bottom: 0; width: 22%; z-index: 1; pointer-events: none; opacity: 0; transition: opacity .25s var(--ease); border-radius: 18px; }
-  .pimgs::before { left: 0; background: linear-gradient(to right, rgb(0 0 0 / .28), transparent); }
-  .pimgs::after { right: 0; background: linear-gradient(to left, rgb(0 0 0 / .28), transparent); }
-  .pimgs:hover::before, .pimgs:hover::after, .pimgs:focus-within::before, .pimgs:focus-within::after { opacity: 1; }
-  .pimgs .pslide { cursor: zoom-in; }
-}
-@media (prefers-reduced-motion: reduce) { .pnav, .pimgs::before, .pimgs::after, .pdots button::before { transition: none; } }
-.lbimg { touch-action: pan-y; }
-/* viewer: image fades in on every change, a clear message when a photo fails to load */
-.lbfade { animation: lbfade .22s var(--ease); } @keyframes lbfade { from { opacity: 0; } }
-.lbbad { display: grid; justify-items: center; gap: 8px; padding: 64px 24px; color: var(--muted); }
-.lb .arrow:focus-visible, .lbx:focus-visible { outline: 2px solid var(--accent-fg, var(--ink)); outline-offset: 2px; }
-@media (prefers-reduced-motion: reduce) { .lbfade { animation: none; } }
-/* icon + label buttons (Phosphor icon next to text) and icons set inline in text */
-.iconbtn { display: inline-flex; align-items: center; justify-content: center; gap: .35em; }
-.inlic { vertical-align: -.15em; }
+.pcount { position: absolute; top: 10px; right: 10px; padding: 2px 10px; border-radius: 999px; background: var(--scrim-hi); color: var(--ink); font-size: .8rem; font-weight: 800; pointer-events: none; }
+.pdots { position: absolute; bottom: 6px; left: 0; right: 0; display: flex; justify-content: center; gap: 0; pointer-events: none; }
+.pdots button { pointer-events: auto; width: 20px; height: 20px; padding: 0; border: 0; background: none; box-shadow: none; display: grid; place-items: center; cursor: pointer; }
+.pdots i { width: 7px; height: 7px; border-radius: 50%; background: color-mix(in srgb, var(--ink) 40%, transparent); transition: width .2s, background .2s; box-shadow: 0 0 0 1px color-mix(in srgb, var(--g0) 45%, transparent); }
+.pdots button.on i { width: 18px; border-radius: 99px; background: var(--ink); }
+.lbimg { touch-action: pinch-zoom; user-select: none; -webkit-user-select: none; }
 
 /* notifications page (the list used to live inside the account menu) */
 .npanel { padding: 6px; }
@@ -228,24 +193,81 @@
 .gh .ghlegend .ghc:first-of-type { margin-left: 4px; } .gh .ghlegend .ghc:last-of-type { margin-right: 4px; }
 .gh .ghstats { margin-top: 14px; }
 
-/* ---- skeletons (progressive loading) ---- */
-@keyframes sk-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
-.sk { display: inline-block; background: linear-gradient(100deg, var(--g2) 30%, color-mix(in srgb, var(--ink) 10%, var(--g2)) 50%, var(--g2) 70%) 0 0 / 200% 100%; animation: sk-shimmer 1.4s linear infinite; }
-.sk-row { display: flex; align-items: center; gap: 12px; } .sk-col { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
-.sk-post { pointer-events: none; }
-.sk-lb { position: absolute; inset: 0; border-radius: 0; z-index: 0; }
-.lbimg { position: relative; } .lbhide { opacity: 0; }
-.pslide.sk { min-height: 260px; } .pslide.sk img { opacity: 0; } .pslide img { transition: opacity .2s; }
-@media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
 
-/* ---- avatar initials fallback (no empty circle / flicker) ---- */
-.av--ini { display: inline-grid; place-items: center; flex: none; color: #fff; font-weight: 800; line-height: 1; letter-spacing: .02em; user-select: none; background: hsl(var(--avh, 220) 45% 38%); }
-.av .ini { display: block; }
+/* ================= UX pass ================= */
+.sronly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
-/* ---- multi-image hover arrows (desktop / fine pointer): solid, high-contrast, theme-independent ---- */
-@media (hover: hover) and (pointer: fine) {
-  .pnav { width: 42px; height: 42px; background: rgb(0 0 0 / .62); color: #fff; border: 1px solid rgb(255 255 255 / .35); box-shadow: 0 2px 12px rgb(0 0 0 / .45); }
-  .pimgs .pnav:hover { background: rgb(0 0 0 / .85); border-color: #fff; }
-  .pimgs:hover .pnav:not([aria-disabled="true"]), .pimgs:focus-within .pnav:not([aria-disabled="true"]) { opacity: 1; transform: translateY(-50%) scale(1); }
-  .pnav svg { display: block; pointer-events: none; }
+/* photos fade in instead of popping in */
+.fadeimg { opacity: 0; }
+.fadeimg.ready { opacity: 1; }
+.pimg img.fadeimg, .lbimg img.fadeimg { transition: opacity .3s ease, transform .3s var(--ease); }
+.pimgph { aspect-ratio: 4 / 3; cursor: default; }
+.pimgph::after, .skimg::after, .skln::after, .skav::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--ink) 9%, transparent) 50%, transparent 70%); transform: translateX(-100%); animation: shimmer 1.4s infinite; }
+@keyframes shimmer { to { transform: translateX(100%); } }
+
+/* carousel: previous / next appear on hover (desktop), focus (keyboard); hidden on touch and at the ends */
+.pnav { position: absolute; top: 50%; translate: 0 -50%; z-index: 2; width: 40px; height: 40px; padding: 0; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--g4); background: var(--scrim-hi); color: var(--ink); box-shadow: 0 4px 14px -4px color-mix(in srgb, var(--shade) 70%, transparent); cursor: pointer; opacity: 0; transition: opacity .18s ease, transform .15s ease, border-color .15s; }
+.pnav.l { left: 10px; } .pnav.r { right: 10px; }
+.pnav:focus-visible { opacity: 1; }
+.pnav:hover { border-color: var(--accent-fg); transform: scale(1.08); }
+.pnav:active { transform: scale(.94); }
+@media (hover: hover) and (pointer: fine) { .pimgs:hover .pnav, .pimgs:focus-within .pnav { opacity: 1; } .pslides { cursor: grab; } .pslides:active { cursor: grabbing; } }
+@media (hover: none) { .pnav { display: none; } }
+.pslides:focus-visible { outline: 2px solid var(--accent-fg); }
+
+/* photo viewer */
+.lbpic.fromr { animation: lbr .22s var(--ease); } .lbpic.froml { animation: lbl .22s var(--ease); }
+@keyframes lbr { from { transform: translateX(28px); } } @keyframes lbl { from { transform: translateX(-28px); } }
+.lbspin { width: 36px; height: 36px; margin: 80px 0; border-radius: 50%; border: 3px solid var(--g3); border-top-color: var(--accent-fg); animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.lbheart { position: absolute; left: 50%; top: 50%; margin: -48px 0 0 -48px; color: var(--pink); pointer-events: none; filter: drop-shadow(0 6px 18px #0007); animation: heartburst .8s ease-out forwards; }
+@keyframes heartburst { 0% { transform: scale(.3); opacity: 0; } 25% { transform: scale(1.15); opacity: 1; } 55% { transform: scale(.95); opacity: 1; } 100% { transform: scale(1.25); opacity: 0; } }
+.lbthumbs { display: flex; gap: 8px; justify-content: center; overflow-x: auto; scrollbar-width: none; padding: 2px; }
+.lbthumbs::-webkit-scrollbar { display: none; }
+.lbthumbs button { flex: none; width: 54px; height: 54px; padding: 0; overflow: hidden; border-radius: 10px; border: 2px solid transparent; background: var(--g2); opacity: .55; cursor: pointer; transition: opacity .15s, border-color .15s; }
+.lbthumbs button:hover { opacity: .9; } .lbthumbs button.on { opacity: 1; border-color: var(--accent-fg); }
+.lbthumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lbcap.clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.lbmore, .pmorebtn { background: none; border: 0; padding: 0; margin: 0 0 8px; color: var(--link-fg, var(--accent-fg)); font-weight: 700; font-size: .9rem; cursor: pointer; text-align: left; box-shadow: none; }
+.pmorebtn { margin: 0; width: fit-content; }
+.lbmore:hover, .pmorebtn:hover { text-decoration: underline; }
+.lbfoot { display: grid; }
+@media (max-width: 640px) { .lbthumbs { display: none; } }
+
+/* post card */
+.pre.clamp { display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
+.like.pop svg { animation: likepop .5s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes likepop { 0% { transform: scale(.5); } 60% { transform: scale(1.4); } 100% { transform: scale(1); } }
+.hint { color: var(--muted); }
+.post time { cursor: help; }
+
+/* composer */
+.composer { position: relative; }
+.composer.drag { outline: 2px dashed var(--accent-fg); outline-offset: 3px; }
+.dropnote { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border-radius: inherit; background: var(--scrim-hi); color: var(--accent-fg); font-weight: 800; pointer-events: none; }
+.ccount { justify-self: end; color: var(--muted); font-variant-numeric: tabular-nums; } .ccount.hot { color: var(--red-fg); font-weight: 800; }
+
+/* feed: skeletons, load more, empty states */
+.skels { display: grid; gap: 14px; }
+.skel { overflow: hidden; }
+.skrow { display: flex; align-items: center; gap: 10px; }
+.skrow > span { display: grid; gap: 8px; flex: 1; }
+.skav, .skln, .skimg { position: relative; overflow: hidden; display: block; background: var(--g2); }
+.skav { width: 40px; height: 40px; border-radius: 50%; flex: none; }
+.skln { height: 12px; border-radius: 99px; } .skimg { height: 220px; border-radius: 18px; }
+.w90 { width: 90%; } .w70 { width: 70%; } .w40 { width: 40%; } .w25 { width: 25%; }
+.moreposts { min-height: 44px; }
+.emptyx { display: grid; justify-items: center; gap: 8px; padding: 2.5rem 1rem; } .emptyx p { margin: 0; max-width: 32ch; }
+
+/* shell: dismissable toast, offline bar */
+button.toast { font: inherit; font-weight: 800; cursor: pointer; text-align: center; border: 2px solid var(--edge, transparent); }
+.offline { position: sticky; top: 0; z-index: 80; display: flex; align-items: center; justify-content: center; gap: 8px; padding: .45rem 1rem; background: var(--yellow); color: var(--on-notice, #111); font-weight: 700; font-size: .9rem; text-align: center; }
+
+/* keyboard users always see where they are */
+button:focus-visible, a:focus-visible, [role="tab"]:focus-visible, select:focus-visible { outline: 2px solid var(--accent-fg); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fadeimg, .pnav, .pdots i, .lbpic, .lbheart, .like.pop svg, .view { animation: none !important; transition: none !important; }
+  .pimgph::after, .skimg::after, .skln::after, .skav::after { animation: none; }
+  .pslides { scroll-behavior: auto; }
 }

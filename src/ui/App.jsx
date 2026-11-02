@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { auth, admin as adminApi, posts, profiles, cards as cardsApi, friends, wall, social, safety, media, errorCode } from '../index.js';
-import { useImages, Boot, Avatar, Rich, ListSkeleton } from './shared.jsx';
+import { useImages, Boot, Avatar, Rich } from './shared.jsx';
 import { toCss } from './customCss.js';
 import { Lightbox, LikersModal, ReportModal, Verified, NavIcon, spamMessage } from './parts.jsx';
 import { HomeView, MapView, MessagesView, PostView } from './views.jsx';
@@ -28,7 +28,7 @@ import SettingsView from './SettingsView.jsx';
 import { PasswordMeter } from './PasswordMeter.jsx';
 import { registerSW, forgetDevice, syncPush } from './push.js';
 import GithubActivity from './GithubActivity.jsx';
-import { Bell, Eye, EyeSlash, Check, GearSix, Heart, MagnifyingGlass, PencilSimple, ShareNetwork, SignOut, Trash, UserPlus } from '@phosphor-icons/react';
+import { Bell, WifiSlash, Eye, EyeSlash, Check, GearSix, Heart, MagnifyingGlass, PencilSimple, ShareNetwork, SignOut, Trash, UserPlus } from '@phosphor-icons/react';
 
 const BASE = import.meta.env.BASE_URL;
 function Auth() {
@@ -286,7 +286,7 @@ function toRoute(path) {
 export default function App() {
   const [session, setSession] = useState(undefined); const [me, setMe] = useState(null); const path = usePath(); const route = useMemo(() => toRoute(path), [path]);
   const [isAdmin, setIsAdmin] = useState(false); const [recovery, setRecovery] = useState(false);
-  const [menu, setMenu] = useState(false); const { n: nCount, setN: setNCount, tick: nTick } = useNotifCount(me?.id); const [toast, setToast] = useState(null); const [unread, setUnread] = useState(0);
+  const [menu, setMenu] = useState(false); const { n: nCount, setN: setNCount, tick: nTick } = useNotifCount(me?.id); const [toast, setToast] = useState(null); const [paused, setPaused] = useState(false); const [online, setOnline] = useState(() => navigator.onLine !== false); const [unread, setUnread] = useState(0);
   const refreshMe = useCallback(() => profiles.getMyProfile().then(setMe).catch(() => {}), []);
   const [meErr, setMeErr] = useState(null); const [inviteOpen, setInviteOpen] = useState(false);
   const loadMe = useCallback(() => {
@@ -318,7 +318,9 @@ export default function App() {
     const tick = () => posts.publishDue().then((n) => { if (n > 0) window.dispatchEvent(new Event('fiiyou:published')); }).catch(() => {});
     tick(); const t = setInterval(tick, 60000); return () => clearInterval(t);
   }, [me?.id]);   // service worker: installable app + push notifications
-  useEffect(() => { const t = { home: 'Home', profile: route.username ? `@${route.username}` : 'Me', map: 'Map', messages: 'Chat', people: 'People', admin: 'Admin', post: 'Post', search: 'Search', tag: 'Tag', notifications: 'Notifications', settings: 'Settings' }[route.v]; document.title = `fiiyou · ${t}`; }, [route]);
+  useEffect(() => { const t = { home: 'Home', profile: route.username ? `@${route.username}` : 'Me', map: 'Map', messages: 'Chat', people: 'People', admin: 'Admin', post: 'Post', search: 'Search', tag: 'Tag', notifications: 'Notifications', settings: 'Settings' }[route.v]; const b = unread + nCount; document.title = `${b > 0 ? `(${b > 99 ? '99+' : b}) ` : ''}fiiyou · ${t}`; }, [route, unread, nCount]);
+  useEffect(() => { window.scrollTo(0, 0); }, [path]);   // a new page starts at the top
+  useEffect(() => { const on = () => setOnline(true); const off = () => setOnline(false); addEventListener('online', on); addEventListener('offline', off); return () => { removeEventListener('online', on); removeEventListener('offline', off); }; }, []);
   useEffect(() => { if (route.legacyMe && me) navigate(`/${me.username.toLowerCase()}${route.edit ? '/edit' : ''}`, { replace: true }); }, [route.legacyMe, route.edit, me?.username]);   // old /me -> /<username>
   useEffect(() => { if (session) loadMe(); else { setMe(null); setMeErr(null); } }, [session, loadMe]);
   useEffect(() => {   // someone who is already a member opened an invite link: take them to the person who sent it
@@ -336,7 +338,7 @@ export default function App() {
   const menuRef = useRef();
   useEffect(() => { if (!menu) return; const out = (e) => { if (!menuRef.current?.contains(e.target)) setMenu(false); }; const esc = (e) => { if (e.key === 'Escape') setMenu(false); };
     addEventListener('pointerdown', out); addEventListener('keydown', esc); return () => { removeEventListener('pointerdown', out); removeEventListener('keydown', esc); }; }, [menu]);
-  useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 3200); return () => clearTimeout(t); }, [toast]);
+  useEffect(() => { if (!toast || paused) return undefined; const t = setTimeout(() => setToast(null), toast.type === 'err' ? 6000 : 3200); return () => clearTimeout(t); }, [toast, paused]);   // errors stay longer; hovering a toast keeps it
   if (session === undefined) return <Boot />;
   if (recovery && session) return <NewPassword onDone={() => setRecovery(false)} />;
   if (!session) return <Auth />;
@@ -353,13 +355,15 @@ export default function App() {
       : v === 'search' ? (username ? `/search?q=${encodeURIComponent(username)}` : '/search')
       : v === 'home' ? '/' : `/${v}`;
     setMenu(false); navigate(to); };
+  const top = (v) => { if (active(v) && !(v === 'profile' && route.edit)) { window.scrollTo({ top: 0, behavior: 'smooth' }); if (v === 'home') window.dispatchEvent(new Event('fiiyou:refresh')); } else go(v); };   // pressing the page you are on = back to the top (and a fresh feed on Home)
   const NAV = [['home', 'Home'], ['profile', 'Me'], ['map', 'Map'], ['messages', 'Chat'], ['people', 'People'], ...(isAdmin ? [['admin', 'Admin']] : [])];
   const active = (v) => (v === 'profile' ? route.v === 'profile' && (!route.username || route.username === me.username.toLowerCase()) : route.v === v);
   return (<div className="app">
-    <nav className="nav"><button className="logo" onClick={() => go('home')}>fiiyou</button>
-      <div className="navlinks">{NAV.map(([v, l]) => <button key={v} className={active(v) ? 'on' : ''} aria-label={l} title={l} aria-current={active(v) ? 'page' : undefined} onClick={() => go(v)}><span className="navicw"><NavIcon name={v} active={active(v)} />{v === 'messages' && unread > 0 && <em className="dotb">{unread > 99 ? '99+' : unread}</em>}</span></button>)}</div>
-      <div className="more" ref={menuRef}><button className="avbtn" onClick={() => setMenu(!menu)} aria-label={nCount > 0 ? `Account menu (${nCount} new notifications)` : 'Account menu'} aria-expanded={menu}><Avatar src={myImg[me.avatar_path]} size={34} name={me.display_name || me.username} /></button>{nCount > 0 && <em className="avdot" aria-hidden="true">{nCount > 9 ? '9+' : nCount}</em>}{menu && <div className="menu" role="menu">
-        <button className="mhead" role="menuitem" onClick={() => go('profile')}><Avatar src={myImg[me.avatar_path]} size={44} name={me.display_name || me.username} /><span><b>{me.display_name || me.username}</b><small>@{me.username}</small></span></button>
+    {!online && <div className="offline" role="status"><WifiSlash size={16} weight="bold" aria-hidden="true" />You are offline. Posts and messages will not send until you are back.</div>}
+    <nav className="nav"><button className="logo" onClick={() => top('home')}>fiiyou</button>
+      <div className="navlinks">{NAV.map(([v, l]) => <button key={v} className={active(v) ? 'on' : ''} aria-label={l} title={l} aria-current={active(v) ? 'page' : undefined} onClick={() => top(v)}><span className="navicw"><NavIcon name={v} active={active(v)} />{v === 'messages' && unread > 0 && <em className="dotb">{unread > 99 ? '99+' : unread}</em>}</span></button>)}</div>
+      <div className="more" ref={menuRef}><button className="avbtn" onClick={() => setMenu(!menu)} aria-label={nCount > 0 ? `Account menu (${nCount} new notifications)` : 'Account menu'} aria-expanded={menu}><Avatar src={myImg[me.avatar_path]} size={34} /></button>{nCount > 0 && <em className="avdot" aria-hidden="true">{nCount > 9 ? '9+' : nCount}</em>}{menu && <div className="menu" role="menu">
+        <button className="mhead" role="menuitem" onClick={() => go('profile')}><Avatar src={myImg[me.avatar_path]} size={44} /><span><b>{me.display_name || me.username}</b><small>@{me.username}</small></span></button>
         <hr className="msep" />
         <NotificationList go={go} notify={notify} tick={nTick} onRead={setNCount} limit={5} />
         <hr className="msep" />
@@ -371,14 +375,14 @@ export default function App() {
     {route.v === 'home' && <HomeView me={me} go={go} notify={notify} unread={unread} />}
     {route.v === 'map' && <MapView me={me} go={go} notify={notify} />}
     {route.v === 'messages' && <MessagesView key={route.peer || 'all'} me={me} peer={route.peer} go={go} notify={notify} refreshUnread={refreshUnread} />}
-    {route.v === 'admin' && isAdmin && <Suspense fallback={<div className="plain view"><ListSkeleton /></div>}><AdminView go={go} notify={notify} /></Suspense>}
-    {route.v === 'search' && <Suspense fallback={<div className="plain view"><ListSkeleton /></div>}><SearchView key={`${route.tag || ''}|${route.q || ''}`} me={me} go={go} notify={notify} initialQuery={route.q || ''} initialTag={route.tag || ''} /></Suspense>}
+    {route.v === 'admin' && isAdmin && <Suspense fallback={<Boot />}><AdminView go={go} notify={notify} /></Suspense>}
+    {route.v === 'search' && <Suspense fallback={<Boot />}><SearchView key={`${route.tag || ''}|${route.q || ''}`} me={me} go={go} notify={notify} initialQuery={route.q || ''} initialTag={route.tag || ''} /></Suspense>}
     {route.v === 'notifications' && <NotificationsView go={go} notify={notify} tick={nTick} onRead={setNCount} />}
     {route.v === 'settings' && <SettingsView notify={notify} go={go} />}
     {route.v === 'people' && <PeopleView me={me} go={go} notify={notify} onInvite={() => setInviteOpen(true)} />}
     {route.v === 'post' && <PostView key={route.id} id={route.id} me={me} go={go} notify={notify} />}
     {route.v === 'profile' && <ProfileView key={route.username || me.username} username={route.username || me.username} go={go} notify={notify} refreshMe={refreshMe} meName={me.username} autoEdit={!!route.edit} />}
     {inviteOpen && <Suspense fallback={null}><InviteModal me={me} onClose={() => setInviteOpen(false)} notify={notify} /></Suspense>}
-    {toast && <div className={`toast ${toast.type}`} role="status">{toast.msg}</div>}
+    {toast && <button type="button" className={`toast ${toast.type}`} role={toast.type === 'err' ? 'alert' : 'status'} title="Dismiss" onClick={() => setToast(null)} onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>{toast.msg}</button>}
   </div>);
 }
