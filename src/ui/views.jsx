@@ -8,7 +8,7 @@ import { SharedPostCard, decodeSharedPost, previewText } from './PostShare.jsx';
 import { MessageMenu, MessageEditor } from './MessageMenu.jsx';
 import { ask } from './dialog.jsx';
 import { ErrorState, friendlyError } from './errors.jsx';
-import { ArrowBendUpLeft, MagnifyingGlass, PaperPlaneRight, PushPin, X } from '@phosphor-icons/react';
+import { ArrowBendUpLeft, CaretLeft, MagnifyingGlass, PaperPlaneRight, PushPin, X } from '@phosphor-icons/react';
 import './more.css';
 
 const useFeed = (args, notify) => {
@@ -38,7 +38,7 @@ export function PostView({ id, me, go, notify }) {
   const img = useImages(p ? [p.image_path, p.author_avatar_path] : []);
   if (err) return <ErrorState error={err} onRetry={fetchPost} title="Could not load this post" />;
   if (p === undefined) return <div className="boot">Loading…</div>;
-  return (<div className="plain view"><div className="phead"><button className="ghost sm" onClick={() => (history.length > 1 ? history.back() : go('home'))}>‹ Back</button></div>
+  return (<div className="plain view"><div className="phead"><button className="ghost sm iconbtn" onClick={() => (history.length > 1 ? history.back() : go('home'))}><CaretLeft size={16} weight="bold" aria-hidden="true" />Back</button></div>
     {p ? <PostCard p={p} me={me} img={img} go={go} onChange={setP} onDelete={() => go('home')} notify={notify} />
       : <p className="empty">This post is not available. It may have been deleted, or it is only visible to friends.</p>}</div>);
 }
@@ -80,7 +80,7 @@ function PlaceSheet({ place, me, go, notify, onClose, onChanged }) {
   const here = [...new Map((rows || []).filter((p) => p.author_is_friend).map((p) => [p.author_id, p])).values()];
   const pics = (rows || []).filter((p) => p.image_path && img[p.image_path]);
   const change = (np) => setRows((r) => r.map((x) => (x.id === np.id ? np : x))); const drop = (id) => setRows((r) => r.filter((x) => x.id !== id));
-  return (<aside className="sheet"><header><div><h3>{place.name}</h3>{place.description && <p className="muted">{place.description}</p>}</div><button className="ghost sm" onClick={onClose} aria-label="Close">✕</button></header>
+  return (<aside className="sheet"><header><div><h3>{place.name}</h3>{place.description && <p className="muted">{place.description}</p>}</div><button className="ghost sm iconbtn" onClick={onClose} aria-label="Close" title="Close"><X size={16} weight="bold" aria-hidden="true" /></button></header>
     {here.length > 0 && <div><h4>Friends who have been here</h4><div className="mlist">{here.map((p) => <button key={p.author_id} className="chip" onClick={() => go('profile', p.author_username)}><Avatar src={img[p.author_avatar_path]} size={26} />{p.author_display_name}</button>)}</div></div>}
     {pics.length > 0 && <div className="pstrip">{pics.map((p, i) => <button key={p.id} onClick={() => setLb(i)}><img src={img[p.image_path]} alt="" /></button>)}</div>}
     <Composer me={me} fixedPlace={place.id} onPosted={() => { load(); onChanged(); }} notify={notify} />
@@ -210,7 +210,7 @@ export function MessagesView({ me, peer, go, notify, refreshUnread }) {
         <span className="ctext"><span className="cl1"><b>{c.display_name}</b><small>{ago(c.last_at)}</small></span>
           <span className="cl2"><small className="prev">{c.last_mine ? 'You: ' : ''}{previewText(c.last_body)}</small>{c.unread > 0 && <em className="dotb">{c.unread}</em>}</span></span></button>))}</aside>
     <section className="cthread">{cur && who ? (<>
-      <header><button className="ghost sm back" onClick={() => setCur(null)}>‹</button><button type="button" className="who" aria-label="Open profile" onClick={() => go('profile', who.username)}><Avatar src={img[who.avatar_path]} size={34} /></button><button className="link" onClick={() => go('profile', who.username)}><b>{who.display_name}</b><small>@{who.username}</small></button><button type="button" className="ghost sm findbtn" aria-label="Search in this chat" aria-expanded={findOpen} title="Search in this chat" onClick={() => setFindOpen(!findOpen)}><MagnifyingGlass size={18} weight="bold" aria-hidden="true" /></button></header>
+      <header><button className="ghost sm back iconbtn" onClick={() => setCur(null)} aria-label="Back to conversations" title="Back"><CaretLeft size={18} weight="bold" aria-hidden="true" /></button><button type="button" className="who" aria-label="Open profile" onClick={() => go('profile', who.username)}><Avatar src={img[who.avatar_path]} size={34} /></button><button className="link" onClick={() => go('profile', who.username)}><b>{who.display_name}</b><small>@{who.username}</small></button><button type="button" className="ghost sm findbtn" aria-label="Search in this chat" aria-expanded={findOpen} title="Search in this chat" onClick={() => setFindOpen(!findOpen)}><MagnifyingGlass size={18} weight="bold" aria-hidden="true" /></button></header>
       {findOpen && <ChatSearch peerId={cur} autoFocus onPick={pickFound} nameOf={() => who.display_name} />}
       {pins.filter((x) => x.message.body !== social.DELETED_BODY).length > 0 && <div className="pinbar" role="region" aria-label="Pinned messages"><PushPin size={14} weight="fill" aria-hidden="true" />
         <div>{pins.filter((x) => x.message.body !== social.DELETED_BODY).map((x) => <button key={x.message_id} type="button" onClick={() => jump(x.message_id)} title="Go to the message"><b>{x.message.sender_id === me.id ? 'You' : who.display_name}:</b> {previewText(x.message.body)}</button>)}</div></div>}

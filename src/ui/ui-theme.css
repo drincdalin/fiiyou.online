@@ -260,8 +260,7 @@ img { image-rendering: auto; }
 .err, .toast.err { background: var(--red); color: var(--on-red); }
 .errpre { color: var(--red-fg); }
 .safe .link:hover { color: var(--red-fg); }
-.vcheck circle { fill: var(--verified); }
-.vcheck path { stroke: #fff; }
+.vcheck { color: var(--verified, #1d9bf0); }
 .badge.vb { background: var(--verified); color: #fff; }
 .cz-err, .cz-err p { color: var(--red-fg); }
 @media (max-width: 700px) { .menu button { padding: .8rem .85rem; } }

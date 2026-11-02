@@ -1,17 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { Play, Pause, Stop, SkipBack, FastForward, SpeakerX, SpeakerNone, SpeakerLow, SpeakerHigh } from '@phosphor-icons/react';
 
-const PATHS = {
-  play: <path d="M8 5v14l11-7z" />,
-  pause: <path d="M6 5h4v14H6zM14 5h4v14h-4z" />,
-  stop: <path d="M6 6h12v12H6z" />,
-  prev: <path d="M6 5h2v14H6zM20 5v14L9 12z" />,
-  next: <path d="M16 5h2v14h-2zM4 5v14l11-7z" />,
-  mute: <><path d="M4 9v6h4l5 4V5L8 9z" /><path fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" d="M16 9l5 6M21 9l-5 6" /></>,
-  low: <path d="M4 9v6h4l5 4V5L8 9z" />,
-  mid: <><path d="M4 9v6h4l5 4V5L8 9z" /><path fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" d="M16 9a4 4 0 010 6" /></>,
-  high: <><path d="M4 9v6h4l5 4V5L8 9z" /><path fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" d="M16 9a4 4 0 010 6M18.5 6.5a8 8 0 010 11" /></>,
-};
-const Icon = ({ n, size = '1em' }) => <svg className="ico" viewBox="0 0 24 24" width={size} height={size} fill="currentColor" aria-hidden="true">{PATHS[n]}</svg>;
+const ICONS = { play: Play, pause: Pause, stop: Stop, prev: SkipBack, next: FastForward, mute: SpeakerX, low: SpeakerNone, mid: SpeakerLow, high: SpeakerHigh };
+const Icon = ({ n, size = '1em' }) => { const C = ICONS[n]; return <C className="ico" size={size} weight="fill" aria-hidden="true" />; };
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 // src must be a direct https audio URL or a YouTube link. Nothing loads until the visitor presses play (privacy + bandwidth).

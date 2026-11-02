@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { House, User, MapPin, ChatCircle, UsersThree, ShieldCheck, Heart, X, CaretLeft, CaretRight, Flag, PencilSimple, Trash, PaperPlaneRight, ImageSquare, CalendarBlank, ShareNetwork, DotsThree, Clock } from '@phosphor-icons/react';
+import { House, User, MapPin, ChatCircle, UsersThree, ShieldCheck, Heart, X, CaretLeft, CaretRight, Flag, PencilSimple, Trash, PaperPlaneRight, ImageSquare, CalendarBlank, ShareNetwork, DotsThree, Clock, Camera, SealCheck } from '@phosphor-icons/react';
 import PostShareModal from './PostShare.jsx';
 import { posts, safety } from '../index.js';
 import { Avatar, ago, Rich, useImages } from './shared.jsx';
@@ -17,50 +17,95 @@ export const spamMessage = (er) => {
   return null;
 };
 
-/** Verified checkmark (Instagram style), coloured by the theme accent. */
+/** Verified seal (Phosphor SealCheck), coloured by the theme's --verified via currentColor. */
 export function Verified() {
-  return (<svg className="vcheck" viewBox="0 0 24 24" role="img" aria-label="Verified" width="1em" height="1em"><title>Verified</title>
-    <circle cx="12" cy="12" r="11" fill="#1d9bf0" />
-    <path fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" d="M7 12.4l3.4 3.4L17 8.8" /></svg>);
+  return <SealCheck className="vcheck" weight="fill" size="1em" role="img" aria-label="Verified" />;
 }
 
-/** Pop-up viewer. items: [{id, src, caption, likes, liked}]. Pass onLike to show the like button. */
+const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/** Pop-up viewer. items: [{id, src, caption, likes, liked}]. Pass onLike to show the like button.
+ *  Keyboard: Esc closes, arrows browse, Home/End jump, Tab stays inside. Focus moves in on open and returns to the opener on close. */
 export function Lightbox({ items, index, onClose, onIndex, onLike, onLikers }) {
-  const it = items[index]; const n = items.length; const sx = useRef(null);
-  const swipeEnd = (e) => { if (sx.current == null || n < 2) return; const dx = e.clientX - sx.current; sx.current = null; if (Math.abs(dx) > 50) onIndex(dx < 0 ? (index + 1) % n : (index - 1 + n) % n); };
+  const it = items[index]; const n = items.length; const sx = useRef(null); const root = useRef(null); const closeBtn = useRef(null); const [bad, setBad] = useState(false);
+  const step = (d) => { if (n > 1) onIndex((index + d + n) % n); };
+  const swipeEnd = (e) => { if (sx.current == null || n < 2) return; const dx = e.clientX - sx.current; sx.current = null; if (Math.abs(dx) > 50) step(dx < 0 ? 1 : -1); };
   useEffect(() => {
-    const key = (e) => { if (e.key === 'Escape') onClose(); if (e.key === 'ArrowRight') onIndex((index + 1) % n); if (e.key === 'ArrowLeft') onIndex((index - 1 + n) % n); };
+    const key = (e) => {
+      if (e.defaultPrevented) return;
+      if (e.key === 'Escape') onClose();
+      else if (e.key === 'ArrowRight') step(1);
+      else if (e.key === 'ArrowLeft') step(-1);
+      else if (e.key === 'Home' && n > 1) { e.preventDefault(); onIndex(0); }
+      else if (e.key === 'End' && n > 1) { e.preventDefault(); onIndex(n - 1); }
+    };
     addEventListener('keydown', key); document.body.style.overflow = 'hidden';
     return () => { removeEventListener('keydown', key); document.body.style.overflow = ''; };
-  }, [index, n]);
+  }, [index, n]);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {   // focus in on open, back to whatever opened it on close
+    const back = document.activeElement; closeBtn.current?.focus({ preventScroll: true });
+    return () => { if (back instanceof HTMLElement && back.isConnected) back.focus({ preventScroll: true }); };
+  }, []);
+  useEffect(() => { setBad(false); }, [index]);
+  useEffect(() => {   // warm the neighbours so browsing feels instant
+    if (n < 2) return; [index + 1, index - 1].forEach((k) => { const u = items[(k + n) % n]?.src; if (u) { const im = new Image(); im.src = u; } });
+  }, [index, n]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const trap = (e) => {   // keep Tab inside the viewer
+    if (e.key !== 'Tab' || !root.current) return;
+    const els = Array.from(root.current.querySelectorAll(FOCUSABLE)); if (!els.length) return;
+    const first = els[0]; const last = els[els.length - 1];
+    if (e.shiftKey && (document.activeElement === first || !root.current.contains(document.activeElement))) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && (document.activeElement === last || !root.current.contains(document.activeElement))) { e.preventDefault(); first.focus(); }
+  };
   if (!it) return null;
-  return (<div className="lb" onClick={onClose} role="dialog" aria-modal="true"><div className="lbin" onClick={(e) => e.stopPropagation()}>
-    <button className="lbx ghost" onClick={onClose} aria-label="Close"><X size={18} weight="bold" aria-hidden="true" /></button>
-    <div className="lbimg" onPointerDown={(e) => { sx.current = e.clientX; }} onPointerUp={swipeEnd} onPointerCancel={() => { sx.current = null; }}>{n > 1 && <button className="arrow l" onClick={() => onIndex((index - 1 + n) % n)} aria-label="Previous"><CaretLeft size={22} weight="bold" aria-hidden="true" /></button>}
-      {it.src ? <img src={it.src} alt={it.caption || ''} /> : <div className="boot">…</div>}
-      {n > 1 && <button className="arrow r" onClick={() => onIndex((index + 1) % n)} aria-label="Next"><CaretRight size={22} weight="bold" aria-hidden="true" /></button>}</div>
+  return (<div className="lb" ref={root} onClick={onClose} onKeyDown={trap} role="dialog" aria-modal="true" aria-label="Photo viewer"><div className="lbin" onClick={(e) => e.stopPropagation()}>
+    <button className="lbx ghost" ref={closeBtn} onClick={onClose} aria-label="Close" title="Close (Esc)"><X size={18} weight="bold" aria-hidden="true" /></button>
+    <div className="lbimg" onPointerDown={(e) => { sx.current = e.clientX; }} onPointerUp={swipeEnd} onPointerCancel={() => { sx.current = null; }}>
+      {n > 1 && <button className="arrow l" onClick={() => step(-1)} aria-label="Previous photo" title="Previous (←)"><CaretLeft size={22} weight="bold" aria-hidden="true" /></button>}
+      {!it.src ? <div className="boot" role="status" aria-label="Loading photo">…</div>
+        : bad ? <div className="lbbad" role="img" aria-label="This photo could not be loaded"><ImageSquare size={40} weight="light" aria-hidden="true" /><span>Could not load this photo</span></div>
+        : <img key={it.id ?? index} className="lbfade" src={it.src} alt={it.caption || `Photo ${index + 1} of ${n}`} draggable="false" onError={() => setBad(true)} />}
+      {n > 1 && <button className="arrow r" onClick={() => step(1)} aria-label="Next photo" title="Next (→)"><CaretRight size={22} weight="bold" aria-hidden="true" /></button>}</div>
     <div className="lbfoot">{it.caption && <p>{it.caption}</p>}
-      <div className="lbbar">{onLike && <button className={`like${it.liked ? ' on' : ''}`} onClick={() => onLike(it)}><Heart size={16} weight={it.liked ? 'fill' : 'bold'} aria-hidden="true" />{it.likes}</button>}{!onLike && onLikers && it.likes > 0 && <button className="like" onClick={() => onLikers(it)} aria-label={`See who liked (${it.likes})`}><Heart size={16} weight="fill" aria-hidden="true" />{it.likes}</button>}<small>{index + 1} / {n}</small></div></div>
+      <div className="lbbar">{onLike && <button className={`like${it.liked ? ' on' : ''}`} onClick={() => onLike(it)} aria-pressed={!!it.liked} aria-label={it.liked ? `Unlike (${it.likes})` : `Like (${it.likes})`}><Heart size={16} weight={it.liked ? 'fill' : 'bold'} aria-hidden="true" />{it.likes}</button>}{!onLike && onLikers && it.likes > 0 && <button className="like" onClick={() => onLikers(it)} aria-label={`See who liked (${it.likes})`}><Heart size={16} weight="fill" aria-hidden="true" />{it.likes}</button>}<small aria-live="polite">{index + 1} / {n}</small></div></div>
   </div></div>);
 }
 
-/** Several photos of one post: swipe (touch), scroll (trackpad), drag (mouse) or use the arrow keys right inside the post. A tap opens the big viewer. */
+/** Several photos of one post. Touch: swipe. Trackpad: scroll. Mouse: drag, or the Previous/Next buttons that fade in on hover or keyboard focus.
+ *  Keyboard: arrows, Home/End. Dots jump to a photo. A click opens the big viewer. */
 function PostImages({ srcs, onOpen }) {
-  const box = useRef(null); const down = useRef(null); const dragged = useRef(false); const [i, setI] = useState(0); const n = srcs.length;
-  const to = (k) => { const el = box.current; if (el) el.scrollTo({ left: el.clientWidth * Math.max(0, Math.min(n - 1, k)), behavior: 'smooth' }); };
-  const onScroll = () => { const el = box.current; if (el && el.clientWidth) setI(Math.round(el.scrollLeft / el.clientWidth)); };
-  const key = (e) => { if (e.key === 'ArrowRight') { e.preventDefault(); to(i + 1); } else if (e.key === 'ArrowLeft') { e.preventDefault(); to(i - 1); } };
+  const box = useRef(null); const down = useRef(null); const dragged = useRef(false); const cur = useRef(0); const [i, setI] = useState(0); const n = srcs.length;
+  const clamp = (k) => Math.max(0, Math.min(n - 1, k));
+  cur.current = i;
+  const to = (k) => { const el = box.current; if (el) el.scrollTo({ left: el.clientWidth * clamp(k), behavior: reducedMotion() ? 'auto' : 'smooth' }); };
+  const onScroll = () => { const el = box.current; if (el && el.clientWidth) setI(clamp(Math.round(el.scrollLeft / el.clientWidth))); };
+  useEffect(() => { setI((k) => clamp(k)); }, [n]);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {   // keep the current photo in place when the post is resized (window resize, rotating a tablet)
+    const el = box.current; if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => { const w = el.clientWidth; if (w && Math.abs(el.scrollLeft - w * cur.current) > 2) el.scrollTo({ left: w * cur.current, behavior: 'auto' }); });
+    ro.observe(el); return () => ro.disconnect();
+  }, []);
+  const key = (e) => {
+    if (e.key === 'ArrowRight') { e.preventDefault(); to(i + 1); } else if (e.key === 'ArrowLeft') { e.preventDefault(); to(i - 1); }
+    else if (e.key === 'Home') { e.preventDefault(); to(0); } else if (e.key === 'End') { e.preventDefault(); to(n - 1); }
+  };
   // a mouse cannot swipe, so a drag with the mouse turns the page; touch and trackpads scroll natively
-  const pdown = (e) => { dragged.current = false; down.current = e.pointerType === 'mouse' ? e.clientX : null; };
+  const pdown = (e) => { dragged.current = false; down.current = e.pointerType === 'mouse' && e.button === 0 ? e.clientX : null; };
   const pup = (e) => { if (down.current == null) return; const dx = e.clientX - down.current; down.current = null; if (Math.abs(dx) > 40) { dragged.current = true; to(dx < 0 ? i + 1 : i - 1); } };
-  return (<div className="pimgs">
-    <div className="pslides" ref={box} onScroll={onScroll} onKeyDown={key} onPointerDown={pdown} onPointerUp={pup} onClickCapture={(e) => { if (dragged.current) { e.stopPropagation(); e.preventDefault(); dragged.current = false; } }}
+  const atStart = i <= 0; const atEnd = i >= n - 1;
+  return (<div className="pimgs" onKeyDown={key}>
+    <div className="pslides" ref={box} onScroll={onScroll} onPointerDown={pdown} onPointerUp={pup} onPointerCancel={() => { down.current = null; }} onPointerLeave={() => { down.current = null; }}
+      onClickCapture={(e) => { if (dragged.current) { e.stopPropagation(); e.preventDefault(); dragged.current = false; } }}
       tabIndex={0} role="group" aria-roledescription="carousel" aria-label={`${n} photos`}>
-      {srcs.map((u, k) => <button key={k} type="button" className="pimg pslide" style={u ? { '--bgimg': `url("${u}")` } : undefined} onClick={() => onOpen(k)} aria-label={`Open photo ${k + 1} of ${n}`}>
-        {u ? <img src={u} alt="" loading={k ? 'lazy' : undefined} draggable="false" /> : <span className="pslideph" />}</button>)}
+      {srcs.map((u, k) => <button key={k} type="button" className="pimg pslide" tabIndex={k === i ? 0 : -1} style={u ? { '--bgimg': `url("${u}")` } : undefined} onClick={() => onOpen(k)} aria-label={`Open photo ${k + 1} of ${n}`}>
+        {u ? <img src={u} alt="" loading={k ? 'lazy' : undefined} decoding="async" draggable="false" /> : <span className="pslideph" />}</button>)}
     </div>
+    <button type="button" className="pnav l" onClick={() => !atStart && to(i - 1)} aria-label="Previous photo" aria-disabled={atStart} tabIndex={atStart ? -1 : 0} title="Previous photo"><CaretLeft size={20} weight="bold" aria-hidden="true" /></button>
+    <button type="button" className="pnav r" onClick={() => !atEnd && to(i + 1)} aria-label="Next photo" aria-disabled={atEnd} tabIndex={atEnd ? -1 : 0} title="Next photo"><CaretRight size={20} weight="bold" aria-hidden="true" /></button>
     <span className="pcount" aria-hidden="true">{i + 1}/{n}</span>
-    <div className="pdots" aria-hidden="true">{srcs.map((_, k) => <i key={k} className={k === i ? 'on' : ''} />)}</div>
+    <span className="sronly" role="status" aria-live="polite">Photo {i + 1} of {n}</span>
+    <div className="pdots">{srcs.map((_, k) => <button key={k} type="button" className={k === i ? 'on' : ''} onClick={() => to(k)} aria-label={`Go to photo ${k + 1}`} aria-current={k === i ? 'true' : undefined} />)}</div>
   </div>);
 }
 
@@ -200,7 +245,7 @@ function ScheduledList({ version, notify }) {
   const cancel = async (r) => { if (!(await ask({ title: 'Cancel this scheduled post?', message: 'It will not be published and is deleted.', confirmLabel: 'Cancel post', danger: true }))) return;
     try { await posts.cancelScheduled(r); load(); notify('Scheduled post cancelled'); } catch (e) { notify(e.message || 'Could not cancel', 'err'); } };
   return (<div className="panel schedlist"><button type="button" className="ghost sm" aria-expanded={open} onClick={() => setOpen(!open)}><Clock size={16} weight="bold" aria-hidden="true" />Scheduled ({rows.length})</button>
-    {open && <ul>{rows.map((r) => <li key={r.id}><span><b>{new Date(r.publish_at).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' })}</b>{(r.image_path ? ' · 📷' : '')}<br /><small>{r.title || r.body.slice(0, 80)}</small></span>
+    {open && <ul>{rows.map((r) => <li key={r.id}><span><b>{new Date(r.publish_at).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' })}</b>{r.image_path && <> · <Camera className="inlic" size={14} weight="bold" role="img" aria-label="Has photos" /></>}<br /><small>{r.title || r.body.slice(0, 80)}</small></span>
       <button type="button" className="ghost sm danger" onClick={() => cancel(r)}>Cancel</button></li>)}</ul>}</div>);
 }
 
