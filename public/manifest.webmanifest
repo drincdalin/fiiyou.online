@@ -4,6 +4,7 @@
   "short_name": "fiiyou",
   "description": "The internet belongs to you.",
   "lang": "en",
+  "categories": ["social"],
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

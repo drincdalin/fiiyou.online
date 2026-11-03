@@ -1,5 +1,5 @@
 // Writes public/robots.txt and public/sitemap.xml for the real domain. Runs automatically before `npm run build`.
-// Set SITE_URL (e.g. https://fiiyou.online, no trailing slash). Without it the committed placeholder files are left alone.
+// Set SITE_URL (the app's address, e.g. https://app.fiiyou.online, no trailing slash). Without it the committed placeholder files are left alone.
 import { writeFileSync } from 'node:fs';
 const site = (process.env.SITE_URL || '').replace(/\/+$/, '');
 if (!/^https:\/\/[^\s/]+(\/[^\s]*)?$/.test(site)) {

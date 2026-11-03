@@ -79,7 +79,7 @@ self.addEventListener('push', (event) => {
   event.waitUntil((async () => {
     // the app is open and in front: the in-app badge already shows it, so no system notification is needed
     const open = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    if (!d.force && open.some((c) => c.visibilityState === 'visible' && c.focused)) return;   // d.force: the "Send test" button in Settings
+    if (open.some((c) => c.visibilityState === 'visible' && c.focused)) return;
     await self.registration.showNotification(d.title || 'fiiyou', {
       body: d.body || '',
       icon: `${scope}icon-192.png`,
@@ -98,7 +98,8 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil((async () => {
     const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const mine = all.find((c) => c.url.startsWith(self.registration.scope));
-    if (mine) { await mine.focus(); try { await mine.navigate(url); } catch { /* ignore */ } return; }
+    // the app is already open: hand it the page to show (no reload, nothing you typed is lost); the app moves there by itself
+    if (mine) { await mine.focus().catch(() => {}); mine.postMessage({ type: 'fiiyou:open', path }); return; }
     await self.clients.openWindow(url);
   })());
 });

@@ -9,8 +9,8 @@ The site is a static Vite build hosted on **Vercel**; data, auth and files live 
 - Fonts (Ubuntu Sans, woff2) and their licence are already in `public/fonts/`.
 
 ## 1. Supabase (production settings)
-1. SQL Editor: migrations `0001` to `0029` and `seed.sql` must all have been run, in order, once each. Files `0015`–`0022` were renumbered in git so every file has its own version number; **their SQL is unchanged**. If you already ran them under their old names, the only new file to run is **`0023_media_read_scope.sql`**. Add `lat`/`lng` to your localities (the map skips localities without coordinates; verify the names in the seed while you are there).
-2. Authentication → URL Configuration: **Site URL** = `https://fiiyou.online`. **Redirect URLs**: add `https://fiiyou.online` and `https://fiiyou.online/**` (keep `http://localhost:5173` and `http://localhost:5173/**` for local work). Password-reset and confirmation links depend on this.
+1. SQL Editor: migrations `0001` to `0031` and `seed.sql` must all have been run, in order, once each. Files `0015`–`0022` were renumbered in git so every file has its own version number; **their SQL is unchanged**. If you already ran them under their old names, the only new file to run is **`0023_media_read_scope.sql`**. Add `lat`/`lng` to your localities (the map skips localities without coordinates; verify the names in the seed while you are there).
+2. Authentication → URL Configuration: **Site URL** = `https://app.fiiyou.online`. **Redirect URLs**: add `https://app.fiiyou.online` and `https://app.fiiyou.online/**` (keep `http://localhost:5173` and `http://localhost:5173/**` for local work). Password-reset and confirmation links depend on this.
 3. Authentication → Email: turn **Confirm email** on. Set up your **own SMTP provider** before inviting people: Supabase's built-in sender is for testing and is heavily limited.
 4. Authentication → Attack protection / password settings: use the strongest options your plan offers. Do **not** enable CAPTCHA yet: the sign-up form does not send a CAPTCHA token, so sign-ups would fail.
 5. Advisors → run **Security Advisor** and **Performance Advisor** and read what they say.
@@ -24,15 +24,15 @@ The site is a static Vite build hosted on **Vercel**; data, auth and files live 
 2. Settings → Environment Variables (Production, and Preview if you use previews):
    - `VITE_SUPABASE_URL` = Project URL
    - `VITE_SUPABASE_ANON_KEY` = publishable / anon key (public by design; Row Level Security protects the data). **Never** add a `service_role` or secret key here or anywhere in this repository.
-   - `SITE_URL` = `https://fiiyou.online` (https, no trailing slash). It builds `sitemap.xml`, `robots.txt` and the `og:image` tags. **The production build fails without it**, on purpose, so the `YOUR-DOMAIN` placeholder never goes live.
+   - `SITE_URL` = `https://app.fiiyou.online` (https, no trailing slash). It builds `sitemap.xml`, `robots.txt` and the `og:image` tags. **The production build fails without it**, on purpose, so the `YOUR-DOMAIN` placeholder never goes live.
    - `VITE_VAPID_PUBLIC_KEY` = the public VAPID key (only if you set up push, see [PUSH_SETUP.md](PUSH_SETUP.md)).
-3. Settings → Domains: add `fiiyou.online`, then create the DNS records Vercel shows at your registrar. HTTPS is automatic.
+3. Settings → Domains: add `app.fiiyou.online` (the landing page on `fiiyou.online` is a separate project), then create the DNS records Vercel shows at your registrar. HTTPS is automatic.
 4. **Turn GitHub Pages off** (repo Settings → Pages → unpublish), so the old site cannot answer for the domain or cause confusion. The old Pages workflow and `CNAME` files were removed from the repo.
 5. Redeploy once after setting the variables (Deployments → ⋯ → Redeploy). Security headers (`frame-ancestors`, HSTS, `nosniff`, referrer and permissions policies) come from `vercel.json`.
 
 ## 3. Search engines
 - `robots.txt` and `sitemap.xml` are generated at build time from `SITE_URL`. Only the landing page, privacy and terms are public (everything else needs a login), so those three URLs are all there is to index.
-- Add the site in Google Search Console and submit `https://fiiyou.online/sitemap.xml`.
+- Add the site in Google Search Console and submit `https://app.fiiyou.online/sitemap.xml`.
 - Share the link in a chat app to check the preview card (`public/og-image.png`).
 
 ## 4. Final checklist (do it on your phone too)
@@ -41,12 +41,13 @@ The site is a static Vite build hosted on **Vercel**; data, auth and files live 
 - [ ] Customize → Save, upload an avatar, add a photo, add a place from search, post, comment, like.
 - [ ] Two accounts: friend request, accept, chat, report a post, block. After blocking, the blocked account can no longer load your photos.
 - [ ] A **friends-only** post with an image: a friend sees the image, a non-friend account does not.
-- [ ] Open `https://fiiyou.online/<some-username>` and `/post/<id>` directly (deep links) and refresh: no 404.
+- [ ] Open `https://app.fiiyou.online/<some-username>` and `/post/<id>` directly (deep links) and refresh: no 404.
+- [ ] Install: Settings → Install the app (Chrome, Edge, Brave, Opera on desktop or Android), or Share → Add to Home Screen on iPhone. It opens in its own window.
 - [ ] Push (if enabled): turn it on, like something from the second account while the first app is in the background, tap the notification: it opens the right post/profile, also when the app was already open.
 - [ ] Export all my data, Export my theme, Import a theme.
 - [ ] Delete a test account (account menu) and confirm its files disappear from Storage after a while.
 - [ ] Open the site with the browser console open: no red errors, no blocked requests.
-- [ ] `https://fiiyou.online/sitemap.xml` shows your real domain, not `YOUR-DOMAIN`.
+- [ ] `https://app.fiiyou.online/sitemap.xml` shows your real domain, not `YOUR-DOMAIN`.
 
 ## 5. Moderation (Admin tab)
 - **Reports:** every Report button sends an item to Admin → Reports with a preview. You can open the profile, delete the content (a post's image file is deleted too), delete the account (all of its files are removed first), mark it reviewed or dismiss it.
@@ -65,3 +66,9 @@ Change code, `git push`, wait for the green CI check and the Vercel deploy. Data
 - **"typing…"** uses a private Realtime channel. The migration adds the two policies it needs on `realtime.messages`. If your project does not show the indicator, check Dashboard → Realtime → Settings (private channels) and that the policies `typing_receive` / `typing_send` exist. Nothing else depends on it.
 - **"Seen" in chat** is always on: the person who sent a message sees when it was read. Mention this in `privacy.html`.
 - After a deploy, bump `VERSION` in `public/sw.js` only if you want to throw away every cached copy; normal deploys do not need it (pages are loaded network-first, assets have content hashes).
+
+
+## Notes for this release
+- **Photos of posts with several images**: older versions of the app's cleanup ran `sweepOrphans` with a list that did not include a post's extra photos or the photos of scheduled posts, so after two hours those files were deleted from storage. That is fixed (the list now matches `admin_referenced_paths()`). Files already deleted cannot come back; such posts now show "Photo unavailable" instead of a spinner that never ends. Authors can delete and repost them.
+- **Install button** (Settings → Account): uses the browser's own install prompt where it exists (Chrome, Edge, Brave, Opera, Vivaldi, Samsung Internet). On iPhone and iPad it explains Share → Add to Home Screen. Installing needs HTTPS (or localhost), the manifest and the service worker, which are all in place.
+- **Push**: the "Send test" button and the `test` branch of `send-push` are gone. Redeploy the function once: `supabase functions deploy send-push --no-verify-jwt`.

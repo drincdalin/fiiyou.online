@@ -116,8 +116,8 @@
 .navlinks .navicw { position: relative; display: grid; place-items: center; width: 1.6em; height: 1.6em; flex: none; }
 .navlinks .navicw .navic { width: 1.4em; height: 1.4em; flex: none; transition: transform .2s var(--ease); }
 .navlinks .navic-messages { transform: scale(1.12); }   /* the round bubble looks smaller than the house or the pin at the same size */
+.navlinks .navic-people { transform: scale(1.16); }     /* three-person group: its heads are small, so it is drawn a bit larger to carry the same visual weight as the house and the pin */
 .navlinks .navic-map { transform: scale(1.04); }
-.navlinks .navic-people { transform: scale(.95); }
 .navlinks button:hover .navic { transform: scale(1.08); }
 .navlinks button:hover .navic-messages { transform: scale(1.2); }
 .navlinks .navicw .dotb { position: absolute; top: -6px; right: -9px; margin: 0; min-width: 17px; line-height: 17px; animation: dotpop .22s var(--ease); pointer-events: none; }
@@ -205,12 +205,10 @@
 .pimgph::after, .skimg::after, .skln::after, .skav::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--ink) 9%, transparent) 50%, transparent 70%); transform: translateX(-100%); animation: shimmer 1.4s infinite; }
 @keyframes shimmer { to { transform: translateX(100%); } }
 
-/* carousel: previous / next appear on hover (desktop), focus (keyboard); hidden on touch and at the ends */
-.pnav { position: absolute; top: 50%; translate: 0 -50%; z-index: 2; width: 40px; height: 40px; padding: 0; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--g4); background: var(--scrim-hi); color: var(--ink); box-shadow: 0 4px 14px -4px color-mix(in srgb, var(--shade) 70%, transparent); cursor: pointer; opacity: 0; transition: opacity .18s ease, transform .15s ease, border-color .15s; }
-.pnav.l { left: 10px; } .pnav.r { right: 10px; }
+/* carousel: the previous / next buttons ARE the viewer's .arrow buttons (same shape, size and colours); here they only
+   appear on hover (desktop) or keyboard focus, never on touch screens, and are removed at the first / last photo */
+.pnav { opacity: 0; z-index: 2; cursor: pointer; transition: opacity .18s ease, border-color .15s; }
 .pnav:focus-visible { opacity: 1; }
-.pnav:hover { border-color: var(--accent-fg); transform: scale(1.08); }
-.pnav:active { transform: scale(.94); }
 @media (hover: hover) and (pointer: fine) { .pimgs:hover .pnav, .pimgs:focus-within .pnav { opacity: 1; } .pslides { cursor: grab; } .pslides:active { cursor: grabbing; } }
 @media (hover: none) { .pnav { display: none; } }
 .pslides:focus-visible { outline: 2px solid var(--accent-fg); }
@@ -259,9 +257,8 @@
 .moreposts { min-height: 44px; }
 .emptyx { display: grid; justify-items: center; gap: 8px; padding: 2.5rem 1rem; } .emptyx p { margin: 0; max-width: 32ch; }
 
-/* shell: dismissable toast, offline bar */
+/* shell: dismissable toast */
 button.toast { font: inherit; font-weight: 800; cursor: pointer; text-align: center; border: 2px solid var(--edge, transparent); }
-.offline { position: sticky; top: 0; z-index: 80; display: flex; align-items: center; justify-content: center; gap: 8px; padding: .45rem 1rem; background: var(--yellow); color: var(--on-notice, #111); font-weight: 700; font-size: .9rem; text-align: center; }
 
 /* keyboard users always see where they are */
 button:focus-visible, a:focus-visible, [role="tab"]:focus-visible, select:focus-visible { outline: 2px solid var(--accent-fg); outline-offset: 2px; }
@@ -271,3 +268,18 @@ button:focus-visible, a:focus-visible, [role="tab"]:focus-visible, select:focus-
   .pimgph::after, .skimg::after, .skln::after, .skav::after { animation: none; }
   .pslides { scroll-behavior: auto; }
 }
+
+/* a photo whose file no longer exists */
+.imgbad { display: grid; justify-items: center; align-content: center; gap: 4px; color: var(--muted); text-align: center; padding: 1rem; }
+.imgbad b { color: var(--ink2, var(--ink)); font-weight: 700; } .imgbad small { color: var(--muted); }
+.pimgbad { min-height: 200px; display: grid; place-items: center; cursor: default; border: 1px dashed var(--g4); background: var(--g2); }
+.pimgbad::before { display: none; }
+.pslide .pslideph { display: grid; place-items: center; width: 100%; }
+.lbbad { min-height: 260px; display: grid; place-items: center; width: 100%; }
+.lbthumbs i.bad { display: block; width: 100%; height: 100%; background: repeating-linear-gradient(45deg, var(--g2), var(--g2) 6px, var(--g3) 6px, var(--g3) 12px); }
+
+/* chat: "New messages" pill while you read older ones */
+.newbelow { position: sticky; bottom: 8px; align-self: center; z-index: 3; display: inline-flex; align-items: center; gap: 6px; padding: .35rem .9rem; border-radius: 999px; border: 1px solid var(--accent-fg); background: var(--accent); color: var(--on-accent); font-weight: 800; cursor: pointer; box-shadow: 0 6px 18px -6px color-mix(in srgb, var(--shade) 80%, transparent); }
+
+/* initial letter shown when a profile picture is missing or failed to load */
+.av .avl { width: 100%; height: 100%; display: grid; place-items: center; font-weight: 800; line-height: 1; color: var(--ink); background: var(--g3); user-select: none; }

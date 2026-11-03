@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { LockKey, Trash, Prohibit } from '@phosphor-icons/react';
+import { LockKey, Trash, DeviceMobile, DownloadSimple } from '@phosphor-icons/react';
 import { auth, safety } from '../index.js';
 import { useImages, Avatar } from './shared.jsx';
-import { ask } from './dialog.jsx';
+import { ask, tell } from './dialog.jsx';
 import { ErrorState, friendlyError } from './errors.jsx';
 import PushToggle from './PushToggle.jsx';
+import { useInstallState, promptInstall } from './install.js';
 import { ChangePasswordModal } from './PasswordMeter.jsx';
 
 /** People you blocked. Unblocking does not bring a friendship back (blocking removed it). */
@@ -28,6 +29,28 @@ function Blocked({ notify, go }) {
     <button type="button" className="ghost sm" disabled={busy === u.id} onClick={() => unblock(u)}>{busy === u.id ? '…' : 'Unblock'}</button></div>))}</>);
 }
 
+/** Install fiiyou as an app. Browsers that allow it (Chrome, Edge, Brave, Opera, Vivaldi, Samsung Internet) install with one click.
+ *  Safari and a few others do not let a website install itself, so the same button opens a short card with the exact steps. */
+const GUIDE = {
+  ios: { title: 'Add fiiyou to your Home Screen', message: '1. Tap the Share button (the square with an arrow) in Safari.\n2. Scroll down and tap “Add to Home Screen”.\n3. Tap Add. From now on open fiiyou from your Home Screen.\n\nUsing another browser and not seeing it? Open fiiyou in Safari.' },
+  manual: { title: 'Install fiiyou', message: 'This browser does not let a website install itself. Open the browser menu (⋮ or ⋯) and choose “Install fiiyou” or “Add to Home screen”. In Safari on a Mac use File, then “Add to Dock”.\n\nIf you do not see any of these, this browser cannot install websites. Chrome, Edge, Brave and Opera can.' },
+};
+function InstallRow({ notify }) {
+  const st = useInstallState(); const [busy, setBusy] = useState(false);
+  const install = async () => {
+    if (st === 'ready') {
+      setBusy(true); const r = await promptInstall(); setBusy(false);
+      if (r === 'accepted') notify('Installing fiiyou…');
+      else if (r === 'unavailable') tell(GUIDE.manual);
+      return;   // 'dismissed': they said no, nothing more to say
+    }
+    tell(st === 'ios' ? GUIDE.ios : GUIDE.manual);
+  };
+  const text = st === 'installed' ? 'You are using fiiyou as an installed app.' : 'Give fiiyou its own window and an icon on your home screen or desktop. It opens faster and feels like any other app.';
+  return (<div className="srow"><span className="sico"><DeviceMobile size={20} weight="bold" aria-hidden="true" /></span><div><b>Install the app</b><small>{text}</small></div>
+    {st !== 'installed' && <button type="button" className="primary sm" disabled={busy} onClick={install}><DownloadSimple size={16} weight="bold" aria-hidden="true" />{busy ? '…' : 'Install'}</button>}</div>);
+}
+
 /** /settings: this device and this account, split into the same pill tabs the rest of the app uses. */
 export default function SettingsView({ notify, go }) {
   const [tab, setTab] = useState('account'); const [pw, setPw] = useState(false);
@@ -39,6 +62,7 @@ export default function SettingsView({ notify, go }) {
     <div className="tabs" role="tablist" aria-label="Settings">
       {[['account', 'Account'], ['notifications', 'Notifications'], ['blocked', 'Blocked']].map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}</div>
     {tab === 'account' && <>
+      <div className="panel sgroup"><InstallRow notify={notify} /></div>
       <div className="panel sgroup"><div className="srow"><span className="sico"><LockKey size={20} weight="bold" aria-hidden="true" /></span><div><b>Password</b><small>Choose a new password for signing in.</small></div><button type="button" className="ghost sm" onClick={() => setPw(true)}>Change</button></div></div>
       <div className="panel sgroup sdanger"><div className="srow"><span className="sico"><Trash size={20} weight="bold" aria-hidden="true" /></span><div><b>Delete account</b><small>Removes your profile, posts, photos and messages for good.</small></div><button type="button" className="ghost sm danger" onClick={del}>Delete</button></div></div></>}
     {tab === 'notifications' && <div className="panel sgroup"><PushToggle notify={notify} /></div>}

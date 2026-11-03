@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { House, User, MapPin, ChatCircle, UsersThree, ShieldCheck, Heart, X, CaretLeft, CaretRight, Flag, PencilSimple, Trash, PaperPlaneRight, ImageSquare, CalendarBlank, ShareNetwork, DotsThree, Clock } from '@phosphor-icons/react';
+import { House, User, MapPin, ChatCircle, ShieldCheck, Heart, X, CaretLeft, CaretRight, Flag, PencilSimple, Trash, PaperPlaneRight, ImageSquare, CalendarBlank, ShareNetwork, DotsThree, Clock, ImageBroken, UsersThree } from '@phosphor-icons/react';
 import PostShareModal from './PostShare.jsx';
 import { posts, safety } from '../index.js';
 import { Avatar, ago, Rich, useImages, FadeImg, fullDate, reducedMotion } from './shared.jsx';
@@ -24,12 +24,30 @@ export function Verified() {
     <path fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" d="M7 12.4l3.4 3.4L17 8.8" /></svg>);
 }
 
+/** A photo whose file is gone (deleted, or never uploaded): said plainly, instead of a spinner that never ends. */
+function Unavailable({ big = false }) {
+  return (<span className="imgbad" role="img" aria-label="Photo unavailable"><ImageBroken size={big ? 44 : 30} weight="duotone" aria-hidden="true" /><b>Photo unavailable</b>{big && <small>It may have been removed.</small>}</span>);
+}
+
+/** Phones: the Back button / swipe-back closes a pop-up instead of leaving the page. Closing it any other way removes the extra history entry again. */
+function useBackToClose(onClose) {
+  const cb = useRef(onClose); cb.current = onClose;
+  useEffect(() => {
+    let popped = false;
+    try { history.pushState({ ...(history.state || {}), fiiyouOverlay: true }, ''); } catch { return undefined; }
+    const pop = () => { popped = true; cb.current(); };
+    addEventListener('popstate', pop);
+    return () => { removeEventListener('popstate', pop); if (!popped && history.state?.fiiyouOverlay) history.back(); };
+  }, []);
+}
+
 /** Pop-up viewer. items: [{id, src, caption, likes, liked}]. Pass onLike to show the like button.
  *  Arrow keys, the side buttons, the thumbnails or a swipe move between photos; Esc, a tap outside or a swipe down closes;
  *  a double-click (or double-tap) likes; the next photos are preloaded; focus stays inside and goes back to where it was on close. */
 export function Lightbox({ items, index, onClose, onIndex, onLike, onLikers }) {
   const n = items.length; const it = items[index];
   const root = useRef(null); const start = useRef(null); const strip = useRef(null); const opener = useRef(typeof document !== 'undefined' ? document.activeElement : null);
+  useBackToClose(onClose);
   const [dy, setDy] = useState(0); const [dir, setDir] = useState(0); const [more, setMore] = useState(false); const [burst, setBurst] = useState(0);
   const step = (d) => { if (n < 2) return; setDir(d); setMore(false); onIndex((index + d + n) % n); };
   const jump = (k) => { if (k === index || k < 0 || k >= n) return; setDir(k > index ? 1 : -1); setMore(false); onIndex(k); };
@@ -74,10 +92,11 @@ export function Lightbox({ items, index, onClose, onIndex, onLike, onLikers }) {
       <button className="lbx ghost" onClick={onClose} aria-label="Close"><X size={18} weight="bold" aria-hidden="true" /></button>
       <div className="lbimg" onPointerDown={pdown} onPointerMove={pmove} onPointerUp={pend} onPointerCancel={pcancel} onDoubleClick={dbl} title={onLike && !it.liked ? 'Double-click to like' : undefined}>
         {n > 1 && <button className="arrow l" onClick={() => step(-1)} aria-label="Previous photo"><CaretLeft size={22} weight="bold" aria-hidden="true" /></button>}
-        {it.src ? <FadeImg key={it.id} className={`lbpic${dir > 0 ? ' fromr' : dir < 0 ? ' froml' : ''}`} src={it.src} alt={n > 1 ? `Photo ${index + 1} of ${n}` : 'Photo'} draggable="false" /> : <div className="lbspin" role="status" aria-label="Loading photo" />}
+        {it.src ? <FadeImg key={it.id} className={`lbpic${dir > 0 ? ' fromr' : dir < 0 ? ' froml' : ''}`} src={it.src} alt={n > 1 ? `Photo ${index + 1} of ${n}` : 'Photo'} draggable="false" />
+          : it.src === null ? <div className="lbbad"><Unavailable big /></div> : <div className="lbspin" role="status" aria-label="Loading photo" />}
         {burst > 0 && <Heart key={burst} className="lbheart" size={96} weight="fill" aria-hidden="true" />}
         {n > 1 && <button className="arrow r" onClick={() => step(1)} aria-label="Next photo"><CaretRight size={22} weight="bold" aria-hidden="true" /></button>}</div>
-      {n > 1 && n <= 12 && <div className="lbthumbs" ref={strip} role="group" aria-label="All photos">{items.map((x, k) => <button key={x.id} type="button" className={k === index ? 'on' : ''} aria-label={`Photo ${k + 1} of ${n}`} aria-current={k === index ? 'true' : undefined} onClick={() => jump(k)}>{x.src ? <img src={x.src} alt="" draggable="false" /> : <i />}</button>)}</div>}
+      {n > 1 && n <= 12 && <div className="lbthumbs" ref={strip} role="group" aria-label="All photos">{items.map((x, k) => <button key={x.id} type="button" className={k === index ? 'on' : ''} aria-label={`Photo ${k + 1} of ${n}`} aria-current={k === index ? 'true' : undefined} onClick={() => jump(k)}>{x.src ? <img src={x.src} alt="" draggable="false" /> : <i className={x.src === null ? 'bad' : ''} />}</button>)}</div>}
       <div className="lbfoot">{cap && <p className={`lbcap${long && !more ? ' clamp' : ''}`}>{cap}</p>}{cap && long && <button type="button" className="lbmore" onClick={() => setMore(!more)} aria-expanded={more}>{more ? 'Show less' : 'Show more'}</button>}
         <div className="lbbar">{onLike && <button className={`like${it.liked ? ' on' : ''}`} onClick={() => onLike(it)} aria-pressed={!!it.liked} aria-label={it.liked ? 'Unlike' : 'Like'}><Heart size={16} weight={it.liked ? 'fill' : 'bold'} aria-hidden="true" />{it.likes}</button>}{!onLike && onLikers && it.likes > 0 && <button className="like" onClick={() => onLikers(it)} aria-label={`See who liked (${it.likes})`}><Heart size={16} weight="fill" aria-hidden="true" />{it.likes}</button>}<small>{index + 1} / {n}</small></div></div>
       <span className="sronly" aria-live="polite">{n > 1 ? `Photo ${index + 1} of ${n}` : ''}</span>
@@ -103,10 +122,10 @@ function PostImages({ srcs, onOpen }) {
     <div className="pslides" ref={box} onScroll={onScroll} onKeyDown={key} onPointerDown={pdown} onPointerUp={pup} onPointerCancel={() => { down.current = null; }} onClickCapture={(e) => { if (dragged.current) { e.stopPropagation(); e.preventDefault(); dragged.current = false; } }}
       tabIndex={0} role="group" aria-roledescription="carousel" aria-label={`Photo ${i + 1} of ${n}. Use the left and right arrow keys to browse.`}>
       {srcs.map((u, k) => <button key={k} type="button" tabIndex={k === i ? 0 : -1} className="pimg pslide" style={u ? { '--bgimg': `url("${u}")` } : undefined} onClick={() => onOpen(k)} aria-label={`Open photo ${k + 1} of ${n}`}>
-        {u ? <FadeImg src={u} alt="" loading={k <= i + 1 ? undefined : 'lazy'} draggable="false" /> : <span className="pslideph" />}</button>)}
+        {u ? <FadeImg src={u} alt="" loading={k <= i + 1 ? undefined : 'lazy'} draggable="false" /> : u === null ? <span className="pslideph"><Unavailable /></span> : <span className="pslideph" />}</button>)}
     </div>
-    {i > 0 && <button type="button" className="pnav l" onClick={() => to(i - 1)} aria-label="Previous photo"><CaretLeft size={20} weight="bold" aria-hidden="true" /></button>}
-    {i < n - 1 && <button type="button" className="pnav r" onClick={() => to(i + 1)} aria-label="Next photo"><CaretRight size={20} weight="bold" aria-hidden="true" /></button>}
+    {i > 0 && <button type="button" className="arrow pnav l" onClick={() => to(i - 1)} aria-label="Previous photo"><CaretLeft size={22} weight="bold" aria-hidden="true" /></button>}
+    {i < n - 1 && <button type="button" className="arrow pnav r" onClick={() => to(i + 1)} aria-label="Next photo"><CaretRight size={22} weight="bold" aria-hidden="true" /></button>}
     <span className="pcount" aria-hidden="true">{i + 1}/{n}</span>
     <div className="pdots">{srcs.map((_, k) => <button type="button" key={k} tabIndex={-1} className={k === i ? 'on' : ''} onClick={() => to(k)} aria-label={`Go to photo ${k + 1}`} aria-current={k === i ? 'true' : undefined}><i /></button>)}</div>
   </div>);
@@ -124,7 +143,7 @@ export function PostCard({ p, me, img, go, onChange, onDelete, notify, expanded 
   const like = async () => { const on = !p.liked; if (on) { setPop(true); setTimeout(() => setPop(false), 600); } onChange({ ...p, liked: on, like_count: p.like_count + (on ? 1 : -1) }); try { await posts.setLike(p.id, on); } catch (e) { onChange(p); fail(e); } };
   const save = async () => { try { const r = await posts.updatePost(p.id, { body, title: p.kind === 'event' ? title : undefined }); onChange({ ...p, body: r.body, title: r.title, edited_at: r.edited_at }); setEdit(false); notify('Post updated'); } catch (e) { fail(e); } };
   const dropImg = async () => { try { await posts.updatePost(p.id, { body: p.body }, { removeImage: true, oldImage: p.image_path, oldExtras: extra }); onChange({ ...p, image_path: null, extra_images: [] }); } catch (e) { fail(e); } };
-  const del = async () => { if (!(await ask({ title: 'Delete this post?', message: 'This cannot be undone.', confirmLabel: 'Delete', danger: true }))) return; try { await posts.deletePost(p.id, p.image_path, extra); onDelete(p.id); notify('Post deleted'); } catch (e) { fail(e); } };
+  const del = async () => { if (!(await ask({ title: 'Delete this post?', message: 'This cannot be undone.', confirmLabel: 'Delete', danger: true }))) return; try { await posts.deletePost(p.id, p.image_path, extra); window.dispatchEvent(new CustomEvent('fiiyou:postgone', { detail: p.id })); onDelete(p.id); notify('Post deleted'); } catch (e) { fail(e); } };
   const src = img[p.image_path]; const longText = (p.body || '').length > 360 || (p.body || '').split('\n').length > 7;
   return (<article className={`post${p.author_official ? ' official' : ''}`}>
     <header><button className="who" onClick={() => go('profile', p.author_username)}><Avatar src={img[p.author_avatar_path]} />
@@ -135,8 +154,9 @@ export function PostCard({ p, me, img, go, onChange, onDelete, notify, expanded 
             <button role="menuitem" className="danger" onClick={() => { setMenu(false); del(); }}><Trash size={18} weight="bold" aria-hidden="true" />Delete</button></>
             : <button role="menuitem" onClick={() => { setMenu(false); setRep(true); }}><Flag size={18} weight="bold" aria-hidden="true" />Report</button>}</div></>}</div>}</header>
     <div className={`pmain${p.image_path && src ? ' has' : ''}`}>
-      {p.image_path && !src && <div className="pimg pimgph" aria-hidden="true" />}
-      {p.image_path && src && (extra.length ? <PostImages srcs={[src, ...extra.map((x) => xi[x])]} onOpen={(k) => { setZi(k); setZoom(true); }} />
+      {p.image_path && (extra.length ? <PostImages srcs={[src, ...extra.map((x) => xi[x])]} onOpen={(k) => { setZi(k); setZoom(true); }} />
+        : src === undefined ? <div className="pimg pimgph" aria-hidden="true" />   // still fetching the link
+        : src === null ? <div className="pimg pimgbad"><Unavailable big /></div>    // the file is gone
         : <button className="pimg" style={{ '--bgimg': `url("${src}")` }} onClick={() => setZoom(true)} aria-label="Open photo"><FadeImg src={src} alt="" loading="lazy" /></button>)}
       <div className="ptext">
         {p.kind === 'event' && <div className="evmeta"><CalendarBlank size={14} weight="bold" aria-hidden="true" />{new Date(p.event_at).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' })}{p.event_place && ` · ${p.event_place}`}</div>}

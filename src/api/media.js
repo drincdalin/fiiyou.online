@@ -49,15 +49,22 @@ export async function deleteImage(path) {
 }
 
 // ---- signed URL cache (buckets are private; URLs live 1h, refreshed at 50 min) ----
-const TTL = 3600, cache = new Map();
+// A path that is already being signed is not asked for twice (the nav bar, the home card and the feed all want the same avatar at the same
+// moment), a failed request is retried once quietly, and a failure is never cached. A path that could not be signed comes back as null.
+const TTL = 3600, cache = new Map(), flying = new Map();
+
+async function sign(bucket, paths) {
+  const call = async () => unwrap(await supabase.storage.from(bucket).createSignedUrls(paths, TTL));
+  let rows; try { rows = await call(); } catch { await new Promise((r) => setTimeout(r, 700)); rows = await call(); }
+  const exp = Date.now() + (TTL - 600) * 1000;
+  for (const r of rows) if (r.signedUrl && r.path) cache.set(`${bucket}/${r.path}`, { url: r.signedUrl, exp });
+}
 
 export async function signedUrls(paths, bucket = BUCKET) {
-  const now = Date.now(), key = (p) => `${bucket}/${p}`;
-  const need = [...new Set(paths.filter(Boolean))].filter((p) => !(cache.get(key(p))?.exp > now));
-  if (need.length) {
-    const rows = unwrap(await supabase.storage.from(bucket).createSignedUrls(need, TTL));
-    for (const r of rows) if (r.signedUrl) cache.set(key(r.path), { url: r.signedUrl, exp: now + (TTL - 600) * 1000 });
-  }
+  const key = (p) => `${bucket}/${p}`; const want = [...new Set(paths.filter(Boolean))];
+  const need = want.filter((p) => !(cache.get(key(p))?.exp > Date.now()) && !flying.has(key(p)));
+  if (need.length) { const job = sign(bucket, need).finally(() => need.forEach((p) => flying.delete(key(p)))); need.forEach((p) => flying.set(key(p), job)); }
+  await Promise.allSettled([...new Set(want.map((p) => flying.get(key(p))).filter(Boolean))]);
   return Object.fromEntries(paths.filter(Boolean).map((p) => [p, cache.get(key(p))?.url ?? null]));
 }
 export async function signedUrl(path, bucket = BUCKET) { return path ? (await signedUrls([path], bucket))[path] : null; }
@@ -107,14 +114,18 @@ export async function removeAllMyImages() {
  *  Deleting through the Storage API is the only way to really free space; SQL deletes would orphan files. */
 export async function sweepOrphans(graceMs = 2 * 3600e3) {
   const id = await myId();
-  const [prof, cards, photos, posts] = await Promise.all([
+  const [prof, cards, photos, posts, scheduled] = await Promise.all([
     supabase.from('profiles').select('avatar_path, theme, music').eq('id', id).single(),
     supabase.from('profile_cards').select('content').eq('profile_id', id),
     supabase.from('photos').select('path').eq('owner_id', id),
-    supabase.from('posts').select('image_path').eq('author_id', id),
+    supabase.from('posts').select('image_path, extra_images').eq('author_id', id),
+    supabase.from('scheduled_posts').select('image_path, extra_images').eq('author_id', id),   // photos of posts that are waiting for their time
   ].map((p) => p.then(unwrap)));
+  // Everything a row can point to must be listed here (same list as admin_referenced_paths() in the database):
+  // a path that is missing from this set is deleted from storage as an "orphan". Extra post photos used to be missing, so they vanished.
   const media = new Set([prof.avatar_path, prof.theme?.bg_image, prof.music?.cover, ...cards.flatMap((c) => c.content?.images || []),
-    ...photos.map((p) => p.path), ...posts.map((p) => p.image_path)].filter(Boolean));
+    ...photos.map((p) => p.path), ...posts.flatMap((p) => [p.image_path, ...(p.extra_images || [])]),
+    ...(scheduled || []).flatMap((p) => [p.image_path, ...(p.extra_images || [])])].filter(Boolean));
   const audio = new Set([prof.music?.audio].filter(Boolean));
   const fonts = new Set([prof.theme?.font_file].filter(Boolean));
   for (const keep of [media, audio, fonts]) for (const p of draftMediaPaths(id)) keep.add(p);   // files of an autosaved, unsaved editor draft are still wanted

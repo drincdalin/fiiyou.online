@@ -2,34 +2,50 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { posts, social, friends, discover, profiles } from '../index.js';
-import { useImages, Avatar, ago } from './shared.jsx';
+import { useImages, Avatar, ago, reducedMotion } from './shared.jsx';
 import { PostCard, Composer, Lightbox } from './parts.jsx';
 import { SharedPostCard, decodeSharedPost, previewText } from './PostShare.jsx';
 import { MessageMenu, MessageEditor } from './MessageMenu.jsx';
 import { ask } from './dialog.jsx';
 import { ErrorState, friendlyError } from './errors.jsx';
-import { ArrowBendUpLeft, CalendarBlank, ChatsCircle, MagnifyingGlass, PaperPlaneRight, PushPin, UsersThree, X } from '@phosphor-icons/react';
+import { ArrowBendUpLeft, ArrowDown, CalendarBlank, ChatsCircle, MagnifyingGlass, PaperPlaneRight, PushPin, UsersThree, X } from '@phosphor-icons/react';
 import './more.css';
 
-const useFeed = (args, notify) => {
-  const [rows, setRows] = useState(null); const [more, setMore] = useState(false); const [err, setErr] = useState(null); const [busy, setBusy] = useState(false); const key = JSON.stringify(args); const cache = useRef([]); const loading = useRef(false);
-  const load = useCallback(async (append = false, cur = []) => {
+/* The feeds you already opened stay in memory while the app is open: Back from a profile or a post shows the feed (and your place in it)
+   at once and refreshes it quietly, instead of an empty screen and a reload. Keyed by person + filter, so nobody sees someone else's feed. */
+const feedCache = new Map();   // key -> { rows, more }
+addEventListener('fiiyou:postgone', (e) => { for (const v of feedCache.values()) v.rows = v.rows.filter((x) => x.id !== e.detail); });
+
+const useFeed = (args, notify, scope = '') => {
+  const key = `${scope}|${JSON.stringify(args)}`; const hit = feedCache.get(key);
+  const [rows, setRows] = useState(hit ? hit.rows : null); const [more, setMore] = useState(hit ? hit.more : false); const [err, setErr] = useState(null); const [busy, setBusy] = useState(false);
+  const cache = useRef([]); const loading = useRef(false);
+  const load = useCallback(async (append = false, cur = [], reset = false) => {
     if (!append) setErr(null); else { if (loading.current) return; loading.current = true; setBusy(true); }
-    try { const before = append && cur.length ? cur[cur.length - 1].created_at : null; const r = await posts.feed({ ...args, before, limit: 20 });
-      setRows(append ? [...cur, ...r] : r); setMore(r.length === 20 && !args.upcoming); } catch (e) { if (append) notify(friendlyError(e), 'err'); else { setErr(e); setRows([]); } } finally { if (append) { loading.current = false; setBusy(false); } }
+    try {
+      const before = append && cur.length ? cur[cur.length - 1].created_at : null; const r = await posts.feed({ ...args, before, limit: 20 });
+      let next = append ? [...cur, ...r] : r; let mre = r.length === 20 && !args.upcoming;
+      if (!append && !reset) {   // a quiet refresh keeps the older pages you already scrolled through, so the page does not shrink under you
+        const prev = feedCache.get(key)?.rows || []; const last = r[r.length - 1];
+        if (last && r.length === 20 && prev.length > r.length) { next = [...r, ...prev.filter((x) => x.created_at < last.created_at)]; mre = feedCache.get(key)?.more ?? mre; }
+      }
+      feedCache.set(key, { rows: next, more: mre }); setRows(next); setMore(mre);
+    } catch (e) { if (append) notify(friendlyError(e), 'err'); else if (!feedCache.get(key)) { setErr(e); setRows([]); } /* a failed quiet refresh keeps showing what is there */ }
+    finally { if (append) { loading.current = false; setBusy(false); } }
   }, [key]);
-  useEffect(() => { setRows(null); load(false); }, [load]);
+  useEffect(() => { const c = feedCache.get(key); setRows(c ? c.rows : null); setMore(c ? c.more : false); load(false); }, [load]);
   useEffect(() => { const h = () => load(false); addEventListener('fiiyou:published', h); return () => removeEventListener('fiiyou:published', h); }, [load]);   // a scheduled post just went out
   cache.current = rows || [];
   const next = useCallback(() => { if (cache.current.length) load(true, cache.current); }, [load]);
   useEffect(() => {   // Home tab pressed again = refresh from the top; coming back to the tab after a while = quiet refresh
-    const h = () => load(false); let hid = 0;
+    const h = () => load(false, [], true); let hid = 0;
     const vis = () => { if (document.hidden) hid = Date.now(); else if (hid && Date.now() - hid > 180000) { hid = 0; load(false); } };
     addEventListener('fiiyou:refresh', h); document.addEventListener('visibilitychange', vis);
     return () => { removeEventListener('fiiyou:refresh', h); document.removeEventListener('visibilitychange', vis); };
   }, [load]);
-  const img = useImages((rows || []).flatMap((p) => [p.image_path, p.author_avatar_path]));
-  const change = (np) => setRows((r) => r.map((x) => (x.id === np.id ? np : x))); const drop = (id) => setRows((r) => r.filter((x) => x.id !== id));
+  const img = useImages((rows || []).flatMap((p) => [p.image_path, ...(p.extra_images || []), p.author_avatar_path]));
+  const put = (fn) => setRows((r) => { const n = fn(r || []); feedCache.set(key, { rows: n, more: feedCache.get(key)?.more ?? false }); return n; });
+  const change = (np) => put((r) => r.map((x) => (x.id === np.id ? np : x))); const drop = (id) => put((r) => r.filter((x) => x.id !== id));
   return { rows, more, load, next, busy, img, change, drop, err };
 };
 const Skeleton = ({ n = 3 }) => (<div className="skels" aria-busy="true" aria-label="Loading posts">{Array.from({ length: n }, (_, k) => (<div className="post skel" key={k} aria-hidden="true"><div className="skrow"><i className="skav" /><span><i className="skln w40" /><i className="skln w25" /></span></div>
@@ -69,10 +85,10 @@ function Snapshot({ go, unread }) {
     friends.incomingRequests().then((r) => setReq(r.length)).catch(() => {}); discover.discover({ mode: 'new', limit: 3 }).then(setFresh).catch(() => {}); }, []);
   const img = useImages([me?.avatar_path, ...fresh.map((p) => p.avatar_path)]);
   if (!me) return <aside className="snap panel"><div className="boot">…</div></aside>;
-  return (<aside className="snap panel"><button type="button" className="snaptop who" onClick={() => go('profile')} aria-label="Open my profile"><Avatar src={img[me.avatar_path]} size={64} /><span><b>{me.display_name}</b><small>{me.headline || 'No mood set yet'}</small></span></button>
+  return (<aside className="snap panel"><button type="button" className="snaptop who" onClick={() => go('profile')} aria-label="Open my profile"><Avatar src={img[me.avatar_path]} size={64} name={me.display_name || me.username} /><span><b>{me.display_name}</b><small>{me.headline || 'No mood set yet'}</small></span></button>
     <div className="stats3"><button onClick={() => go('messages')}><b>{unread}</b><small>messages</small></button><button onClick={() => go('people')}><b>{req}</b><small>requests</small></button><span><b>{views ?? '–'}</b><small>views</small></span></div>
     <button className="primary wide" onClick={() => go('profile', null, null, true)}>Edit my profile</button>
-    {fresh.length > 0 && <><h4>Cool new people</h4><div className="newp">{fresh.map((p) => <button key={p.id} onClick={() => go('profile', p.username)}><Avatar src={img[p.avatar_path]} size={52} /><small>{p.display_name}</small></button>)}</div></>}
+    {fresh.length > 0 && <><h4>Cool new people</h4><div className="newp">{fresh.map((p) => <button key={p.id} onClick={() => go('profile', p.username)}><Avatar src={img[p.avatar_path]} size={52} name={p.display_name || p.username} /><small>{p.display_name}</small></button>)}</div></>}
   </aside>);
 }
 
@@ -80,7 +96,7 @@ export function HomeView({ me, go, notify, unread }) {
   const [tab, setTabRaw] = useState(() => { try { const t = sessionStorage.getItem('fiiyou:tab'); return ['nearby', 'friends', 'events'].includes(t) ? t : 'nearby'; } catch { return 'nearby'; } });
   const setTab = (t) => { setTabRaw(t); try { sessionStorage.setItem('fiiyou:tab', t); } catch {} }; const [loc, setLoc] = useState(''); const [locs, setLocs] = useState([]); const [places, setPlaces] = useState([]);
   useEffect(() => { discover.listLocalities().then(setLocs); social.listPlaces().then(setPlaces).catch(() => {}); }, []);
-  const f = useFeed(tab === 'events' ? { kind: 'event', upcoming: true, localityId: loc ? +loc : null } : { onlyFriends: tab === 'friends', localityId: loc ? +loc : null }, notify);
+  const f = useFeed(tab === 'events' ? { kind: 'event', upcoming: true, localityId: loc ? +loc : null } : { onlyFriends: tab === 'friends', localityId: loc ? +loc : null }, notify, me.id);
   return (<div className="plain wide view"><div className="homegrid"><Snapshot go={go} unread={unread} />
     <div className="homemain"><Composer me={me} places={places} onPosted={() => f.load(false)} notify={notify} />
       <div className="tabs" role="tablist" aria-label="Feed"><button role="tab" aria-selected={tab === 'nearby'} className={tab === 'nearby' ? 'on' : ''} onClick={() => setTab('nearby')}>Around you</button><button role="tab" aria-selected={tab === 'friends'} className={tab === 'friends' ? 'on' : ''} onClick={() => setTab('friends')}>Friend updates</button><button role="tab" aria-selected={tab === 'events'} className={tab === 'events' ? 'on' : ''} onClick={() => setTab('events')}>Events</button>
@@ -184,11 +200,12 @@ function ChatSearch({ peerId = null, onPick, nameOf, autoFocus = false }) {
 
 export function MessagesView({ me, peer, go, notify, refreshUnread }) {
   const [convs, setConvs] = useState([]); const [fl, setFl] = useState([]); const [cur, setCur] = useState(peer || null); const [msgs, setMsgs] = useState(null); const [txt, setTxt] = useState(''); const end = useRef(); const inp = useRef(); const [replyTo, setReplyTo] = useState(null); const [editing, setEditing] = useState(null);   // editing = id of the message being edited
+  const box = useRef(null); const stick = useRef(true); const initial = useRef(true); const prevLen = useRef(0); const curRef = useRef(cur); curRef.current = cur; const [newBelow, setNewBelow] = useState(false);
   const [pins, setPins] = useState([]); const [peerTyping, setPeerTyping] = useState(false); const [findOpen, setFindOpen] = useState(false); const typing = useRef(null); const typingT = useRef(); const pendingJump = useRef(null);
   const loadConvs = () => social.conversations().then(setConvs).catch(() => {});
-  const loadThread = useCallback(async (id) => { try { setMsgs(await social.thread(id)); await social.markRead(id); loadConvs(); refreshUnread(); } catch (e) { notify(e.message, 'err'); } }, []);
+  const loadThread = useCallback(async (id) => { try { const m = await social.thread(id); if (curRef.current !== id) return; setMsgs(m); await social.markRead(id); loadConvs(); refreshUnread(); } catch (e) { if (curRef.current === id) notify(e.message, 'err'); } }, []);   // an answer for a chat you already left is dropped, so it can never show under the wrong name
   useEffect(() => { loadConvs(); friends.listFriends().then(setFl); }, []);
-  useEffect(() => { setMsgs(null); setReplyTo(null); setEditing(null); setPins([]); setPeerTyping(false); setFindOpen(false); if (cur) { loadThread(cur); social.listPins(cur).then(setPins).catch(() => {}); } }, [cur]);
+  useEffect(() => { initial.current = true; stick.current = true; prevLen.current = 0; setNewBelow(false); setMsgs(null); setReplyTo(null); setEditing(null); setPins([]); setPeerTyping(false); setFindOpen(false); if (cur) { loadThread(cur); social.listPins(cur).then(setPins).catch(() => {}); } }, [cur]);
   useEffect(() => {   // "is typing…": a private realtime channel between the two of us; silent when Realtime is not available
     if (!cur) return undefined;
     const ch = social.typingChannel(me.id, cur, () => { setPeerTyping(true); clearTimeout(typingT.current); typingT.current = setTimeout(() => setPeerTyping(false), 4000); });
@@ -198,7 +215,14 @@ export function MessagesView({ me, peer, go, notify, refreshUnread }) {
   useEffect(() => { if (msgs && pendingJump.current) { const id = pendingJump.current; pendingJump.current = null; setTimeout(() => jump(id), 60); } }, [msgs]);
   useEffect(() => { const off = social.onMessage(me.id, () => { loadConvs(); if (cur) loadThread(cur); });
     const t = setInterval(() => { loadConvs(); if (cur) loadThread(cur); }, 12000); return () => { off(); clearInterval(t); }; }, [cur]);
-  useEffect(() => { end.current?.scrollIntoView({ block: 'end' }); }, [msgs?.length, cur]);
+  const toEnd = (smooth) => { const el = box.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: smooth && !reducedMotion() ? 'smooth' : 'auto' }); };
+  useEffect(() => {   // open a chat = jump to the newest message; a new message only pulls you down if you were already at the bottom (or you sent it)
+    if (!msgs) return; const len = msgs.length; const grew = len > prevLen.current; prevLen.current = len;
+    if (initial.current) { initial.current = false; toEnd(false); return; }
+    if (!grew) return;
+    if (stick.current || msgs[len - 1]?.sender_id === me.id) toEnd(true); else setNewBelow(true);
+  }, [msgs]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const onScroll = () => { const el = box.current; if (!el) return; const near = el.scrollHeight - el.scrollTop - el.clientHeight < 120; stick.current = near; if (near) setNewBelow(false); };
   const img = useImages([...convs, ...fl].map((p) => p.avatar_path));
   const who = convs.find((c) => c.id === cur) || fl.find((f) => f.id === cur);
   const send = async (e) => { e.preventDefault(); const body = txt.trim(); if (!body) return; const rep = replyTo; setTxt(''); setReplyTo(null);
@@ -234,14 +258,14 @@ export function MessagesView({ me, peer, go, notify, refreshUnread }) {
       {findOpen && <ChatSearch peerId={cur} autoFocus onPick={pickFound} nameOf={() => who.display_name} />}
       {pins.filter((x) => x.message.body !== social.DELETED_BODY).length > 0 && <div className="pinbar" role="region" aria-label="Pinned messages"><PushPin size={14} weight="fill" aria-hidden="true" />
         <div>{pins.filter((x) => x.message.body !== social.DELETED_BODY).map((x) => <button key={x.message_id} type="button" onClick={() => jump(x.message_id)} title="Go to the message"><b>{x.message.sender_id === me.id ? 'You' : who.display_name}:</b> {previewText(x.message.body)}</button>)}</div></div>}
-      <div className="msgs">{msgs ? (msgs.length ? msgs.map((m, i) => { const mine = m.sender_id === me.id; const newDay = i === 0 || new Date(m.created_at).toDateString() !== new Date(msgs[i - 1].created_at).toDateString();
+      <div className="msgs" ref={box} onScroll={onScroll}>{msgs ? (msgs.length ? msgs.map((m, i) => { const mine = m.sender_id === me.id; const newDay = i === 0 || new Date(m.created_at).toDateString() !== new Date(msgs[i - 1].created_at).toDateString();
         const nx = msgs[i + 1]; const first = newDay || msgs[i - 1].sender_id !== m.sender_id;   // first / last bubble of a run from the same person
         const tail = !nx || nx.sender_id !== m.sender_id || new Date(nx.created_at).toDateString() !== new Date(m.created_at).toDateString();
         const q = m.reply_to ? (byId.get(m.reply_to) || (m.reply?.id ? m.reply : null)) : null;
         const del = m.body === social.DELETED_BODY; const isEd = editing === m.id;
         const sp = del ? null : decodeSharedPost(m.body);   // a shared post: drawn as a card instead of text
         return (<Fragment key={m.id}>{newDay && <div className="dsep">{dayLabel(m.created_at)}</div>}<div className={`brow${mine ? ' mine' : ''}${first ? ' first' : ''}${tail ? ' tail' : ''}`} id={`m-${m.id}`}>{!mine && (tail ? <button type="button" className="who" aria-label="Open profile" onClick={() => go('profile', who.username)}><Avatar src={img[who.avatar_path]} size={26} /></button> : <span className="avsp" />)}{mine && <>{!del && !isEd && <MessageMenu m={m} me={me.id} notify={notify} canEdit={!sp} onEdit={() => setEditing(m.id)} onDeleted={replaceMsg} />}{!del && replyBtn(m)}</>}
-          <div className="bcol">{q && <button type="button" className="rq" onClick={() => jump(q.id)} aria-label="Go to the original message"><span className="rqlab"><ArrowBendUpLeft size={12} weight="bold" aria-hidden="true" />{replyLabel(m, q)}</span><span className="rqtxt">{previewText(q.body)}</span></button>}<div className={`bub${mine ? ' mine' : ''}${sp ? ' hasshare' : ''}${del ? ' msgdeleted' : ''}${isEd ? ' editing' : ''}`}>{isEd ? <MessageEditor m={m} notify={notify} onCancel={() => setEditing(null)} onSaved={(nm) => { replaceMsg(nm); setEditing(null); }} /> : del ? <p>This message was deleted</p> : sp ? <><SharedPostCard data={sp.data} go={go} />{sp.note && <p>{sp.note}</p>}</> : <p>{m.body}</p>}{!isEd && <small>{new Date(m.created_at).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}{m.edited_at && !del && <span className="msgedited"> · edited</span>}</small>}</div>{mine && m.id === lastMineId && m.read_at && <small className="seen">Seen {new Date(m.read_at).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}</small>}</div>{!mine && !del && replyBtn(m)}</div></Fragment>); }) : <p className="empty">Say hi.</p>) : <div className="boot">…</div>}<div ref={end} /></div>
+          <div className="bcol">{q && <button type="button" className="rq" onClick={() => jump(q.id)} aria-label="Go to the original message"><span className="rqlab"><ArrowBendUpLeft size={12} weight="bold" aria-hidden="true" />{replyLabel(m, q)}</span><span className="rqtxt">{previewText(q.body)}</span></button>}<div className={`bub${mine ? ' mine' : ''}${sp ? ' hasshare' : ''}${del ? ' msgdeleted' : ''}${isEd ? ' editing' : ''}`}>{isEd ? <MessageEditor m={m} notify={notify} onCancel={() => setEditing(null)} onSaved={(nm) => { replaceMsg(nm); setEditing(null); }} /> : del ? <p>This message was deleted</p> : sp ? <><SharedPostCard data={sp.data} go={go} />{sp.note && <p>{sp.note}</p>}</> : <p>{m.body}</p>}{!isEd && <small>{new Date(m.created_at).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}{m.edited_at && !del && <span className="msgedited"> · edited</span>}</small>}</div>{mine && m.id === lastMineId && m.read_at && <small className="seen">Seen {new Date(m.read_at).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}</small>}</div>{!mine && !del && replyBtn(m)}</div></Fragment>); }) : <p className="empty">Say hi.</p>) : <div className="boot">…</div>}{newBelow && <button type="button" className="newbelow" onClick={() => { toEnd(true); setNewBelow(false); }}><ArrowDown size={14} weight="bold" aria-hidden="true" />New messages</button>}<div ref={end} /></div>
       {peerTyping && <div className="typing" role="status" aria-live="polite"><span className="tdots" aria-hidden="true"><i /><i /><i /></span>{who.display_name} is typing…</div>}
       {replyTo && <div className="replybar"><ArrowBendUpLeft className="ric" size={18} weight="bold" aria-hidden="true" /><div><b>Replying to {nameOf(replyTo)}</b><span>{previewText(replyTo.body)}</span></div><button type="button" aria-label="Cancel reply" title="Cancel reply" onClick={() => setReplyTo(null)}><X size={16} weight="bold" aria-hidden="true" /></button></div>}
       <form className="inline" onSubmit={send}><input ref={inp} value={txt} maxLength={1000} placeholder="Write a message…" onChange={(e) => { setTxt(e.target.value); if (e.target.value) typing.current?.ping(); }} onKeyDown={(e) => e.key === 'Escape' && replyTo && setReplyTo(null)} autoFocus /><button className="primary sendbtn" aria-label="Send" title="Send" disabled={!txt.trim()}><PaperPlaneRight size={20} weight="fill" aria-hidden="true" /></button></form></>)

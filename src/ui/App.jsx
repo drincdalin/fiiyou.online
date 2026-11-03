@@ -26,9 +26,9 @@ const InviteModal = lazy(() => import('./InviteModal.jsx'));
 import NotificationsView, { NotificationList, useNotifCount } from './Notifications.jsx';
 import SettingsView from './SettingsView.jsx';
 import { PasswordMeter } from './PasswordMeter.jsx';
-import { registerSW, forgetDevice, syncPush } from './push.js';
+import { registerSW, forgetDevice, syncPush, listenForOpen } from './push.js';
 import GithubActivity from './GithubActivity.jsx';
-import { Bell, WifiSlash, Eye, EyeSlash, Check, GearSix, Heart, MagnifyingGlass, PencilSimple, ShareNetwork, SignOut, Trash, UserPlus } from '@phosphor-icons/react';
+import { Bell, Eye, EyeSlash, Check, GearSix, Heart, MagnifyingGlass, PencilSimple, ShareNetwork, SignOut, Trash, UserPlus } from '@phosphor-icons/react';
 
 const BASE = import.meta.env.BASE_URL;
 function Auth() {
@@ -286,7 +286,7 @@ function toRoute(path) {
 export default function App() {
   const [session, setSession] = useState(undefined); const [me, setMe] = useState(null); const path = usePath(); const route = useMemo(() => toRoute(path), [path]);
   const [isAdmin, setIsAdmin] = useState(false); const [recovery, setRecovery] = useState(false);
-  const [menu, setMenu] = useState(false); const { n: nCount, setN: setNCount, tick: nTick } = useNotifCount(me?.id); const [toast, setToast] = useState(null); const [paused, setPaused] = useState(false); const [online, setOnline] = useState(() => navigator.onLine !== false); const [unread, setUnread] = useState(0);
+  const [menu, setMenu] = useState(false); const { n: nCount, setN: setNCount, tick: nTick } = useNotifCount(me?.id); const [toast, setToast] = useState(null); const [paused, setPaused] = useState(false); const [unread, setUnread] = useState(0);
   const refreshMe = useCallback(() => profiles.getMyProfile().then(setMe).catch(() => {}), []);
   const [meErr, setMeErr] = useState(null); const [inviteOpen, setInviteOpen] = useState(false);
   const loadMe = useCallback(() => {
@@ -310,7 +310,7 @@ export default function App() {
       if (ev === 'PASSWORD_RECOVERY') setRecovery(true);
     });
   }, []);
-  useEffect(() => { registerSW(); }, []);
+  useEffect(() => { registerSW(); return listenForOpen((to) => navigate(to)); }, []);
   useEffect(() => { if (me?.id) syncPush(); }, [me?.id]);   // keep this device's push address on the server in step with who is signed in
   // scheduled posts: publish the ones that are due when the app opens and then every minute (a database job does it too when pg_cron is available)
   useEffect(() => {
@@ -319,8 +319,6 @@ export default function App() {
     tick(); const t = setInterval(tick, 60000); return () => clearInterval(t);
   }, [me?.id]);   // service worker: installable app + push notifications
   useEffect(() => { const t = { home: 'Home', profile: route.username ? `@${route.username}` : 'Me', map: 'Map', messages: 'Chat', people: 'People', admin: 'Admin', post: 'Post', search: 'Search', tag: 'Tag', notifications: 'Notifications', settings: 'Settings' }[route.v]; const b = unread + nCount; document.title = `${b > 0 ? `(${b > 99 ? '99+' : b}) ` : ''}fiiyou · ${t}`; }, [route, unread, nCount]);
-  useEffect(() => { window.scrollTo(0, 0); }, [path]);   // a new page starts at the top
-  useEffect(() => { const on = () => setOnline(true); const off = () => setOnline(false); addEventListener('online', on); addEventListener('offline', off); return () => { removeEventListener('online', on); removeEventListener('offline', off); }; }, []);
   useEffect(() => { if (route.legacyMe && me) navigate(`/${me.username.toLowerCase()}${route.edit ? '/edit' : ''}`, { replace: true }); }, [route.legacyMe, route.edit, me?.username]);   // old /me -> /<username>
   useEffect(() => { if (session) loadMe(); else { setMe(null); setMeErr(null); } }, [session, loadMe]);
   useEffect(() => {   // someone who is already a member opened an invite link: take them to the person who sent it
@@ -359,11 +357,10 @@ export default function App() {
   const NAV = [['home', 'Home'], ['profile', 'Me'], ['map', 'Map'], ['messages', 'Chat'], ['people', 'People'], ...(isAdmin ? [['admin', 'Admin']] : [])];
   const active = (v) => (v === 'profile' ? route.v === 'profile' && (!route.username || route.username === me.username.toLowerCase()) : route.v === v);
   return (<div className="app">
-    {!online && <div className="offline" role="status"><WifiSlash size={16} weight="bold" aria-hidden="true" />You are offline. Posts and messages will not send until you are back.</div>}
     <nav className="nav"><button className="logo" onClick={() => top('home')}>fiiyou</button>
       <div className="navlinks">{NAV.map(([v, l]) => <button key={v} className={active(v) ? 'on' : ''} aria-label={l} title={l} aria-current={active(v) ? 'page' : undefined} onClick={() => top(v)}><span className="navicw"><NavIcon name={v} active={active(v)} />{v === 'messages' && unread > 0 && <em className="dotb">{unread > 99 ? '99+' : unread}</em>}</span></button>)}</div>
-      <div className="more" ref={menuRef}><button className="avbtn" onClick={() => setMenu(!menu)} aria-label={nCount > 0 ? `Account menu (${nCount} new notifications)` : 'Account menu'} aria-expanded={menu}><Avatar src={myImg[me.avatar_path]} size={34} /></button>{nCount > 0 && <em className="avdot" aria-hidden="true">{nCount > 9 ? '9+' : nCount}</em>}{menu && <div className="menu" role="menu">
-        <button className="mhead" role="menuitem" onClick={() => go('profile')}><Avatar src={myImg[me.avatar_path]} size={44} /><span><b>{me.display_name || me.username}</b><small>@{me.username}</small></span></button>
+      <div className="more" ref={menuRef}><button className="avbtn" onClick={() => setMenu(!menu)} aria-label={nCount > 0 ? `Account menu (${nCount} new notifications)` : 'Account menu'} aria-expanded={menu}><Avatar src={myImg[me.avatar_path]} size={34} name={me.display_name || me.username} /></button>{nCount > 0 && <em className="avdot" aria-hidden="true">{nCount > 9 ? '9+' : nCount}</em>}{menu && <div className="menu" role="menu">
+        <button className="mhead" role="menuitem" onClick={() => go('profile')}><Avatar src={myImg[me.avatar_path]} size={44} name={me.display_name || me.username} /><span><b>{me.display_name || me.username}</b><small>@{me.username}</small></span></button>
         <hr className="msep" />
         <NotificationList go={go} notify={notify} tick={nTick} onRead={setNCount} limit={5} />
         <hr className="msep" />

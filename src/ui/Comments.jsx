@@ -4,15 +4,16 @@ import { posts } from '../index.js';
 import { Avatar, Rich, ago, useImages } from './shared.jsx';
 import { ask } from './dialog.jsx';
 import MentionInput from './MentionInput.jsx';
+import { ErrorState } from './errors.jsx';
 
 /** Comment thread of one post: likes, replies (one level deep) and @mentions. Used inside PostCard.
  *  Props: postId, postAuthorId (the post author may delete any comment), me, go(view, arg), notify, fail(err) (error toast),
  *  onDelta(n) (comment_count changed by n), onTag(tag). */
 export default function Comments({ postId, postAuthorId, me, go, notify, fail, onDelta, onTag }) {
-  const [rows, setRows] = useState(null); const [text, setText] = useState(''); const [reply, setReply] = useState(null); const [busy, setBusy] = useState(false);
+  const [rows, setRows] = useState(null); const [text, setText] = useState(''); const [reply, setReply] = useState(null); const [busy, setBusy] = useState(false); const [err, setErr] = useState(null);
   const [openT, setOpenT] = useState(() => new Set());   // threads with more than 2 replies start collapsed
   const field = useRef(null);
-  const load = useCallback(() => posts.listComments(postId).then(setRows).catch(() => setRows((x) => x || [])), [postId]);
+  const load = useCallback(() => { setErr(null); return posts.listComments(postId).then(setRows).catch((e) => { setErr(e); setRows((x) => x || []); }); }, [postId]);   // a failed load says so (it used to look like "no comments yet")
   useEffect(() => { load(); }, [load]);
   const img = useImages((rows || []).map((c) => c.author?.avatar_path));
 
@@ -80,7 +81,7 @@ export default function Comments({ postId, postAuthorId, me, go, notify, fail, o
 
   return (<div className="comments">
     <div className="cmtop"><b>Comments</b><span className="cmcount">{rows ? rows.length : '…'}</span></div>
-    {rows === null ? <div className="boot cmload">…</div> : !rows.length ? <p className="cmempty">No comments yet. Start the conversation.</p>
+    {rows === null ? <div className="boot cmload">…</div> : err && !rows.length ? <ErrorState error={err} onRetry={load} title="Could not load comments" /> : !rows.length ? <p className="cmempty">No comments yet. Start the conversation.</p>
       : <ul className="cmlist">{roots.map((c) => item(c, false))}</ul>}
     {reply && <div className="cmreplying"><span>Replying to @{reply.username}</span>
       <button type="button" aria-label="Cancel reply" onClick={() => setReply(null)}><X size={14} weight="bold" aria-hidden="true" /></button></div>}

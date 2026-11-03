@@ -14,6 +14,13 @@ export function registerSW() {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register(`${BASE}sw.js`, { scope: BASE }).catch(() => {});
 }
 
+/** A tapped notification while the app is already open: the service worker sends the page to show, and the app moves there without reloading. */
+export function listenForOpen(open) {
+  if (!('serviceWorker' in navigator)) return () => {};
+  const h = (e) => { if (e.data?.type === 'fiiyou:open' && typeof e.data.path === 'string') open(`/${e.data.path.replace(/^\/+/, '')}`); };
+  navigator.serviceWorker.addEventListener('message', h); return () => navigator.serviceWorker.removeEventListener('message', h);
+}
+
 const sameKey = (sub) => {   // a device subscribed with an OLD key pair can never receive anything from the current server keys
   const k = sub?.options?.applicationServerKey; if (!k) return true;
   const a = new Uint8Array(k); const b = toBytes(KEY);
@@ -37,10 +44,13 @@ export async function pushStatus() {
   return sub && Notification.permission === 'granted' ? 'on' : 'off';
 }
 
-/** Asks for permission, subscribes this device and saves it for the signed-in person. Throws 'denied' when the person says no.
+/** Asks for permission, subscribes this device and saves it for the signed-in person. Throws 'denied' when the browser blocks it for good,
+ *  'dismissed' when the person just closed the question (they can be asked again). 
  *  If saving fails the browser subscription is removed again, so "on" never means "on in the browser but unknown to the server". */
 export async function enablePush() {
-  if ((await Notification.requestPermission()) !== 'granted') throw new Error('denied');
+  const perm = await Notification.requestPermission();
+  if (perm === 'denied') throw new Error('denied');
+  if (perm !== 'granted') throw new Error('dismissed');
   const reg = await swReady();
   const sub = (await currentSub(reg)) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: toBytes(KEY) }));
   try { await social.savePushSubscription(sub.toJSON()); }

@@ -1,13 +1,33 @@
 import { useEffect, useRef, useState } from 'react';
 import { media } from '../index.js';
 
+const RETRY = [800, 2500];   // a link that could not be made is tried again after these many ms before the image is called missing
+/** paths -> { path: url | null }. undefined = still loading (or being retried), null = could not be made after the retries (file gone or no access). */
 export function useImages(paths) {
   const [m, setM] = useState({}); const k = paths.filter(Boolean).join('|');
-  useEffect(() => { if (k) media.signedUrls(paths).then(setM).catch(() => {}); else setM({}); }, [k]);
+  useEffect(() => {
+    const list = [...new Set(paths.filter(Boolean))];
+    if (!list.length) { setM({}); return undefined; }
+    let dead = false; const timers = [];
+    setM((cur) => Object.fromEntries(list.filter((p) => p in cur && cur[p]).map((p) => [p, cur[p]])));   // keep what is known, drop the rest
+    const run = (todo, attempt) => media.signedUrls(todo).catch(() => ({})).then((r) => {
+      if (dead) return;
+      const miss = todo.filter((p) => !r[p]); const last = attempt >= RETRY.length;
+      setM((cur) => { const n = { ...cur }; for (const p of todo) { if (r[p]) n[p] = r[p]; else if (last) n[p] = null; } return n; });
+      if (miss.length && !last) timers.push(setTimeout(() => run(miss, attempt + 1), RETRY[attempt]));
+    });
+    run(list, 0);
+    return () => { dead = true; timers.forEach(clearTimeout); };
+  }, [k]);   // eslint-disable-line react-hooks/exhaustive-deps
   return m;
 }
 export const Boot = () => <div className="boot">…</div>;
-export const Avatar = ({ src, size = 40 }) => <span className="av" style={{ width: size, height: size }}>{src ? <img src={src} alt="" /> : <i />}</span>;
+/** Round picture. When there is no picture (or it fails to load) the first letter of `name` is shown instead of an empty grey circle. */
+export function Avatar({ src, size = 40, name = '' }) {
+  const [bad, setBad] = useState(false); useEffect(() => { setBad(false); }, [src]);
+  const letter = [...String(name).trim()][0]?.toUpperCase();
+  return (<span className="av" style={{ width: size, height: size }}>{src && !bad ? <img src={src} alt="" onError={() => setBad(true)} /> : letter ? <b className="avl" style={{ fontSize: Math.round(size * 0.42) }} aria-hidden="true">{letter}</b> : <i />}</span>);
+}
 export const ago = (iso) => { const s = (Date.now() - new Date(iso)) / 1000;
   if (s < 60) return 'now'; if (s < 3600) return `${Math.floor(s / 60)}m`; if (s < 86400) return `${Math.floor(s / 3600)}h`;
   if (s < 604800) return `${Math.floor(s / 86400)}d`; return new Date(iso).toLocaleDateString('ro-RO'); };

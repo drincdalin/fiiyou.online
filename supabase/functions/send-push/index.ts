@@ -1,7 +1,6 @@
-// Supabase Edge Function `send-push`. Two callers:
-//  1. database webhooks (public.notifications and public.messages, event Insert), proven by the x-webhook-secret header:
-//     sends a Web Push message to every device the receiving person turned notifications on for.
-//  2. the "Send test" button in Settings, proven by the signed-in person's own token: sends one test message to that person's devices.
+// Supabase Edge Function `send-push`. Only caller: the database webhooks (public.notifications and public.messages, event Insert),
+// proven by the x-webhook-secret header. It sends a Web Push message to every device the receiving person turned notifications on for.
+// Anything without the right secret is refused with 403.
 // Deploy with:  supabase functions deploy send-push --no-verify-jwt
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3.6.7';
@@ -65,18 +64,11 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'method not allowed' }, 405);
 
   const isHook = !!env('WEBHOOK_SECRET') && req.headers.get('x-webhook-secret') === env('WEBHOOK_SECRET');
-  let body: { test?: boolean; type?: string; table?: string; record?: Record<string, string | null> };
+  let body: { type?: string; table?: string; record?: Record<string, string | null> };
   try { body = await req.json(); } catch { return json({ error: 'bad request' }, 400); }
 
   try {
-    if (!isHook) {
-      // not our webhook: the only other thing allowed is a signed-in person testing their own devices
-      const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
-      const { data } = token ? await admin.auth.getUser(token) : { data: { user: null } };
-      if (body.test !== true || !data?.user) return json({ error: 'forbidden' }, 403);
-      if (setupError) return json({ error: `Push keys are not set up on the server (${setupError}). Check the VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and VAPID_SUBJECT secrets.` }, 500);
-      return json(await deliver(data.user.id, { title: 'fiiyou', body: 'Push notifications are working on this device.', path: '', tag: 'test', force: true }));
-    }
+    if (!isHook) return json({ error: 'forbidden' }, 403);   // not our webhook
 
     if (setupError) { console.error('refusing to send:', setupError); return json({ error: setupError }, 500); }
     const n = body.record;
