@@ -1,0 +1,33 @@
+/* Release polish layer. Loaded LAST (main.jsx), so it wins over the older style sheets. Phone rules are scoped to max-width 700px or touch input. */
+
+/* ---------- phones ---------- */
+@media (max-width: 700px) {
+  /* tab rows no longer hide their last tab behind the screen edge: they wrap instead of scrolling sideways */
+  .plain.view > .tabs, .homemain > .tabs { flex-wrap: wrap; overflow: visible; }
+  .plain.view > .tabs button, .homemain > .tabs button { flex: 1 1 auto; justify-content: center; }
+  .homemain > .tabs select { flex: 1 1 100%; width: 100%; max-width: none; margin-left: 0; }
+
+  /* Home: the profile card used to be 400px of stats and buttons before the first post. On a phone it is one slim row; "Edit my profile"
+     lives in the Profile tab and "Cool new people" in People */
+  .snap { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 10px; padding: 10px 12px; }
+  .snap .snaptop { min-width: 0; }
+  .snap .snaptop .av { width: 44px !important; height: 44px !important; }
+  .snap .stats3 { grid-template-columns: repeat(2, auto); gap: 6px; }
+  .snap .stats3 > span, .snap > .primary, .snap > h4, .snap > .newp { display: none; }
+  .snap .stats3 button { padding: 6px 12px; }
+
+  /* messages: the toast sits above the tab bar, not on top of it */
+  .toast { bottom: calc(var(--nav-h) + 18px + env(safe-area-inset-bottom, 0px)); width: max-content; max-width: min(92vw, 420px); }
+  /* four tabs (People) sit in a tidy 2 x 2 grid instead of 3 + 1 */
+  .plain.view > .tabs:has(> button:nth-child(4):last-child) { display: grid; grid-template-columns: 1fr 1fr; }
+
+  /* the on-screen keyboard is open: the tab bar steps aside so the field you type in gets the room (see viewport.js) */
+  html.kb { --nav-h: 0px; }
+  html.kb .nav { display: none; }
+}
+
+/* ---------- everywhere ---------- */
+/* long words, links and pasted text never push a card wider than the screen */
+.post, .bub, .cm, .rq, .sview .row, .plain .row { overflow-wrap: anywhere; }
+/* nothing selects or zooms by accident when you double-tap a control */
+button, .navlinks, .tabs { -webkit-user-select: none; user-select: none; }

@@ -65,3 +65,23 @@ export function FadeImg({ className = '', onLoad, ...rest }) {
 
 /** True when the visitor asked their system for less motion. */
 export const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** Phones: the Back button / swipe-back closes a pop-up instead of leaving the page. Closing it any other way removes the extra history entry again. */
+export function useBackToClose(onClose) {
+  const cb = useRef(onClose); cb.current = onClose;
+  useEffect(() => {
+    let popped = false;
+    try { history.pushState({ ...(history.state || {}), fiiyouOverlay: true }, ''); } catch { return undefined; }
+    const pop = () => { popped = true; cb.current(); };
+    addEventListener('popstate', pop);
+    return () => { removeEventListener('popstate', pop); if (!popped && history.state?.fiiyouOverlay) history.back(); };
+  }, []);
+}
+
+/** True on screens you use with a finger (no hover). Lets the chat show a tap menu there instead of hover buttons. */
+export function useTouchScreen() {
+  const q = '(hover: none)'; const get = () => typeof matchMedia === 'function' && matchMedia(q).matches;
+  const [t, setT] = useState(get);
+  useEffect(() => { if (typeof matchMedia !== 'function') return undefined; const m = matchMedia(q); const h = () => setT(m.matches); m.addEventListener?.('change', h); return () => m.removeEventListener?.('change', h); }, []);
+  return t;
+}

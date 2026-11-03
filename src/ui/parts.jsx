@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { House, User, MapPin, ChatCircle, ShieldCheck, Heart, X, CaretLeft, CaretRight, Flag, PencilSimple, Trash, PaperPlaneRight, ImageSquare, CalendarBlank, ShareNetwork, DotsThree, Clock, ImageBroken, UsersThree } from '@phosphor-icons/react';
 import PostShareModal from './PostShare.jsx';
 import { posts, safety } from '../index.js';
-import { Avatar, ago, Rich, useImages, FadeImg, fullDate, reducedMotion } from './shared.jsx';
+import { Avatar, ago, Rich, useImages, FadeImg, fullDate, reducedMotion, useBackToClose } from './shared.jsx';
 import { ask } from './dialog.jsx';
 import Comments from './Comments.jsx';
 import MentionInput from './MentionInput.jsx';
@@ -27,18 +27,6 @@ export function Verified() {
 /** A photo whose file is gone (deleted, or never uploaded): said plainly, instead of a spinner that never ends. */
 function Unavailable({ big = false }) {
   return (<span className="imgbad" role="img" aria-label="Photo unavailable"><ImageBroken size={big ? 44 : 30} weight="duotone" aria-hidden="true" /><b>Photo unavailable</b>{big && <small>It may have been removed.</small>}</span>);
-}
-
-/** Phones: the Back button / swipe-back closes a pop-up instead of leaving the page. Closing it any other way removes the extra history entry again. */
-function useBackToClose(onClose) {
-  const cb = useRef(onClose); cb.current = onClose;
-  useEffect(() => {
-    let popped = false;
-    try { history.pushState({ ...(history.state || {}), fiiyouOverlay: true }, ''); } catch { return undefined; }
-    const pop = () => { popped = true; cb.current(); };
-    addEventListener('popstate', pop);
-    return () => { removeEventListener('popstate', pop); if (!popped && history.state?.fiiyouOverlay) history.back(); };
-  }, []);
 }
 
 /** Pop-up viewer. items: [{id, src, caption, likes, liked}]. Pass onLike to show the like button.
