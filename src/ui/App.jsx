@@ -26,25 +26,28 @@ const InviteModal = lazy(() => import('./InviteModal.jsx'));
 import NotificationsView, { NotificationList, useNotifCount } from './Notifications.jsx';
 import SettingsView from './SettingsView.jsx';
 import { PasswordMeter } from './PasswordMeter.jsx';
+import Captcha, { CAPTCHA_ON } from './Captcha.jsx';
 import { registerSW, forgetDevice, syncPush, listenForOpen } from './push.js';
 import GithubActivity from './GithubActivity.jsx';
 import { Bell, Eye, EyeSlash, Check, GearSix, Heart, MagnifyingGlass, PencilSimple, ShareNetwork, SignOut, Trash, UserPlus } from '@phosphor-icons/react';
 
 const BASE = import.meta.env.BASE_URL;
 function Auth() {
+  const capRef = useRef(null); const [cap, setCap] = useState('');   // Turnstile token (only when VITE_TURNSTILE_SITE_KEY is set)
+  const needCap = () => CAPTCHA_ON && !cap;
   const [invite] = useState(() => getInvite()); const [mode, setMode] = useState(invite ? 'up' : 'in'); const [f, setF] = useState({ email: '', password: '', username: '', displayName: '' }); const [agree, setAgree] = useState(false); const [banned, setBanned] = useState(false);
   const [msg, setMsg] = useState(''); const [ok, setOk] = useState(false); const [busy, setBusy] = useState(false); const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const say = (m, good = false) => { setMsg(m); setOk(good); };
-  const go = async (e) => { e.preventDefault(); say(''); if (mode === 'up' && isReserved(f.username)) return say('That username is reserved.'); setBusy(true);
-    try { if (mode === 'in') await auth.signIn(f); else { const r = await auth.signUp({ ...f, invitedBy: invite }); if (!r.session) say('Check your email to confirm your account.', true); } }
-    catch (er) { if (er.message === 'banned') setBanned(true); else say(er.message === 'username_taken' ? 'That username is taken.' : friendlyError(er)); } setBusy(false); };
-  const forgot = async () => { if (!f.email) return say('Type your email first.'); try { await auth.resetPassword(f.email); say('If that email has an account, a reset link is on its way.', true); } catch (er) { say(friendlyError(er)); } };
-  const magic = async () => { if (!f.email) return say('Type your email first.'); setBusy(true);
-    try { await auth.signInWithMagicLink(f.email); say('If that email has an account, a sign-in link is on its way.', true); } catch (er) { if (er.message === 'banned') setBanned(true); else say(friendlyError(er)); } setBusy(false); };
+  const go = async (e) => { e.preventDefault(); say(''); if (mode === 'up' && isReserved(f.username)) return say('That username is reserved.'); if (needCap()) return say('Please finish the security check first.'); setBusy(true);
+    try { if (mode === 'in') await auth.signIn({ ...f, captchaToken: cap }); else { const r = await auth.signUp({ ...f, invitedBy: invite, captchaToken: cap }); if (!r.session) say('Check your email to confirm your account.', true); } }
+    catch (er) { if (er.message === 'banned') setBanned(true); else say(er.message === 'username_taken' ? 'That username is taken.' : friendlyError(er)); } capRef.current?.reset(); setBusy(false); };
+  const forgot = async () => { if (!f.email) return say('Type your email first.'); if (needCap()) return say('Please finish the security check first.'); try { await auth.resetPassword(f.email, cap); say('If that email has an account, a reset link is on its way.', true); } catch (er) { say(friendlyError(er)); } capRef.current?.reset(); };
+  const magic = async () => { if (!f.email) return say('Type your email first.'); if (needCap()) return say('Please finish the security check first.'); setBusy(true);
+    try { await auth.signInWithMagicLink(f.email, cap); say('If that email has an account, a sign-in link is on its way.', true); } catch (er) { if (er.message === 'banned') setBanned(true); else say(friendlyError(er)); } capRef.current?.reset(); setBusy(false); };
   const up = mode === 'up'; const [showPw, setShowPw] = useState(false);
   if (banned) return <Banned onBack={() => setBanned(false)} />;
   return (
-    <div className="authwrap">
+    <main className="authwrap">
       <form className="authcard" onSubmit={go}>
         <header className="authhead"><h1 className="brand">fiiyou</h1><p className="authlead">The internet belongs to you.</p></header>
         <div className="authtabs" role="tablist" aria-label="Sign in or create an account">
@@ -59,13 +62,14 @@ function Auth() {
           <button type="button" className="pweye" onClick={() => setShowPw(!showPw)} aria-label={showPw ? 'Hide password' : 'Show password'} aria-pressed={showPw}>{showPw ? <EyeSlash size={18} weight="bold" aria-hidden="true" /> : <Eye size={18} weight="bold" aria-hidden="true" />}</button></div></label>
         {up && <PasswordMeter value={f.password} username={f.username} email={f.email} />}
         {up && <label className="agree"><input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} /><span>I am 16 or older and accept the <a href={`${BASE}terms.html`} target="_blank" rel="noopener">Terms</a> and <a href={`${BASE}privacy.html`} target="_blank" rel="noopener">Privacy Policy</a>.</span></label>}
+        <Captcha ref={capRef} onToken={setCap} onProblem={() => say('The security check could not load. Turn off your ad blocker for this site, or check your connection, then reload.')} />
         {msg && <p className={ok ? 'okmsg' : 'err'} role="alert">{msg}</p>}
-        <button className="primary wide authgo" disabled={busy || (up && !agree)}>{busy ? 'One moment…' : up ? 'Create account' : 'Sign in'}</button>
+        <button className="primary wide authgo" disabled={busy || (up && !agree) || needCap()}>{busy ? 'One moment…' : up ? 'Create account' : 'Sign in'}</button>
         {!up && <button type="button" className="link muted authforgot" onClick={forgot}>Forgot your password?</button>}
         {!up && <button type="button" className="link muted authforgot" disabled={busy} onClick={magic}>Email me a sign-in link instead</button>}
-        <p className="legal"><a href={`${BASE}privacy.html`} target="_blank" rel="noopener">Privacy</a> · <a href={`${BASE}terms.html`} target="_blank" rel="noopener">Terms</a></p>
+        <p className="legal"><a href={`${BASE}privacy.html`} target="_blank" rel="noopener">Privacy</a> · <a href={`${BASE}terms.html`} target="_blank" rel="noopener">Terms</a> · <a href={`${BASE}accessibility.html`} target="_blank" rel="noopener">Accessibility</a></p>
       </form>
-    </div>
+    </main>
   );
 }
 
@@ -337,6 +341,12 @@ export default function App() {
   useEffect(() => { if (!menu) return; const out = (e) => { if (!menuRef.current?.contains(e.target)) setMenu(false); }; const esc = (e) => { if (e.key === 'Escape') setMenu(false); };
     addEventListener('pointerdown', out); addEventListener('keydown', esc); return () => { removeEventListener('pointerdown', out); removeEventListener('keydown', esc); }; }, [menu]);
   useEffect(() => { if (!toast || paused) return undefined; const t = setTimeout(() => setToast(null), toast.type === 'err' ? 6000 : 3200); return () => clearTimeout(t); }, [toast, paused]);   // errors stay longer; hovering a toast keeps it
+  const mainRef = useRef(null); const h1Ref = useRef(null);
+  useEffect(() => {   // every page needs one level-one heading: a hidden one is added only when the page has none of its own
+    const main = mainRef.current; if (!main) return undefined;
+    const upd = () => { if (h1Ref.current) h1Ref.current.hidden = !!main.querySelector('h1:not(.pagetitle)'); };
+    upd(); const mo = new MutationObserver(upd); mo.observe(main, { childList: true, subtree: true }); return () => mo.disconnect();
+  }, [route.v, !!session, !!me]);   // main only exists once signed in and loaded
   if (session === undefined) return <Boot />;
   if (recovery && session) return <NewPassword onDone={() => setRecovery(false)} />;
   if (!session) return <Auth />;
@@ -356,8 +366,10 @@ export default function App() {
   const top = (v) => { if (active(v) && !(v === 'profile' && route.edit)) { window.scrollTo({ top: 0, behavior: 'smooth' }); if (v === 'home') window.dispatchEvent(new Event('fiiyou:refresh')); } else go(v); };   // pressing the page you are on = back to the top (and a fresh feed on Home)
   const NAV = [['home', 'Home'], ['profile', 'Me'], ['map', 'Map'], ['messages', 'Chat'], ['people', 'People'], ...(isAdmin ? [['admin', 'Admin']] : [])];
   const active = (v) => (v === 'profile' ? route.v === 'profile' && (!route.username || route.username === me.username.toLowerCase()) : route.v === v);
+  const PAGE = { home: 'Home', profile: 'Profile', map: 'Map', messages: 'Messages', people: 'People', search: 'Search', settings: 'Settings', notifications: 'Notifications', post: 'Post', admin: 'Admin' };
   return (<div className="app">
-    <nav className="nav"><button className="logo" onClick={() => top('home')}>fiiyou</button>
+    <button type="button" className="skip" onClick={() => { const m = document.getElementById('main'); m?.focus(); m?.scrollIntoView?.(); }}>Skip to content</button>
+    <nav className="nav" aria-label="Main"><button className="logo" onClick={() => top('home')}>fiiyou</button>
       <div className="navlinks">{NAV.map(([v, l]) => <button key={v} className={active(v) ? 'on' : ''} aria-label={l} title={l} aria-current={active(v) ? 'page' : undefined} onClick={() => top(v)}><span className="navicw"><NavIcon name={v} active={active(v)} />{v === 'messages' && unread > 0 && <em className="dotb">{unread > 99 ? '99+' : unread}</em>}</span></button>)}</div>
       <div className="more" ref={menuRef}><button className="avbtn" onClick={() => setMenu(!menu)} aria-label={nCount > 0 ? `Account menu (${nCount} new notifications)` : 'Account menu'} aria-expanded={menu}><Avatar src={myImg[me.avatar_path]} size={34} name={me.display_name || me.username} /></button>{nCount > 0 && <em className="avdot" aria-hidden="true">{nCount > 9 ? '9+' : nCount}</em>}{menu && <div className="menu" role="menu">
         <button className="mhead" role="menuitem" onClick={() => go('profile')}><Avatar src={myImg[me.avatar_path]} size={44} name={me.display_name || me.username} /><span><b>{me.display_name || me.username}</b><small>@{me.username}</small></span></button>
@@ -369,6 +381,8 @@ export default function App() {
         <hr className="msep" />
         <button role="menuitem" onClick={async () => { setMenu(false); await forgetDevice(); auth.signOut(); }}><SignOut size={18} weight="bold" aria-hidden="true" />Sign out</button>
       </div>}</div></nav>
+    <main id="main" className="appmain" tabIndex={-1} ref={mainRef}>
+    <h1 className="sronly pagetitle" ref={h1Ref}>{PAGE[route.v] || 'fiiyou'}</h1>
     {route.v === 'home' && <HomeView me={me} go={go} notify={notify} unread={unread} />}
     {route.v === 'map' && <MapView me={me} go={go} notify={notify} />}
     {route.v === 'messages' && <MessagesView key={route.peer || 'all'} me={me} peer={route.peer} go={go} notify={notify} refreshUnread={refreshUnread} />}
@@ -379,6 +393,7 @@ export default function App() {
     {route.v === 'people' && <PeopleView me={me} go={go} notify={notify} onInvite={() => setInviteOpen(true)} />}
     {route.v === 'post' && <PostView key={route.id} id={route.id} me={me} go={go} notify={notify} />}
     {route.v === 'profile' && <ProfileView key={route.username || me.username} username={route.username || me.username} go={go} notify={notify} refreshMe={refreshMe} meName={me.username} autoEdit={!!route.edit} />}
+    </main>
     {inviteOpen && <Suspense fallback={null}><InviteModal me={me} onClose={() => setInviteOpen(false)} notify={notify} /></Suspense>}
     {toast && <button type="button" className={`toast ${toast.type}`} role={toast.type === 'err' ? 'alert' : 'status'} title="Dismiss" onClick={() => setToast(null)} onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>{toast.msg}</button>}
   </div>);

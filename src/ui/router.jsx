@@ -15,7 +15,7 @@ export const RESERVED = [
   // auth / meta pages
   'login', 'signup', 'settings', 'about', 'help', 'privacy', 'terms', 'api',
   // static files and folders
-  'assets', 'icons', 'index.html', '404.html', 'terms.html', 'privacy.html', 'sw.js',
+  'assets', 'icons', 'index.html', '404.html', 'terms.html', 'privacy.html', 'accessibility.html', 'accessibility', 'sw.js',
   'sitemap.xml', 'robots.txt', 'manifest.webmanifest', 'og-image.png', 'favicon.ico',
 ];
 export const isReserved = (name) => RESERVED.includes(String(name).trim().toLowerCase());

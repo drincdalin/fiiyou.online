@@ -15,23 +15,23 @@ async function orBanned(email, fn) {
 }
 
 /** Username/display name are passed as metadata; a DB trigger creates the profile + starter cards. */
-export async function signUp({ email, password, username, displayName, invitedBy }) {
+export async function signUp({ email, password, username, displayName, invitedBy, captchaToken }) {
   if (await emailBanned(email)) throw new Error('banned');
   if (!(await usernameAvailable(username))) throw new Error('username_taken');
   return orBanned(email, async () => unwrap(await supabase.auth.signUp({
     email, password,
-    options: { data: { username: username.toLowerCase(), display_name: displayName || username, ...(/^[a-z0-9_]{3,24}$/.test(invitedBy || '') ? { invited_by: invitedBy } : {}) } },
+    options: { ...(captchaToken ? { captchaToken } : {}), data: { username: username.toLowerCase(), display_name: displayName || username, ...(/^[a-z0-9_]{3,24}$/.test(invitedBy || '') ? { invited_by: invitedBy } : {}) } },
   })));
 }
 
-export async function signIn({ email, password }) {
-  return orBanned(email, async () => unwrap(await supabase.auth.signInWithPassword({ email, password })));
+export async function signIn({ email, password, captchaToken }) {
+  return orBanned(email, async () => unwrap(await supabase.auth.signInWithPassword({ email, password, ...(captchaToken ? { options: { captchaToken } } : {}) })));
 }
 /** Emails a one-time sign-in link. Only for EXISTING accounts (shouldCreateUser: false), because a new account needs a username and
  *  the Terms. Never reveals whether the email has an account: an unknown address looks exactly like a sent link. */
-export async function signInWithMagicLink(email) {
+export async function signInWithMagicLink(email, captchaToken) {
   if (await emailBanned(email)) throw new Error('banned');
-  const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: `${location.origin}${import.meta.env?.BASE_URL ?? '/'}` } });
+  const { error } = await supabase.auth.signInWithOtp({ email, options: { ...(captchaToken ? { captchaToken } : {}), shouldCreateUser: false, emailRedirectTo: `${location.origin}${import.meta.env?.BASE_URL ?? '/'}` } });
   if (error && !/signups? not allowed|user not found/i.test(error.message || '')) throw error;
 }
 /** scope 'local' signs out this device only. The default ('global') revokes the user's sessions on every device. */
@@ -54,8 +54,8 @@ export async function deleteAccount() {
 }
 
 /** Sends a reset link; the page that opens handles the PASSWORD_RECOVERY event (see App.jsx). Never reveals whether the email exists. */
-export async function resetPassword(email) {
-  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${location.origin}${import.meta.env?.BASE_URL ?? '/'}` });
+export async function resetPassword(email, captchaToken) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { ...(captchaToken ? { captchaToken } : {}), redirectTo: `${location.origin}${import.meta.env?.BASE_URL ?? '/'}` });
   if (error && error.status !== 400) throw error;
 }
 export async function updatePassword(password) { return unwrap(await supabase.auth.updateUser({ password })); }

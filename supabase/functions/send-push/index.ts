@@ -61,16 +61,31 @@ async function deliver(userId: string, payload: Record<string, unknown>) {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+  // Health check for the app's Settings page (no secret, reveals nothing but "is the push server there and configured")
+  if (req.method === 'GET') return json({ ok: true, push: setupError ? 'misconfigured' : 'ready' });
   if (req.method !== 'POST') return json({ error: 'method not allowed' }, 405);
 
   const isHook = !!env('WEBHOOK_SECRET') && req.headers.get('x-webhook-secret') === env('WEBHOOK_SECRET');
-  let body: { type?: string; table?: string; record?: Record<string, string | null> };
+  let body: { type?: string; table?: string; user_id?: string; record?: Record<string, string | null> };
   try { body = await req.json(); } catch { return json({ error: 'bad request' }, 400); }
 
   try {
     if (!isHook) return json({ error: 'forbidden' }, 403);   // not our webhook
 
+    // Owner tools (same secret as the webhooks), so a broken setup can be found with one curl instead of guessing. See docs/PUSH_SETUP.md.
+    //   {"type":"DIAG"}                              -> is the function configured? does its VAPID public key match the site's? how many devices are saved?
+    //   {"type":"TEST","user_id":"<uuid>"}            -> sends one notification to every saved device of that person and says what each push service answered
+    if (body.type === 'DIAG') {
+      const { count, error } = await admin.from('push_subscriptions').select('id', { count: 'exact', head: true });
+      return json({ vapid: setupError ? `broken: ${setupError}` : 'ok', vapid_public_key: env('VAPID_PUBLIC_KEY'), vapid_subject: env('VAPID_SUBJECT'),
+        has: { SUPABASE_URL: !!env('SUPABASE_URL'), SUPABASE_SERVICE_ROLE_KEY: !!env('SUPABASE_SERVICE_ROLE_KEY'), VAPID_PRIVATE_KEY: !!env('VAPID_PRIVATE_KEY'), WEBHOOK_SECRET: true },
+        saved_devices: error ? `could not read: ${error.message}` : count });
+    }
     if (setupError) { console.error('refusing to send:', setupError); return json({ error: setupError }, 500); }
+    if (body.type === 'TEST') {
+      const uid = body.user_id; if (!uid) return json({ error: 'user_id is required' }, 400);
+      return json(await deliver(uid, { title: 'fiiyou', body: 'Test notification: push works on this device', path: '', tag: 'test' }));
+    }
     const n = body.record;
     if (body.type !== 'INSERT') return json({ ok: 'ignored' });
 

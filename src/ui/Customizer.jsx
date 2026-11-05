@@ -13,6 +13,7 @@
  * Requires: @phosphor-icons/react
  */
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useSheetDrag } from './shared.jsx';
 import { createPortal } from 'react-dom';
 import {
   ArrowLineDown, ArrowLineUp, ArrowDown, ArrowUp, BookOpenText, Cards, CaretDoubleRight,
@@ -1099,6 +1100,7 @@ const PANELS = { Profile: ProfileTab, Theme: ThemeTab, Content: ContentTab, Medi
 // ═══ 6. CUSTOMIZER ══════════════════════════════════════════════════════════
 
 export default function Customizer({ draft, setDraft, onClose, reload, sel, setSel, notify, photos, img, collapsed, setCollapsed }) {
+  const czRef = useRef(null); useSheetDrag(czRef, () => setCollapsed(true), { enabled: !collapsed });   // swipe the sheet down = tuck it away (same as the » button), your edits are kept
   // ── state ──────────────────────────────────────────────────────────────
   const [tab, setTab] = useState('Profile');
   const [job, setJob] = useState(null);          // null | 'work' | 'save'
@@ -1253,7 +1255,7 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
   return (
     <>
       <style>{CSS}</style>
-      <aside className="cz" aria-label="Customize" onPointerDown={stop}>
+      <aside className="cz" ref={czRef} aria-label="Customize" onPointerDown={stop}>
         {busy && <div className="cz-busy" role="progressbar" aria-label={saving ? 'Saving' : 'Working'}><i /></div>}
 
         <header className="cz-head">

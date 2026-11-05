@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { DotsThree, PencilSimple, Trash, Check, X, ArrowBendUpLeft, PushPin, Copy } from '@phosphor-icons/react';
 import { social } from '../index.js';
 import { ask } from './dialog.jsx';
-import { useBackToClose } from './shared.jsx';
+import { useBackToClose, useSheetDrag } from './shared.jsx';
 import './MessageMenu.css';
 
 /** "..." button + small menu (Edit / Delete) for MY chat messages.
@@ -45,7 +45,7 @@ export function MessageMenu({ m, me, onEdit, onDeleted, notify, align = 'right',
 /** Phones: tap a message (or press and hold) and this sheet slides up with everything you can do with it. Replaces the row of tiny buttons next to every bubble.
  *  Props: m (message row), mine (bool), preview (short text shown at the top), pinned, canEdit, canCopy, onReply(), onPin(), onEdit(), onDeleted(m), onClose(), notify(). */
 export function MessageSheet({ m, mine, preview, pinned, canEdit = true, canCopy = true, onReply, onPin, onEdit, onDeleted, onClose, notify }) {
-  const root = useRef(null); useBackToClose(onClose);
+  const root = useRef(null); useBackToClose(onClose); useSheetDrag(root, onClose);
   useEffect(() => {
     root.current?.focus({ preventScroll: true });   // focus the sheet itself, not the first button (a ring on "Reply" looks like a selection)
     const k = (e) => { if (e.key === 'Escape') onClose(); }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k);

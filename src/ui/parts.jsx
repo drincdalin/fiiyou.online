@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { House, User, MapPin, ChatCircle, ShieldCheck, Heart, X, CaretLeft, CaretRight, Flag, PencilSimple, Trash, PaperPlaneRight, ImageSquare, CalendarBlank, ShareNetwork, DotsThree, Clock, ImageBroken, UsersThree } from '@phosphor-icons/react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { House, User, MapPin, ChatCircle, ShieldCheck, Heart, X, CaretLeft, CaretRight, Flag, PencilSimple, Trash, PaperPlaneRight, ImageSquare, CalendarBlank, ShareNetwork, DotsThree, Clock, ImageBroken, UsersThree, Link as LinkIcon, ArrowSquareOut } from '@phosphor-icons/react';
 import PostShareModal from './PostShare.jsx';
 import { posts, safety } from '../index.js';
-import { Avatar, ago, Rich, useImages, FadeImg, fullDate, reducedMotion, useBackToClose } from './shared.jsx';
+import { Avatar, ago, Rich, useImages, FadeImg, fullDate, reducedMotion, useBackToClose, useDialog, useTouchScreen } from './shared.jsx';
 import { ask } from './dialog.jsx';
 import Comments from './Comments.jsx';
 import MentionInput from './MentionInput.jsx';
@@ -72,13 +72,13 @@ export function Lightbox({ items, index, onClose, onIndex, onLike, onLikers }) {
     setDy(0); if (n > 1 && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(d)) step(dx < 0 ? 1 : -1);
   };
   const pcancel = () => { start.current = null; setDy(0); };
-  const dbl = () => { if (onLike && it && !it.liked) { onLike(it); setBurst((b) => b + 1); } };   // double-click only ever adds a like, so it can never undo one by accident
+  const dbl = () => { if (!onLike || !it) return; if (!it.liked) setBurst((b) => b + 1); onLike(it); };   // double-click / double-tap toggles the like, the heart flies when it becomes liked
   if (!it) return null;
   const cap = it.caption || ''; const long = cap.length > 140 || cap.split('\n').length > 2;
   return (<div className="lb" ref={root} onClick={onClose} role="dialog" aria-modal="true" aria-label={n > 1 ? `Photo ${index + 1} of ${n}` : 'Photo'}>
     <div className="lbin" onClick={(e) => e.stopPropagation()} style={dy ? { transform: `translateY(${dy}px)`, opacity: 1 - Math.min(0.6, dy / 420), transition: 'none' } : undefined}>
       <button className="lbx ghost" onClick={onClose} aria-label="Close"><X size={18} weight="bold" aria-hidden="true" /></button>
-      <div className="lbimg" onPointerDown={pdown} onPointerMove={pmove} onPointerUp={pend} onPointerCancel={pcancel} onDoubleClick={dbl} title={onLike && !it.liked ? 'Double-click to like' : undefined}>
+      <div className="lbimg" onPointerDown={pdown} onPointerMove={pmove} onPointerUp={pend} onPointerCancel={pcancel} onDoubleClick={dbl} title={onLike ? (it.liked ? 'Double-click to remove your like' : 'Double-click to like') : undefined}>
         {n > 1 && <button className="arrow l" onClick={() => step(-1)} aria-label="Previous photo"><CaretLeft size={22} weight="bold" aria-hidden="true" /></button>}
         {it.src ? <FadeImg key={it.id} className={`lbpic${dir > 0 ? ' fromr' : dir < 0 ? ' froml' : ''}`} src={it.src} alt={n > 1 ? `Photo ${index + 1} of ${n}` : 'Photo'} draggable="false" />
           : it.src === null ? <div className="lbbad"><Unavailable big /></div> : <div className="lbspin" role="status" aria-label="Loading photo" />}
@@ -86,7 +86,7 @@ export function Lightbox({ items, index, onClose, onIndex, onLike, onLikers }) {
         {n > 1 && <button className="arrow r" onClick={() => step(1)} aria-label="Next photo"><CaretRight size={22} weight="bold" aria-hidden="true" /></button>}</div>
       {n > 1 && n <= 12 && <div className="lbthumbs" ref={strip} role="group" aria-label="All photos">{items.map((x, k) => <button key={x.id} type="button" className={k === index ? 'on' : ''} aria-label={`Photo ${k + 1} of ${n}`} aria-current={k === index ? 'true' : undefined} onClick={() => jump(k)}>{x.src ? <img src={x.src} alt="" draggable="false" /> : <i className={x.src === null ? 'bad' : ''} />}</button>)}</div>}
       <div className="lbfoot">{cap && <p className={`lbcap${long && !more ? ' clamp' : ''}`}>{cap}</p>}{cap && long && <button type="button" className="lbmore" onClick={() => setMore(!more)} aria-expanded={more}>{more ? 'Show less' : 'Show more'}</button>}
-        <div className="lbbar">{onLike && <button className={`like${it.liked ? ' on' : ''}`} onClick={() => onLike(it)} aria-pressed={!!it.liked} aria-label={it.liked ? 'Unlike' : 'Like'}><Heart size={16} weight={it.liked ? 'fill' : 'bold'} aria-hidden="true" />{it.likes}</button>}{!onLike && onLikers && it.likes > 0 && <button className="like" onClick={() => onLikers(it)} aria-label={`See who liked (${it.likes})`}><Heart size={16} weight="fill" aria-hidden="true" />{it.likes}</button>}<small>{index + 1} / {n}</small></div></div>
+        <div className="lbbar">{onLike && <button className={`like${it.liked ? ' on' : ''}`} onClick={() => onLike(it)} aria-pressed={!!it.liked} aria-label={`${it.likes} ${it.likes === 1 ? 'like' : 'likes'}`}><Heart size={16} weight={it.liked ? 'fill' : 'bold'} aria-hidden="true" />{it.likes}</button>}{!onLike && onLikers && it.likes > 0 && <button className="like" onClick={() => onLikers(it)} aria-label={`See who liked (${it.likes})`}><Heart size={16} weight="fill" aria-hidden="true" />{it.likes}</button>}<small>{index + 1} / {n}</small></div></div>
       <span className="sronly" aria-live="polite">{n > 1 ? `Photo ${index + 1} of ${n}` : ''}</span>
     </div></div>);
 }
@@ -119,9 +119,30 @@ function PostImages({ srcs, onOpen }) {
   </div>);
 }
 
+/** Right-click menu on a post (mouse). Keyboard and touch people use the normal like button; this is a shortcut, not the only way. */
+function PostContextMenu({ x, y, liked, onLike, onCopy, onOpen, onClose }) {
+  const box = useRef(null); const [pos, setPos] = useState(null);
+  useLayoutEffect(() => { const el = box.current; if (!el) return; setPos({ left: Math.max(8, Math.min(x, window.innerWidth - el.offsetWidth - 8)), top: Math.max(8, Math.min(y, window.innerHeight - el.offsetHeight - 8)) }); }, [x, y]);
+  useEffect(() => {
+    const items = () => [...(box.current?.querySelectorAll('[role="menuitem"]') || [])]; items()[0]?.focus();
+    const key = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); onClose(); } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { const l = items(); const at = l.indexOf(document.activeElement); e.preventDefault(); l[(at + (e.key === 'ArrowDown' ? 1 : -1) + l.length) % l.length].focus(); }
+    };
+    const away = (e) => { if (!box.current?.contains(e.target)) onClose(); };
+    addEventListener('keydown', key); addEventListener('pointerdown', away, true); addEventListener('scroll', onClose, true); addEventListener('blur', onClose);
+    return () => { removeEventListener('keydown', key); removeEventListener('pointerdown', away, true); removeEventListener('scroll', onClose, true); removeEventListener('blur', onClose); };
+  }, []);   // eslint-disable-line react-hooks/exhaustive-deps
+  const pick = (fn) => () => { onClose(); fn(); };
+  return (<div className="pctx" role="menu" aria-label="Post options" ref={box} style={pos || { left: x, top: y, visibility: 'hidden' }} onContextMenu={(e) => e.preventDefault()}>
+    <button type="button" role="menuitem" onClick={pick(onLike)}><Heart size={18} weight={liked ? 'regular' : 'fill'} aria-hidden="true" />{liked ? 'Remove like' : 'Like post'}</button>
+    <button type="button" role="menuitem" onClick={pick(onCopy)}><LinkIcon size={18} weight="bold" aria-hidden="true" />Copy link to post</button>
+    <button type="button" role="menuitem" onClick={pick(onOpen)}><ArrowSquareOut size={18} weight="bold" aria-hidden="true" />Open post</button>
+  </div>);
+}
+
 export function PostCard({ p, me, img, go, onChange, onDelete, notify, expanded = false }) {
   const [edit, setEdit] = useState(false); const [body, setBody] = useState(p.body); const [title, setTitle] = useState(p.title || '');
-  const [open, setOpen] = useState(false); const [zoom, setZoom] = useState(false); const [rep, setRep] = useState(false); const [shr, setShr] = useState(false); const [menu, setMenu] = useState(false); const [zi, setZi] = useState(0); const [pop, setPop] = useState(false); const [full, setFull] = useState(expanded); const moreBtn = useRef(null); const menuBox = useRef(null);
+  const [open, setOpen] = useState(false); const [zoom, setZoom] = useState(false); const [rep, setRep] = useState(false); const [shr, setShr] = useState(false); const [menu, setMenu] = useState(false); const [zi, setZi] = useState(0); const touch = useTouchScreen(); const tapT = useRef(0); const cardTap = useRef({ t: 0, x: 0, y: 0 }); const [burst, setBurst] = useState(0); const [ctx, setCtx] = useState(null); const [pop, setPop] = useState(false); const [full, setFull] = useState(expanded); const moreBtn = useRef(null); const menuBox = useRef(null);
   useEffect(() => {   // the post menu: Esc closes it and hands focus back, arrows move between items, the first item is focused on open
     if (!menu) return undefined; const items = () => [...(menuBox.current?.querySelectorAll('[role="menuitem"]') || [])]; requestAnimationFrame(() => items()[0]?.focus());
     const k = (e) => { if (e.key === 'Escape') { e.preventDefault(); setMenu(false); moreBtn.current?.focus(); } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { const l = items(); if (!l.length) return; e.preventDefault(); const at = l.indexOf(document.activeElement); l[(at + (e.key === 'ArrowDown' ? 1 : -1) + l.length) % l.length].focus(); } };
@@ -129,11 +150,26 @@ export function PostCard({ p, me, img, go, onChange, onDelete, notify, expanded 
   }, [menu]);
   const extra = p.extra_images || []; const xi = useImages(extra); const own = p.author_id === me.id; const fail = (e) => notify(spamMessage(e) || e.message || 'Something went wrong', 'err');
   const like = async () => { const on = !p.liked; if (on) { setPop(true); setTimeout(() => setPop(false), 600); } onChange({ ...p, liked: on, like_count: p.like_count + (on ? 1 : -1) }); try { await posts.setLike(p.id, on); } catch (e) { onChange(p); fail(e); } };
+  const likeNow = () => { like(); if (!p.liked) setBurst((b) => b + 1); };   // toggles; the heart only flies when the post becomes liked
+  // Touch: a single tap opens the photo (after a short wait to see whether a second tap follows), a double tap likes / unlikes. Mouse: a click opens at once.
+  const imgTap = (k) => {
+    if (!touch) { setZi(k); setZoom(true); return; }
+    if (tapT.current) { clearTimeout(tapT.current); tapT.current = 0; likeNow(); return; }
+    tapT.current = setTimeout(() => { tapT.current = 0; setZi(k); setZoom(true); }, 260);
+  };
+  useEffect(() => () => clearTimeout(tapT.current), []);
+  const copyLink = async () => { try { await navigator.clipboard.writeText(`${location.origin}/post/${p.id}`); notify('Link copied'); } catch { notify('Could not copy the link', 'err'); } };
   const save = async () => { try { const r = await posts.updatePost(p.id, { body, title: p.kind === 'event' ? title : undefined }); onChange({ ...p, body: r.body, title: r.title, edited_at: r.edited_at }); setEdit(false); notify('Post updated'); } catch (e) { fail(e); } };
   const dropImg = async () => { try { await posts.updatePost(p.id, { body: p.body }, { removeImage: true, oldImage: p.image_path, oldExtras: extra }); onChange({ ...p, image_path: null, extra_images: [] }); } catch (e) { fail(e); } };
   const del = async () => { if (!(await ask({ title: 'Delete this post?', message: 'This cannot be undone.', confirmLabel: 'Delete', danger: true }))) return; try { await posts.deletePost(p.id, p.image_path, extra); window.dispatchEvent(new CustomEvent('fiiyou:postgone', { detail: p.id })); onDelete(p.id); notify('Post deleted'); } catch (e) { fail(e); } };
   const src = img[p.image_path]; const longText = (p.body || '').length > 360 || (p.body || '').split('\n').length > 7;
-  return (<article className={`post${p.author_official ? ' official' : ''}`}>
+  return (<article className={`post${p.author_official ? ' official' : ''}`}
+    onClick={touch ? (e) => {   // double-tap on the card itself (photos have their own handler above); done by timing because phones do not all send a double-click event
+      if (e.target.closest('a, button, input, textarea, select, .pimgs, .pimg, .pmenu')) return;
+      const now = Date.now(); const l = cardTap.current;
+      if (now - l.t < 320 && Math.hypot(e.clientX - l.x, e.clientY - l.y) < 40) { cardTap.current = { t: 0, x: 0, y: 0 }; likeNow(); } else cardTap.current = { t: now, x: e.clientX, y: e.clientY };
+    } : undefined}
+    onContextMenu={touch ? undefined : (e) => { if (e.target.closest('a, input, textarea, select') || window.getSelection()?.toString()) return; e.preventDefault(); setCtx({ x: e.clientX, y: e.clientY }); }}>
     <header><button className="who" onClick={() => go('profile', p.author_username)}><Avatar src={img[p.author_avatar_path]} />
       <span><b>{p.author_display_name}{p.author_official && <Verified />}</b><small>@{p.author_username} · <time dateTime={p.created_at} title={fullDate(p.created_at)}>{ago(p.created_at)}</time>{p.edited_at && ' · edited'}</small></span></button>
       {!edit && <div className="pmenuwrap"><button ref={moreBtn} className="ghost pmore" onClick={() => setMenu(!menu)} aria-label="More options" aria-haspopup="menu" aria-expanded={menu}><DotsThree size={24} weight="bold" aria-hidden="true" /></button>
@@ -142,10 +178,11 @@ export function PostCard({ p, me, img, go, onChange, onDelete, notify, expanded 
             <button role="menuitem" className="danger" onClick={() => { setMenu(false); del(); }}><Trash size={18} weight="bold" aria-hidden="true" />Delete</button></>
             : <button role="menuitem" onClick={() => { setMenu(false); setRep(true); }}><Flag size={18} weight="bold" aria-hidden="true" />Report</button>}</div></>}</div>}</header>
     <div className={`pmain${p.image_path && src ? ' has' : ''}`}>
-      {p.image_path && (extra.length ? <PostImages srcs={[src, ...extra.map((x) => xi[x])]} onOpen={(k) => { setZi(k); setZoom(true); }} />
+      {p.image_path && (extra.length ? <PostImages srcs={[src, ...extra.map((x) => xi[x])]} onOpen={imgTap} />
         : src === undefined ? <div className="pimg pimgph" aria-hidden="true" />   // still fetching the link
         : src === null ? <div className="pimg pimgbad"><Unavailable big /></div>    // the file is gone
-        : <button className="pimg" style={{ '--bgimg': `url("${src}")` }} onClick={() => setZoom(true)} aria-label="Open photo"><FadeImg src={src} alt="" loading="lazy" /></button>)}
+        : <button className="pimg" style={{ '--bgimg': `url("${src}")` }} onClick={() => imgTap(0)} aria-label="Open photo"><FadeImg src={src} alt="" loading="lazy" /></button>)}
+      {burst > 0 && <Heart key={burst} className="pburst" size={88} weight="fill" aria-hidden="true" />}
       <div className="ptext">
         {p.kind === 'event' && <div className="evmeta"><CalendarBlank size={14} weight="bold" aria-hidden="true" />{new Date(p.event_at).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' })}{p.event_place && ` · ${p.event_place}`}</div>}
         {p.place_name && <div className="chipline"><MapPin size={14} weight="bold" aria-hidden="true" />At {p.place_name}</div>}
@@ -155,17 +192,18 @@ export function PostCard({ p, me, img, go, onChange, onDelete, notify, expanded 
           <small className="hint">Ctrl + Enter saves, Esc cancels</small>
           <div className="acts"><button className="primary sm" disabled={!body.trim()} onClick={save}>Save</button><button className="ghost sm" onClick={() => { setEdit(false); setBody(p.body); setTitle(p.title || ''); }}>Cancel</button>
             {p.image_path && <button className="ghost sm" onClick={dropImg}>{extra.length ? 'Remove images' : 'Remove image'}</button>}</div></div>)
-          : <>{p.title && <h3>{p.title}</h3>}<p className={`pre${longText && !full ? ' clamp' : ''}`}><Rich plain text={p.body} onUser={(u) => go('profile', u)} onTag={(t) => go('tag', t)} /></p>
+          : <>{p.title && <h2 className="ptl">{p.title}</h2>}<p className={`pre${longText && !full ? ' clamp' : ''}`}><Rich plain text={p.body} onUser={(u) => go('profile', u)} onTag={(t) => go('tag', t)} /></p>
             {longText && <button type="button" className="pmorebtn" onClick={() => setFull(!full)} aria-expanded={full}>{full ? 'Show less' : 'Show more'}</button>}</>}
       </div>
     </div>
-    <footer><button className={`like${p.liked ? ' on' : ''}${pop ? ' pop' : ''}`} onClick={like} aria-pressed={!!p.liked} aria-label={p.liked ? `Unlike (${p.like_count})` : `Like (${p.like_count})`}><Heart size={16} weight={p.liked ? 'fill' : 'bold'} aria-hidden="true" />{p.like_count}</button>
-      <button className="ghost sm" onClick={() => setOpen(!open)} aria-expanded={open} aria-label={`Comments (${p.comment_count})`}><ChatCircle size={16} weight="bold" aria-hidden="true" /><span className="lbl">Comments </span>{p.comment_count}</button>
+    <footer><button className={`like${p.liked ? ' on' : ''}${pop ? ' pop' : ''}`} onClick={like} aria-pressed={!!p.liked} aria-label={`${p.like_count} ${p.like_count === 1 ? 'like' : 'likes'}`}><Heart size={16} weight={p.liked ? 'fill' : 'bold'} aria-hidden="true" />{p.like_count}</button>
+      <button className="ghost sm" onClick={() => setOpen(!open)} aria-expanded={open} aria-label={`${p.comment_count} ${p.comment_count === 1 ? 'comment' : 'comments'}`}><ChatCircle size={16} weight="bold" aria-hidden="true" /><span className="lbl">Comments </span>{p.comment_count}</button>
       {p.visibility !== 'friends' && <button className="ghost sm pshare" onClick={() => setShr(true)} aria-label="Share"><ShareNetwork size={16} weight="bold" aria-hidden="true" /><span className="lbl">Share</span></button>}</footer>
     {open && <Comments postId={p.id} postAuthorId={p.author_id} me={me} go={go} notify={notify} fail={fail} onTag={(t) => go('tag', t)}
       onDelta={(d) => onChange({ ...p, comment_count: Math.max(0, p.comment_count + d) })} />}
     {zoom && <Lightbox items={[{ id: p.id, src, caption: p.body, likes: p.like_count, liked: p.liked }, ...extra.map((x) => ({ id: `${p.id}:${x}`, src: xi[x], caption: p.body, likes: p.like_count, liked: p.liked }))]} index={zi} onClose={() => setZoom(false)} onIndex={setZi} onLike={() => like()} />}
     {rep && <ReportModal target={{ type: 'post', id: p.id }} onClose={() => setRep(false)} notify={notify} />}
+    {ctx && <PostContextMenu x={ctx.x} y={ctx.y} liked={!!p.liked} onLike={likeNow} onCopy={copyLink} onOpen={() => go('post', p.id)} onClose={() => setCtx(null)} />}
     {shr && <PostShareModal p={p} img={img} onClose={() => setShr(false)} notify={notify} />}
   </article>);
 }
@@ -195,11 +233,12 @@ export function LikersModal({ load, go, onClose }) {
 }
 
 export function ReportModal({ target, onClose, notify }) {
+  const dlg = useRef(null); useDialog(dlg, onClose);
   const [reason, setReason] = useState(''); const [busy, setBusy] = useState(false);
   const send = async (e) => { e.preventDefault(); setBusy(true);
     try { await safety.report(target.type, target.id, reason.trim()); notify('Report sent. Thank you.'); onClose(); }
     catch (er) { notify(er.message?.includes('rate_limit') ? 'Too many reports. Try again later.' : 'Could not send the report.', 'err'); setBusy(false); } };
-  return (<div className="modal" onClick={onClose}><form className="panel mform" onClick={(e) => e.stopPropagation()} onSubmit={send}>
+  return (<div className="modal" onClick={onClose}><form className="panel mform" role="dialog" aria-modal="true" aria-label="Report" ref={dlg} onClick={(e) => e.stopPropagation()} onSubmit={send}>
     <h3>Report</h3><p className="muted">Tell us what is wrong. Reports are reviewed by the operator.</p>
     <textarea autoFocus required rows="3" maxLength={500} placeholder="What is the problem?" value={reason} onChange={(e) => setReason(e.target.value)} />
     <div className="acts"><button className="primary" disabled={busy || !reason.trim()}>Send report</button><button type="button" className="ghost" onClick={onClose}>Cancel</button></div></form></div>);

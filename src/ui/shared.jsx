@@ -85,3 +85,55 @@ export function useTouchScreen() {
   useEffect(() => { if (typeof matchMedia !== 'function') return undefined; const m = matchMedia(q); const h = () => setT(m.matches); m.addEventListener?.('change', h); return () => m.removeEventListener?.('change', h); }, []);
   return t;
 }
+
+/** Swipe a bottom sheet down to close it (touch screens). It follows the finger from anywhere on the sheet as long as the sheet's own
+ *  content is scrolled to the top; past a quarter of its height, or on a quick flick, it closes, otherwise it springs back.
+ *  Dragging also stops the browser's pull-to-refresh from firing underneath (that was reloading the page behind the sheet). */
+export function useSheetDrag(ref, onClose, { enabled = true } = {}) {
+  const cb = useRef(onClose); cb.current = onClose;
+  useEffect(() => {
+    const el = ref.current; if (!el || !enabled) return undefined;
+    let x0 = 0; let y0 = 0; let t0 = 0; let dy = 0; let drag = false; let ok = false;
+    const scroller = (n) => { for (; n; n = n.parentElement) { if (n.scrollHeight > n.clientHeight + 1 && /(auto|scroll)/.test(getComputedStyle(n).overflowY)) return n; if (n === el) break; } return null; };
+    const start = (e) => {
+      if (e.touches.length !== 1) { ok = false; return; }
+      const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; t0 = Date.now(); dy = 0; drag = false;
+      const sc = scroller(e.target); ok = (!sc || sc.scrollTop <= 0) && !e.target.closest('input, textarea, select, [contenteditable], [data-nodrag]');
+    };
+    const move = (e) => {
+      if (!ok) return; const t = e.touches[0]; const ddy = t.clientY - y0; const ddx = t.clientX - x0;
+      if (!drag) { if (ddy > 8 && ddy > Math.abs(ddx) * 1.2) { drag = true; el.style.transition = 'none'; } else { if (ddy < -4) ok = false; return; } }
+      e.preventDefault(); dy = Math.max(0, ddy); el.style.transform = `translateY(${dy}px)`;
+    };
+    const end = () => {
+      if (!drag) return; drag = false;
+      const flick = dy / Math.max(1, Date.now() - t0) > 0.6; const far = dy > el.offsetHeight * 0.25;
+      el.style.transition = 'transform .2s ease';
+      if (far || flick) { el.style.transform = 'translateY(110%)'; setTimeout(() => cb.current(), 170); }
+      else { el.style.transform = ''; setTimeout(() => { el.style.transition = ''; }, 220); }
+    };
+    el.addEventListener('touchstart', start, { passive: true }); el.addEventListener('touchmove', move, { passive: false });
+    el.addEventListener('touchend', end); el.addEventListener('touchcancel', end);
+    return () => { el.removeEventListener('touchstart', start); el.removeEventListener('touchmove', move); el.removeEventListener('touchend', end); el.removeEventListener('touchcancel', end); };
+  }, [enabled]);   // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+/** A modal dialog that behaves: focus moves in, Tab stays inside, Esc closes, focus goes back to what opened it. Give the dialog's root element as `ref`. */
+export function useDialog(ref, onClose) {
+  const cb = useRef(onClose); cb.current = onClose;
+  useEffect(() => {
+    const el = ref.current; const opener = document.activeElement; if (!el) return undefined;
+    if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1');
+    const first = el.querySelector('input:not([type=hidden]), textarea, select, button:not([disabled])'); (first || el).focus({ preventScroll: true });
+    const key = (e) => {
+      if (e.key === 'Escape') { e.stopPropagation(); cb.current(); return; }
+      if (e.key !== 'Tab') return;
+      const f = [...el.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')].filter((n) => n.offsetParent !== null);
+      if (!f.length) { e.preventDefault(); return; }
+      const a = document.activeElement;
+      if (e.shiftKey && (a === f[0] || a === el)) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && a === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+    };
+    el.addEventListener('keydown', key);
+    return () => { el.removeEventListener('keydown', key); if (opener && document.contains(opener)) opener.focus?.({ preventScroll: true }); };
+  }, []);   // eslint-disable-line react-hooks/exhaustive-deps
+}

@@ -8,7 +8,7 @@ if (!/^https:\/\/[^\s/]+(\/[^\s]*)?$/.test(site)) {
   console.warn('[seo] SITE_URL not set (or not https): robots.txt and sitemap.xml keep their placeholder domain.'); process.exit(0);
 }
 const day = new Date().toISOString().slice(0, 10);
-const urls = [['/', 'monthly', '1.0'], ['/privacy.html', 'yearly', '0.3'], ['/terms.html', 'yearly', '0.3']];
+const urls = [['/', 'monthly', '1.0'], ['/privacy.html', 'yearly', '0.3'], ['/terms.html', 'yearly', '0.3'], ['/accessibility.html', 'yearly', '0.3']];
 writeFileSync('public/sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(([p, f, pr]) => `  <url><loc>${site}${p}</loc><lastmod>${day}</lastmod><changefreq>${f}</changefreq><priority>${pr}</priority></url>`).join('\n')}\n</urlset>\n`);
 writeFileSync('public/robots.txt', `# fiiyou: everything except the landing page is behind a login, so there is nothing else to index.\nUser-agent: *\nAllow: /\nSitemap: ${site}/sitemap.xml\n`);
 console.log(`[seo] wrote sitemap.xml and robots.txt for ${site}`);

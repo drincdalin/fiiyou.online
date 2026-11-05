@@ -195,7 +195,7 @@ input[type=file]::file-selector-button { border-radius: var(--rad-s); }
 .bub:not(.mine) { background: var(--g2); }
 .brow.tail:not(.mine) .bub { border-bottom-left-radius: 6px; }
 .brow.tail.mine .bub { border-bottom-right-radius: 6px; }
-.bub small { margin-top: 3px; font-size: .68rem; opacity: .6; }
+.bub small { margin-top: 3px; font-size: .68rem; opacity: .8; }   /* was .6: message times were hard to read */
 
 /* reply button next to a bubble */
 .replybtn { flex: none; align-self: center; width: 30px; height: 30px; padding: 0; display: grid; place-items: center; background: var(--g2); border: 2px solid var(--g3); border-radius: var(--rad-m); color: var(--muted); opacity: 0; transition: opacity .15s, color .15s, border-color .15s; }

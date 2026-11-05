@@ -31,3 +31,43 @@
 .post, .bub, .cm, .rq, .sview .row, .plain .row { overflow-wrap: anywhere; }
 /* nothing selects or zooms by accident when you double-tap a control */
 button, .navlinks, .tabs { -webkit-user-select: none; user-select: none; }
+
+/* Turnstile security check (sign up / sign in): the widget is 300 x 65 */
+.captcha { display: flex; justify-content: center; min-height: 65px; margin: 4px 0; }
+
+/* ---------- accessibility ---------- */
+.sronly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.appmain { display: contents; }   /* the <main> landmark takes no space of its own, so no page layout changes */
+.appmain:focus { outline: none; }
+.skip { position: fixed; top: 8px; left: 8px; z-index: 2000; transform: translateY(-200%); padding: .6rem 1rem; border-radius: 10px; border: 2px solid var(--accent-fg, #fff); background: var(--g0, #000); color: var(--ink, #fff); font: inherit; font-weight: 700; }
+.skip:focus { transform: none; }
+.tabs > .tabsin { display: flex; gap: inherit; flex-wrap: wrap; min-width: 0; }
+@media (max-width: 700px) { .homemain > .tabs > .tabsin { flex: 1 1 100%; } .homemain > .tabs > .tabsin button { flex: 1 1 auto; } }
+.post h2.ptl { margin: 0; font-size: 1.17em; font-weight: 800; }   /* post titles are level 2 under the page's level-1 heading */
+.bub:not(.mine) small { opacity: 1; color: #b3b3b3; }                /* message times: 6:1 on the bubble, was 4.2:1 */
+
+/* ---------- no accidental pull-to-refresh, sheets stay put ---------- */
+html, body { overscroll-behavior-y: none; }   /* the browser's pull-down-to-reload no longer fires while you swipe a sheet or scroll a list */
+.msgs, .msheet, .ss-sheet, .cz, .likepanel, .modal .panel, .lb { overscroll-behavior: contain; }
+.msheet, .ss-sheet, .cz { touch-action: pan-y; will-change: transform; }
+
+/* ---------- double-tap heart, right-click menu ---------- */
+.pmain { position: relative; }
+.pburst { position: absolute; left: 50%; top: 40%; margin: -44px 0 0 -44px; z-index: 5; color: var(--pink, #ff4d6d); pointer-events: none; filter: drop-shadow(0 6px 18px rgba(0, 0, 0, .5)); animation: heartburst .8s ease-out forwards; }
+.pctx { position: fixed; z-index: 1200; min-width: 200px; padding: 6px; display: grid; gap: 2px; border-radius: 14px; border: 1px solid var(--t-border, var(--g3)); background: var(--t-card, var(--g1)); box-shadow: 0 16px 40px -12px rgba(0, 0, 0, .7); }
+.pctx button { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 40px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; box-shadow: none; color: var(--t-text, var(--ink)); font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
+.pctx button:hover, .pctx button:focus-visible { background: color-mix(in srgb, var(--t-text, #fff) 12%, transparent); outline: none; }
+@media (prefers-reduced-motion: reduce) { .pburst { animation: none; opacity: 0; } }
+
+/* ---------- layout polish ---------- */
+.tabs > .tabsin button, .plain.view > .tabs > button { white-space: nowrap; }
+@media (max-width: 700px) {
+  .nav { background: var(--t-frame, #000); }   /* solid: the page no longer shows through the bar */
+  /* Home: three equal tabs in one row, the place picker underneath */
+  .homemain > .tabs > .tabsin { display: grid; grid-template-columns: 1fr 1.35fr .9fr; gap: 6px; }
+  .homemain > .tabs > .tabsin button { min-width: 0; padding: 0 .35rem; font-size: .92rem; }
+  /* People: tidy 2 x 2 grid, every cell the same size */
+  .plain.view > .tabs:has(> button:nth-child(4):last-child) { gap: 8px; }
+  .plain.view > .tabs:has(> button:nth-child(4):last-child) > * { width: 100%; min-height: 48px; justify-content: center; }
+}
+.clist h2.clisth { margin: 0 0 6px; padding: 0 8px; font-size: 1.17em; font-weight: 700; }   /* was an h3 straight under the page title; keeps the old look */

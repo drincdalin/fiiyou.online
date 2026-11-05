@@ -29,11 +29,12 @@ const useFeed = (args, notify, scope = '') => {
         const prev = feedCache.get(key)?.rows || []; const last = r[r.length - 1];
         if (last && r.length === 20 && prev.length > r.length) { next = [...r, ...prev.filter((x) => x.created_at < last.created_at)]; mre = feedCache.get(key)?.more ?? mre; }
       }
-      feedCache.set(key, { rows: next, more: mre }); setRows(next); setMore(mre);
+      feedCache.set(key, { rows: next, more: mre, at: Date.now() }); setRows(next); setMore(mre);
     } catch (e) { if (append) notify(friendlyError(e), 'err'); else if (!feedCache.get(key)) { setErr(e); setRows([]); } /* a failed quiet refresh keeps showing what is there */ }
     finally { if (append) { loading.current = false; setBusy(false); } }
   }, [key]);
-  useEffect(() => { const c = feedCache.get(key); setRows(c ? c.rows : null); setMore(c ? c.more : false); load(false); }, [load]);
+  // coming back to a feed you opened less than 30 s ago shows it as it is, with no request at all; older ones refresh quietly in the background
+  useEffect(() => { const c = feedCache.get(key); setRows(c ? c.rows : null); setMore(c ? c.more : false); if (c && Date.now() - c.at < 30000) return; load(false); }, [load]);
   useEffect(() => { const h = () => load(false); addEventListener('fiiyou:published', h); return () => removeEventListener('fiiyou:published', h); }, [load]);   // a scheduled post just went out
   cache.current = rows || [];
   const next = useCallback(() => { if (cache.current.length) load(true, cache.current); }, [load]);
@@ -44,7 +45,7 @@ const useFeed = (args, notify, scope = '') => {
     return () => { removeEventListener('fiiyou:refresh', h); document.removeEventListener('visibilitychange', vis); };
   }, [load]);
   const img = useImages((rows || []).flatMap((p) => [p.image_path, ...(p.extra_images || []), p.author_avatar_path]));
-  const put = (fn) => setRows((r) => { const n = fn(r || []); feedCache.set(key, { rows: n, more: feedCache.get(key)?.more ?? false }); return n; });
+  const put = (fn) => setRows((r) => { const n = fn(r || []); feedCache.set(key, { rows: n, more: feedCache.get(key)?.more ?? false, at: feedCache.get(key)?.at ?? Date.now() }); return n; });
   const change = (np) => put((r) => r.map((x) => (x.id === np.id ? np : x))); const drop = (id) => put((r) => r.filter((x) => x.id !== id));
   return { rows, more, load, next, busy, img, change, drop, err };
 };
@@ -85,7 +86,7 @@ function Snapshot({ go, unread }) {
     friends.incomingRequests().then((r) => setReq(r.length)).catch(() => {}); discover.discover({ mode: 'new', limit: 3 }).then(setFresh).catch(() => {}); }, []);
   const img = useImages([me?.avatar_path, ...fresh.map((p) => p.avatar_path)]);
   if (!me) return <aside className="snap panel"><div className="boot">…</div></aside>;
-  return (<aside className="snap panel"><button type="button" className="snaptop who" onClick={() => go('profile')} aria-label="Open my profile"><Avatar src={img[me.avatar_path]} size={64} name={me.display_name || me.username} /><span><b>{me.display_name}</b><small>{me.headline || 'No mood set yet'}</small></span></button>
+  return (<aside className="snap panel"><button type="button" className="snaptop who" onClick={() => go('profile')} title="Open my profile"><Avatar src={img[me.avatar_path]} size={64} name={me.display_name || me.username} /><span><b>{me.display_name}</b><small>{me.headline || 'No mood set yet'}</small></span></button>
     <div className="stats3"><button onClick={() => go('messages')}><b>{unread}</b><small>messages</small></button><button onClick={() => go('people')}><b>{req}</b><small>requests</small></button><span><b>{views ?? '–'}</b><small>views</small></span></div>
     <button className="primary wide" onClick={() => go('profile', null, null, true)}>Edit my profile</button>
     {fresh.length > 0 && <><h4>Cool new people</h4><div className="newp">{fresh.map((p) => <button key={p.id} onClick={() => go('profile', p.username)}><Avatar src={img[p.avatar_path]} size={52} name={p.display_name || p.username} /><small>{p.display_name}</small></button>)}</div></>}
@@ -99,7 +100,7 @@ export function HomeView({ me, go, notify, unread }) {
   const f = useFeed(tab === 'events' ? { kind: 'event', upcoming: true, localityId: loc ? +loc : null } : { onlyFriends: tab === 'friends', localityId: loc ? +loc : null }, notify, me.id);
   return (<div className="plain wide view"><div className="homegrid"><Snapshot go={go} unread={unread} />
     <div className="homemain"><Composer me={me} places={places} onPosted={() => f.load(false)} notify={notify} />
-      <div className="tabs" role="tablist" aria-label="Feed"><button role="tab" aria-selected={tab === 'nearby'} className={tab === 'nearby' ? 'on' : ''} onClick={() => setTab('nearby')}>Around you</button><button role="tab" aria-selected={tab === 'friends'} className={tab === 'friends' ? 'on' : ''} onClick={() => setTab('friends')}>Friend updates</button><button role="tab" aria-selected={tab === 'events'} className={tab === 'events' ? 'on' : ''} onClick={() => setTab('events')}>Events</button>
+      <div className="tabs"><div role="tablist" aria-label="Feed" className="tabsin"><button role="tab" aria-selected={tab === 'nearby'} className={tab === 'nearby' ? 'on' : ''} onClick={() => setTab('nearby')}>Around you</button><button role="tab" aria-selected={tab === 'friends'} className={tab === 'friends' ? 'on' : ''} onClick={() => setTab('friends')}>Friend updates</button><button role="tab" aria-selected={tab === 'events'} className={tab === 'events' ? 'on' : ''} onClick={() => setTab('events')}>Events</button></div>
         <select value={loc} onChange={(e) => setLoc(e.target.value)} aria-label="Place"><option value="">All localities</option>{locs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></div>
       <List f={f} me={me} go={go} notify={notify} Icon={tab === 'friends' ? UsersThree : tab === 'events' ? CalendarBlank : ChatsCircle} empty={tab === 'friends' ? 'Nothing from friends yet. Add a few people and their posts show up here.' : tab === 'events' ? 'No upcoming events. Post one and invite your neighbours.' : 'No posts yet. Be the first to say something.'} /></div></div></div>);
 }
@@ -175,7 +176,7 @@ export function MapView({ me, go, notify }) {
     {pin && <div className="modal" onClick={() => setPin(null)}><form className="panel mform" onClick={(e) => e.stopPropagation()} onSubmit={savePlace}><h3>New place</h3>
       <input autoFocus required minLength={2} maxLength={80} placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
       <textarea rows="2" maxLength={300} placeholder="Short description (optional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-      <select value={form.locality} onChange={(e) => setForm({ ...form, locality: e.target.value })}><option value="">Locality (optional)</option>{locs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select>
+      <select aria-label="Locality" value={form.locality} onChange={(e) => setForm({ ...form, locality: e.target.value })}><option value="">Locality (optional)</option>{locs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select>
       <div className="acts"><button className="primary">Save place</button><button type="button" className="ghost" onClick={() => setPin(null)}>Cancel</button></div></form></div>}
   </div>);
 }
@@ -246,9 +247,9 @@ export function MessagesView({ me, peer, go, notify, refreshUnread }) {
   const lastMineId = [...(msgs || [])].reverse().find((x) => x.sender_id === me.id && x.body !== social.DELETED_BODY)?.id;   // the "Seen" line sits under my newest message
   const fresh = fl.filter((f) => !convs.some((c) => c.id === f.id));
   return (<div className={`chat view${cur ? ' thread' : ''}`}>
-    <aside className="clist"><h3>Messages</h3>
+    <aside className="clist"><h2 className="clisth">Messages</h2>
       <ChatSearch onPick={pickFound} nameOf={(id) => convs.find((c) => c.id === id)?.display_name || fl.find((f) => f.id === id)?.display_name || 'Chat'} />
-      {fresh.length > 0 && <select value="" onChange={(e) => e.target.value && setCur(e.target.value)}><option value="">New message…</option>{fresh.map((f) => <option key={f.id} value={f.id}>{f.display_name}</option>)}</select>}
+      {fresh.length > 0 && <select aria-label="Start a new conversation" value="" onChange={(e) => e.target.value && setCur(e.target.value)}><option value="">New message…</option>{fresh.map((f) => <option key={f.id} value={f.id}>{f.display_name}</option>)}</select>}
       {!convs.length && !fresh.length && <p className="empty">Add friends to start chatting.</p>}
       {convs.map((c) => (<button key={c.id} className={`crow2${cur === c.id ? ' on' : ''}${c.unread > 0 ? ' unread' : ''}`} onClick={() => setCur(c.id)}><Avatar src={img[c.avatar_path]} size={44} />
         <span className="ctext"><span className="cl1"><b>{c.display_name}</b><small>{ago(c.last_at)}</small></span>
@@ -265,7 +266,7 @@ export function MessagesView({ me, peer, go, notify, refreshUnread }) {
         const del = m.body === social.DELETED_BODY; const isEd = editing === m.id;
         const sp = del ? null : decodeSharedPost(m.body);   // a shared post: drawn as a card instead of text
         return (<Fragment key={m.id}>{newDay && <div className="dsep">{dayLabel(m.created_at)}</div>}<div className={`brow${mine ? ' mine' : ''}${first ? ' first' : ''}${tail ? ' tail' : ''}`} id={`m-${m.id}`}>{!mine && (tail ? <button type="button" className="who" aria-label="Open profile" onClick={() => go('profile', who.username)}><Avatar src={img[who.avatar_path]} size={26} /></button> : <span className="avsp" />)}{mine && !touch && <>{!del && !isEd && <MessageMenu m={m} me={me.id} notify={notify} canEdit={!sp} onEdit={() => setEditing(m.id)} onDeleted={replaceMsg} />}{!del && replyBtn(m)}</>}
-          <div className="bcol">{q && <button type="button" className="rq" onClick={() => jump(q.id)} aria-label="Go to the original message"><span className="rqlab"><ArrowBendUpLeft size={12} weight="bold" aria-hidden="true" />{replyLabel(m, q)}</span><span className="rqtxt">{previewText(q.body)}</span></button>}<div className={`bub${mine ? ' mine' : ''}${sp ? ' hasshare' : ''}${del ? ' msgdeleted' : ''}${isEd ? ' editing' : ''}${touch && !del && !isEd ? ' tappable' : ''}`} {...(touch && !del && !isEd ? { onClick: (e) => { if (!e.target.closest('a,button')) setSheet(m); }, onContextMenu: (e) => { e.preventDefault(); setSheet(m); } } : {})}>{isEd ? <MessageEditor m={m} notify={notify} onCancel={() => setEditing(null)} onSaved={(nm) => { replaceMsg(nm); setEditing(null); }} /> : del ? <p>This message was deleted</p> : sp ? <><SharedPostCard data={sp.data} go={go} />{sp.note && <p>{sp.note}</p>}</> : <p>{m.body}</p>}{!isEd && <small>{new Date(m.created_at).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}{m.edited_at && !del && <span className="msgedited"> · edited</span>}</small>}</div>{mine && m.id === lastMineId && m.read_at && <small className="seen">Seen {new Date(m.read_at).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}</small>}</div>{!mine && !del && !touch && replyBtn(m)}</div></Fragment>); }) : <p className="empty">Say hi.</p>) : <div className="boot">…</div>}{newBelow && <button type="button" className="newbelow" onClick={() => { toEnd(true); setNewBelow(false); }}><ArrowDown size={14} weight="bold" aria-hidden="true" />New messages</button>}<div ref={end} /></div>
+          <div className="bcol">{q && <button type="button" className="rq" onClick={() => jump(q.id)} title="Go to the original message"><span className="rqlab"><ArrowBendUpLeft size={12} weight="bold" aria-hidden="true" />{replyLabel(m, q)}</span><span className="rqtxt">{previewText(q.body)}</span></button>}<div className={`bub${mine ? ' mine' : ''}${sp ? ' hasshare' : ''}${del ? ' msgdeleted' : ''}${isEd ? ' editing' : ''}${touch && !del && !isEd ? ' tappable' : ''}`} {...(touch && !del && !isEd ? { onClick: (e) => { if (!e.target.closest('a,button')) setSheet(m); }, onContextMenu: (e) => { e.preventDefault(); setSheet(m); } } : {})}>{isEd ? <MessageEditor m={m} notify={notify} onCancel={() => setEditing(null)} onSaved={(nm) => { replaceMsg(nm); setEditing(null); }} /> : del ? <p>This message was deleted</p> : sp ? <><SharedPostCard data={sp.data} go={go} />{sp.note && <p>{sp.note}</p>}</> : <p>{m.body}</p>}{!isEd && <small>{new Date(m.created_at).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}{m.edited_at && !del && <span className="msgedited"> · edited</span>}</small>}</div>{mine && m.id === lastMineId && m.read_at && <small className="seen">Seen {new Date(m.read_at).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}</small>}</div>{!mine && !del && !touch && replyBtn(m)}</div></Fragment>); }) : <p className="empty">Say hi.</p>) : <div className="boot">…</div>}{newBelow && <button type="button" className="newbelow" onClick={() => { toEnd(true); setNewBelow(false); }}><ArrowDown size={14} weight="bold" aria-hidden="true" />New messages</button>}<div ref={end} /></div>
       {peerTyping && <div className="typing" role="status" aria-live="polite"><span className="tdots" aria-hidden="true"><i /><i /><i /></span>{who.display_name} is typing…</div>}
       {replyTo && <div className="replybar"><ArrowBendUpLeft className="ric" size={18} weight="bold" aria-hidden="true" /><div><b>Replying to {nameOf(replyTo)}</b><span>{previewText(replyTo.body)}</span></div><button type="button" aria-label="Cancel reply" title="Cancel reply" onClick={() => setReplyTo(null)}><X size={16} weight="bold" aria-hidden="true" /></button></div>}
       <form className="inline" onSubmit={send}><input ref={inp} value={txt} maxLength={1000} placeholder="Write a message…" onChange={(e) => { setTxt(e.target.value); if (e.target.value) typing.current?.ping(); }} onKeyDown={(e) => e.key === 'Escape' && replyTo && setReplyTo(null)} autoFocus /><button className="primary sendbtn" aria-label="Send" title="Send" disabled={!txt.trim()}><PaperPlaneRight size={20} weight="fill" aria-hidden="true" /></button></form></>)
@@ -288,8 +289,8 @@ export function PeopleView({ me, go, notify }) {
   return (<div className="plain view"><div className="tabs">
     {[['discover', 'Discover'], ['friends', `Friends`], ['requests', 'Requests']].map(([k, l]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l} {k === 'friends' && <span className="count">{fl.length}</span>}{k === 'requests' && inc.length > 0 && <span className="count hot">{inc.length}</span>}</button>)}</div>
     {tab === 'discover' && <><div className="inline"><input placeholder="Search name or @username" value={q} onChange={(e) => setQ(e.target.value)} />
-      <select value={loc} onChange={(e) => setLoc(e.target.value)}><option value="">Anywhere</option>{locs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select>
-      <select value={mode} onChange={(e) => setMode(e.target.value)}><option value="random">Random</option><option value="new">Newest</option></select></div>
+      <select aria-label="Place" value={loc} onChange={(e) => setLoc(e.target.value)}><option value="">Anywhere</option>{locs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select>
+      <select aria-label="Order" value={mode} onChange={(e) => setMode(e.target.value)}><option value="random">Random</option><option value="new">Newest</option></select></div>
       {!people.length && <p className="empty">No one to show.</p>}
       {people.map((p) => row(p, sent[p.id] ? <small>Request sent</small> : <button className="primary sm" onClick={() => friends.sendRequest(p.id).then(() => { setSent({ ...sent, [p.id]: 1 }); notify('Request sent'); }).catch((e) => notify(e.message, 'err'))}>Add</button>,
         [p.headline, lname(p.locality_id)].filter(Boolean).join(' · ') || `@${p.username}`))}</>}

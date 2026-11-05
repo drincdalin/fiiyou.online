@@ -27,7 +27,7 @@
   --hover: color-mix(in srgb, var(--t-card) 80%, var(--t-text));
   --ink: var(--t-text);
   --ink2: color-mix(in srgb, var(--t-text) 80%, var(--t-bg));
-  --muted: color-mix(in srgb, var(--t-text) 60%, var(--t-bg));
+  --muted: color-mix(in srgb, var(--t-text) 70%, var(--t-bg));   /* was 60%: small grey text did not reach the 4.5:1 contrast WCAG AA asks for */
   --yellow: var(--notice);                      /* legacy name: "notice" colour = accent */
   --ring: color-mix(in srgb, var(--accent-fg) 38%, transparent);
 

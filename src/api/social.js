@@ -50,6 +50,14 @@ export function onNotification(myId, cb) {
 // ---------- push (this device's address for system notifications, see 0018_push.sql) ----------
 export const savePushSubscription = async (sub) => unwrap(await supabase.rpc('save_push_subscription',
   { p_endpoint: sub.endpoint, p_p256dh: sub.keys.p256dh, p_auth: sub.keys.auth, p_ua: String(navigator.userAgent).slice(0, 200) }));
+/** Is the notification server (the send-push Edge Function) deployed and configured? -> 'ready' | 'misconfigured' | 'down'. No secret needed, nothing sensitive comes back. */
+export async function pushServerStatus() {
+  try {
+    const r = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-push`, { method: 'GET', signal: AbortSignal.timeout(6000) });
+    if (!r.ok) return 'down';   // 404 = never deployed, 401 = deployed without --no-verify-jwt, 5xx = crashed on start
+    const j = await r.json().catch(() => null); return j?.push === 'ready' ? 'ready' : 'misconfigured';
+  } catch { return 'down'; }
+}
 export const removePushSubscription = async (endpoint) => unwrap(await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint));
 
 // ---------- places ----------

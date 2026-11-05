@@ -1,3 +1,4 @@
+import { useSheetDrag } from './shared.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ShareNetwork, DownloadSimple, LinkSimple, X, Check } from '@phosphor-icons/react';
 import { renderPromo, availablePromos, promoShareText } from './promoImage.js';
@@ -83,7 +84,7 @@ export default function ShareSheet({ data: incoming, onClose }) {
   const [error, setError] = useState('');
   const [note, setNote] = useState('');
   const built = useRef(null); // { file, url }: the current image, ready to share synchronously
-  const sheetRef = useRef(null);
+  const sheetRef = useRef(null); useSheetDrag(sheetRef, () => onClose?.());
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
 
@@ -217,7 +218,7 @@ export default function ShareSheet({ data: incoming, onClose }) {
             {wall && guestCount > 1 && (
               <label className="ss-pick">
                 <span>Which message?</span>
-                <select value={safeGuest} onChange={(e) => setGuestIndex(Number(e.target.value))}>
+                <select aria-label="Which message?" value={safeGuest} onChange={(e) => setGuestIndex(Number(e.target.value))}>
                   {data.guestbook.map((m, i) => (
                     <option key={i} value={i}>{(m.name || m.username || 'Someone')}: {String(m.body || '').slice(0, 48)}</option>
                   ))}

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { useDialog } from './shared.jsx';
 import { auth } from '../index.js';
 import { passwordStrength } from '../lib/password.js';
 import { friendlyError } from './errors.jsx';
@@ -15,6 +16,7 @@ export function PasswordMeter({ value, username = '', email = '' }) {
 
 /** Account menu → Change password. Asks for the current password first. */
 export function ChangePasswordModal({ onClose, notify }) {
+  const dlg = useRef(null); useDialog(dlg, onClose);
   const [cur, setCur] = useState(''); const [pw, setPw] = useState(''); const [again, setAgain] = useState('');
   const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
   const bad = !cur || pw.length < 8 || pw !== again || pw === cur;
@@ -29,7 +31,7 @@ export function ChangePasswordModal({ onClose, notify }) {
     try { const email = await auth.myEmail(); if (!email) return; await auth.resetPassword(email); setMsg(''); notify('Reset link sent. Check your email.'); onClose(); }
     catch (er) { setMsg(friendlyError(er)); }
   };
-  return (<div className="modal" onClick={onClose}><form className="panel mform" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
+  return (<div className="modal" onClick={onClose}><form className="panel mform" role="dialog" aria-modal="true" aria-label="Change password" ref={dlg} onClick={(e) => e.stopPropagation()} onSubmit={submit}>
     <h3>Change password</h3>
     <label className="field"><span>Current password</span><input type="password" autoFocus required autoComplete="current-password" value={cur} onChange={(e) => setCur(e.target.value)} /></label>
     <label className="field"><span>New password</span><input type="password" required minLength={8} autoComplete="new-password" placeholder="8+ characters" value={pw} onChange={(e) => setPw(e.target.value)} /></label>

@@ -75,5 +75,8 @@ export async function disablePush() {
   await sub.unsubscribe();
 }
 
-/** Run before signing out, so the next person on this device does not receive your notifications. */
-export const forgetDevice = () => disablePush().catch(() => {});
+/** Run before signing out, so the next person on this device neither receives your notifications nor finds your photos in the device's saved copies. */
+export const forgetDevice = async () => {
+  try { navigator.serviceWorker?.controller?.postMessage({ type: 'fiiyou:clear-private' }); } catch { /* ignore */ }
+  await disablePush().catch(() => {});
+};

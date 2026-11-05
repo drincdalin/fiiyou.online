@@ -4,7 +4,7 @@
 @font-face { font-family: "Ubuntu Sans Mono"; src: url("/fonts/UbuntuSansMono.woff2") format("woff2"); font-weight: 200 800; font-style: normal; font-display: swap; }
 
 /* ---------- app chrome: black / white / grey; yellow = notice, red = error ---------- */
-:root { --ui-font: "Ubuntu Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; --ink: #f4f4f4; --g0: #080808; --g1: #101010; --g2: #1a1a1a; --g3: #2c2c2c; --g4: #4a4a4a; --muted: #9a9a9a;
+:root { --ui-font: "Ubuntu Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; --ink: #f4f4f4; --g0: #080808; --g1: #101010; --g2: #1a1a1a; --g3: #2c2c2c; --g4: #4a4a4a; --muted: #a6a6a6;
   --yellow: #ffd84d; --red: #ff6b6b; --ease: cubic-bezier(.2, .7, .2, 1); --nav-h: 60px; }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }

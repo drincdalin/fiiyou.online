@@ -24,10 +24,21 @@
   <meta property="og:description" content="The internet belongs to you. A customizable local social network with profiles, music, a friends map, events and chat. No ads, no tracking." />
   <meta name="twitter:title" content="fiiyou · the internet belongs to you" />
   <meta name="twitter:card" content="summary_large_image" />
+  <link rel="preload" href="/fonts/UbuntuSans.woff2" as="font" type="font/woff2" crossorigin />
+  <style>
+    body { margin: 0; background: #080808; }   /* only body: an html background would stop the app's own page colour from filling the screen */
+    .fx-shell { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; color: #f4f4f4; }
+    .fx-word { font: 800 2.2rem/1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; letter-spacing: -.03em; animation: fxpulse 1.4s ease-in-out infinite; }
+    .fx-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    @keyframes fxpulse { 50% { opacity: .4; } }
+    @media (prefers-reduced-motion: reduce) { .fx-word { animation: none; } }
+  </style>
+  <noscript><style>.fx-shell { display: none; }</style></noscript>
   <!--SEO-->
 </head>
 <body>
-  <div id="root"></div>
+  <!-- Pre-rendered shell: the first paint is this, from the HTML alone, before any JavaScript has loaded. React replaces it when the app starts. -->
+  <div id="root"><div class="fx-shell" role="status" aria-live="polite"><span class="fx-word">fiiyou</span><span class="fx-sr">Loading</span></div></div>
   <noscript><p style="font:16px system-ui;color:#eee;text-align:center;margin-top:20vh">fiiyou needs JavaScript to run.</p></noscript>
   <script type="module" src="/src/ui/main.jsx"></script>
 </body>
