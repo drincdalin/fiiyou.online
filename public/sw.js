@@ -107,7 +107,7 @@ self.addEventListener('push', (event) => {
     await self.registration.showNotification(d.title || 'fiiyou', {
       body: d.body || '',
       icon: `${scope}icon-192.png`,
-      badge: `${scope}icon-192.png`,
+      badge: `${scope}badge.png`,
       tag: d.tag || undefined,          // same tag = replaces the older notification instead of stacking
       renotify: !!d.tag,
       data: { path: typeof d.path === 'string' ? d.path : '' },
