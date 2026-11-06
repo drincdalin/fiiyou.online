@@ -7,14 +7,11 @@
   .plain.view > .tabs button, .homemain > .tabs button { flex: 1 1 auto; justify-content: center; }
   .homemain > .tabs select { flex: 1 1 100%; width: 100%; max-width: none; margin-left: 0; }
 
-  /* Home: the profile card used to be 400px of stats and buttons before the first post. On a phone it is one slim row; "Edit my profile"
-     lives in the Profile tab and "Cool new people" in People */
-  .snap { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 10px; padding: 10px 12px; }
-  .snap .snaptop { min-width: 0; }
-  .snap .snaptop .av { width: 44px !important; height: 44px !important; }
-  .snap .stats3 { grid-template-columns: repeat(2, auto); gap: 6px; }
-  .snap .stats3 > span, .snap > .primary, .snap > h4, .snap > .newp { display: none; }
-  .snap .stats3 button { padding: 6px 12px; }
+  /* Home: the profile card (name, 0 messages, 0 requests) is gone on phones. The feed starts at once; your profile is the second tab, new messages show on the chat tab,
+     and friend requests arrive as notifications on your picture. Desktop keeps the card. */
+  .snap { display: none; }
+  /* a tall photo no longer fills the whole screen: it fits in about half, the rest is the blurred photo behind it */
+  .pimg img { max-height: 58dvh; }
 
   /* messages: the toast sits above the tab bar, not on top of it */
   .toast { bottom: calc(var(--nav-h) + 18px + env(safe-area-inset-bottom, 0px)); width: max-content; max-width: min(92vw, 420px); }

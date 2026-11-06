@@ -184,7 +184,7 @@ export function PostCard({ p, me, img, go, onChange, onDelete, notify, expanded 
         : <button className="pimg" style={{ '--bgimg': `url("${src}")` }} onClick={() => imgTap(0)} aria-label="Open photo"><FadeImg src={src} alt="" loading="lazy" /></button>)}
       {burst > 0 && <Heart key={burst} className="pburst" size={88} weight="fill" aria-hidden="true" />}
       <div className="ptext">
-        {p.kind === 'event' && <div className="evmeta"><CalendarBlank size={14} weight="bold" aria-hidden="true" />{new Date(p.event_at).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' })}{p.event_place && ` · ${p.event_place}`}</div>}
+        {p.kind === 'event' && <div className="evmeta"><CalendarBlank size={14} weight="bold" aria-hidden="true" />{new Date(p.event_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}{p.event_place && ` · ${p.event_place}`}</div>}
         {p.place_name && <div className="chipline"><MapPin size={14} weight="bold" aria-hidden="true" />At {p.place_name}</div>}
         {edit ? (<div className="editbox">{p.kind === 'event' && <input value={title} maxLength={100} placeholder="Title" onChange={(e) => setTitle(e.target.value)} />}
           <MentionInput as="textarea" rows="3" maxLength={1000} autoFocus value={body} onChange={(e) => setBody(e.target.value)}
@@ -279,7 +279,7 @@ export function Composer({ me, places = [], fixedPlace = null, onPosted, notify 
       if (when) await posts.schedulePost({ ...data, publishAt: when }); else await posts.createPost(data);
       clearPostDraft(me.id, scope); setRestored(false);
       setF({ ...blank, kind: f.kind, visibility: f.visibility }); setFiles([]); setLater(''); setOpen(false);
-      if (when) { setSchedVer((v) => v + 1); notify(`Scheduled for ${when.toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' })}`); } else { onPosted(); notify(ev ? 'Event published' : 'Posted'); }
+      if (when) { setSchedVer((v) => v + 1); notify(`Scheduled for ${when.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}`); } else { onPosted(); notify(ev ? 'Event published' : 'Posted'); }
     } catch (er) { notify(er.message === 'too_many_scheduled' ? 'You can have up to 20 scheduled posts.' : spamMessage(er) || er.message || 'Could not post', 'err'); } setBusy(false); };
   return (<>
     <form className={`composer panel${expanded ? ' open' : ''}${drag ? ' drag' : ''}`} onSubmit={submit}
@@ -317,7 +317,7 @@ function ScheduledList({ version, notify }) {
   const cancel = async (r) => { if (!(await ask({ title: 'Cancel this scheduled post?', message: 'It will not be published and is deleted.', confirmLabel: 'Cancel post', danger: true }))) return;
     try { await posts.cancelScheduled(r); load(); notify('Scheduled post cancelled'); } catch (e) { notify(e.message || 'Could not cancel', 'err'); } };
   return (<div className="panel schedlist"><button type="button" className="ghost sm" aria-expanded={open} onClick={() => setOpen(!open)}><Clock size={16} weight="bold" aria-hidden="true" />Scheduled ({rows.length})</button>
-    {open && <ul>{rows.map((r) => <li key={r.id}><span><b>{new Date(r.publish_at).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' })}</b>{(r.image_path ? ' · 📷' : '')}<br /><small>{r.title || r.body.slice(0, 80)}</small></span>
+    {open && <ul>{rows.map((r) => <li key={r.id}><span><b>{new Date(r.publish_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</b>{(r.image_path ? ' · 📷' : '')}<br /><small>{r.title || r.body.slice(0, 80)}</small></span>
       <button type="button" className="ghost sm danger" onClick={() => cancel(r)}>Cancel</button></li>)}</ul>}</div>);
 }
 

@@ -30,7 +30,7 @@ export function Avatar({ src, size = 40, name = '' }) {
 }
 export const ago = (iso) => { const s = (Date.now() - new Date(iso)) / 1000;
   if (s < 60) return 'now'; if (s < 3600) return `${Math.floor(s / 60)}m`; if (s < 86400) return `${Math.floor(s / 3600)}h`;
-  if (s < 604800) return `${Math.floor(s / 86400)}d`; return new Date(iso).toLocaleDateString('ro-RO'); };
+  if (s < 604800) return `${Math.floor(s / 86400)}d`; return new Date(iso).toLocaleDateString('en-GB'); };
 
 /** Tiny safe markup: **bold**, *italic*, [text](https://link), @user, #tag. Everything else is plain text; nothing is ever parsed as HTML.
  *  plain: skip the bold/italic/link markup and show it as typed (@user and #tag still work). Post bodies use plain; profiles keep the markup. */
@@ -54,7 +54,7 @@ export function Rich({ text = '', onUser, onTag, plain = false }) {
 }
 
 /** Full, readable date for tooltips and <time> tags ("12 Oct 2026, 14:05"). */
-export const fullDate = (iso) => { try { return new Date(iso).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' }); } catch { return ''; } };
+export const fullDate = (iso) => { try { return new Date(iso).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }); } catch { return ''; } };
 
 /** <img> that fades in once it has loaded, so photos never pop in. Cached images show at once. */
 export function FadeImg({ className = '', onLoad, ...rest }) {

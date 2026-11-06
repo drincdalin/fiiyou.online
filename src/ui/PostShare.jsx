@@ -67,7 +67,7 @@ export async function renderPostImage(p, { avatarUrl, imageUrl }) {
 
   const CX = 72, CW = W - 144, PAD = 48, IW = CW - PAD * 2, LH = 64;
   const isEvent = p.kind === 'event';
-  const meta = isEvent && p.event_at ? new Date(p.event_at).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' }) + (p.event_place ? ` · ${p.event_place}` : '') : '';
+  const meta = isEvent && p.event_at ? new Date(p.event_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }) + (p.event_place ? ` · ${p.event_place}` : '') : '';
 
   ctx.font = `800 54px ${font}`; const titleLines = p.title ? wrap(ctx, p.title, IW, 2) : [];
   const imgH = pic ? Math.min(760, Math.round(IW * pic.height / pic.width)) : 0;
@@ -160,7 +160,7 @@ export const previewText = (body) => { if (body === social.DELETED_BODY) return 
 export function SharedPostCard({ data, go }) {
   const img = useImages([okPath(data.a), okPath(data.i)]);
   const src = img[data.i], av = img[data.a];
-  const when = data.e ? new Date(data.e).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' }) + (data.ep ? ` · ${data.ep}` : '') : '';
+  const when = data.e ? new Date(data.e).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }) + (data.ep ? ` · ${data.ep}` : '') : '';
   const open = () => (/^[0-9a-f-]{36}$/i.test(data.id || '') ? go('post', data.id.toLowerCase()) : go('profile', data.u));   // bad or missing id: fall back to the author's profile
   return (<button type="button" className="sp" onClick={open} aria-label={`Shared post by @${data.u}. Open post`}>
     <span className="sphead"><Avatar src={av} size={30} /><span className="spname"><b>{data.n}</b><small>@{data.u}</small></span></span>

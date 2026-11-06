@@ -56,6 +56,8 @@ export function navigate(to, { replace = false } = {}) {
   const current = getPath().replace(/(.)\/+$/, '$1');
   if (!replace && to === current) { window.scrollTo(0, 0); return; }   // same page: no duplicate history entry
   if (!replace) remember();                                             // leaving this page: keep where you were on it
+  // A chat opened from anywhere else (a profile, the map, a notification) gets the conversation list underneath it, so Back shows the list first
+  if (!replace && /^\/chat\/[^/]+$/.test(to) && !/^\/chat(\/|$)/.test(current)) history.pushState({ fk: `${Date.now().toString(36)}-${++seq}` }, '', `${BASE}/chat`);
   history[replace ? 'replaceState' : 'pushState'](replace ? history.state : { fk: `${Date.now().toString(36)}-${++seq}` }, '', BASE + to);
   lastPath = getPath();
   emit();
@@ -95,5 +97,11 @@ export function Link({ to, replace, onClick, ...props }) {
 export function bootRouter() {
   const m = location.hash.match(/^#(\/.*)$/);
   if (m) history.replaceState(null, '', BASE + m[1].replace(/^\/u\//, '/'));
+  // Arriving straight on a chat (a notification, a link): put the conversation list underneath, once (a reload keeps its history entry, so it is skipped)
+  const p = location.pathname; const at = getPath();
+  if (/^\/chat\/[^/]+\/?$/.test(at) && !history.state?.fk) {
+    history.replaceState({ fk: `${Date.now().toString(36)}-${++seq}` }, '', `${BASE}/chat`);
+    history.pushState({ fk: `${Date.now().toString(36)}-${++seq}` }, '', p + location.search);
+  }
 }
 export const bootRouterClean = bootRouter;   // alias, in case main.jsx already imports this name
