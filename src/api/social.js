@@ -99,23 +99,40 @@ export async function thread(peerId, limit = 100) {
   const me = await uid();
   const rows = unwrap(await supabase.from('messages').select(MSG_COLS)
     .or(`and(sender_id.eq.${me},recipient_id.eq.${peerId}),and(sender_id.eq.${peerId},recipient_id.eq.${me})`).order('created_at', { ascending: false }).limit(limit));
-  return withReplies(rows.reverse());
+  return withLikes(await withReplies(rows.reverse()));
+}
+/** Who liked each message: attaches `likers` (list of user ids) to every row. Never throws: before migration 0034 is run there are simply no hearts. */
+async function withLikes(rows) {
+  const by = {};
+  if (rows.length) {
+    try { unwrap(await supabase.from('message_likes').select('message_id, user_id').in('message_id', rows.map((r) => r.id))).forEach((l) => { (by[l.message_id] ||= []).push(l.user_id); }); } catch { /* no table yet: chat works, hearts do not */ }
+  }
+  return rows.map((r) => ({ ...r, likers: by[r.id] || [] }));
+}
+/** Like (on = true) or un-like MY heart on a message in one of my chats. Liking twice is harmless. */
+export async function setMessageLike(messageId, on) {
+  const me = await uid();
+  if (on) unwrap(await supabase.from('message_likes').upsert({ message_id: messageId, user_id: me }, { onConflict: 'message_id,user_id', ignoreDuplicates: true }));
+  else unwrap(await supabase.from('message_likes').delete().eq('message_id', messageId).eq('user_id', me));
 }
 export async function sendMessage(peerId, body, replyTo = null) {
   const m = unwrap(await supabase.from('messages').insert({ sender_id: await uid(), recipient_id: peerId, body, reply_to: replyTo || null }).select(MSG_COLS).single());
-  return (await withReplies([m]))[0];
+  return (await withLikes(await withReplies([m])))[0];
 }
 export const markRead = async (peerId) => unwrap(await supabase.rpc('mark_read', { p_peer: peerId }));
 export const unreadCount = async () => Number(unwrap(await supabase.rpc('unread_count')));
 /** Live incoming, edited and deleted messages. Each subscription gets its own channel name (a shared name made the second
  *  subscriber throw and blank the page). Never throws; the UI also polls as a fallback. */
 export function onMessage(myId, cb) {
+  const chans = [];
   try {
-    const ch = supabase.channel(`dm-${myId}-${Math.random().toString(36).slice(2)}`).on('postgres_changes',
+    chans.push(supabase.channel(`dm-${myId}-${Math.random().toString(36).slice(2)}`).on('postgres_changes',
       { event: '*', schema: 'public', table: 'messages', filter: `recipient_id=eq.${myId}` }, cb)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `sender_id=eq.${myId}` }, cb).subscribe();   // the second one: "seen" ticks
-    return () => { try { supabase.removeChannel(ch); } catch { /* ignore */ } };
-  } catch { return () => {}; }
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `sender_id=eq.${myId}` }, cb).subscribe());   // the second one: "seen" ticks
+  } catch { /* ignore */ }
+  // hearts get their own channel: if the table is not there yet (migration 0034) only this one fails, never the messages above
+  try { chans.push(supabase.channel(`dml-${myId}-${Math.random().toString(36).slice(2)}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'message_likes' }, cb).subscribe()); } catch { /* ignore */ }
+  return () => { chans.forEach((ch) => { try { supabase.removeChannel(ch); } catch { /* ignore */ } }); };
 }
 
 

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { DotsThree, PencilSimple, Trash, Check, X, ArrowBendUpLeft, PushPin, Copy } from '@phosphor-icons/react';
+import { DotsThree, PencilSimple, Trash, Check, X, ArrowBendUpLeft, PushPin, Copy, Heart } from '@phosphor-icons/react';
 import { social } from '../index.js';
 import { ask } from './dialog.jsx';
 import { useBackToClose, useSheetDrag } from './shared.jsx';
@@ -44,7 +44,7 @@ export function MessageMenu({ m, me, onEdit, onDeleted, notify, align = 'right',
 
 /** Phones: tap a message (or press and hold) and this sheet slides up with everything you can do with it. Replaces the row of tiny buttons next to every bubble.
  *  Props: m (message row), mine (bool), preview (short text shown at the top), pinned, canEdit, canCopy, onReply(), onPin(), onEdit(), onDeleted(m), onClose(), notify(). */
-export function MessageSheet({ m, mine, preview, pinned, canEdit = true, canCopy = true, onReply, onPin, onEdit, onDeleted, onClose, notify }) {
+export function MessageSheet({ m, mine, preview, pinned, liked = false, canEdit = true, canCopy = true, onLike, onReply, onPin, onEdit, onDeleted, onClose, notify }) {
   const root = useRef(null); useBackToClose(onClose); useSheetDrag(root, onClose);
   useEffect(() => {
     root.current?.focus({ preventScroll: true });   // focus the sheet itself, not the first button (a ring on "Reply" looks like a selection)
@@ -65,6 +65,7 @@ export function MessageSheet({ m, mine, preview, pinned, canEdit = true, canCopy
     <div className="msheet" ref={root} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Message options" onClick={(e) => e.stopPropagation()}>
       <span className="msgrab" aria-hidden="true" />
       {preview && <p className="msheetprev">{preview}</p>}
+      {onLike && <button type="button" onClick={run(onLike)}><Heart size={20} weight={liked ? 'fill' : 'bold'} aria-hidden="true" />{liked ? 'Remove your like' : 'Like'}</button>}
       <button type="button" onClick={run(onReply)}><ArrowBendUpLeft size={20} weight="bold" aria-hidden="true" />Reply</button>
       {canCopy && <button type="button" onClick={run(copy)}><Copy size={20} weight="bold" aria-hidden="true" />Copy text</button>}
       <button type="button" onClick={run(onPin)}><PushPin size={20} weight={pinned ? 'fill' : 'bold'} aria-hidden="true" />{pinned ? 'Unpin' : 'Pin to the top of the chat'}</button>
