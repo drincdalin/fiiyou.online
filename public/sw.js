@@ -104,10 +104,17 @@ self.addEventListener('push', (event) => {
     // the app is open and in front: the in-app badge already shows it, so no system notification is needed
     const open = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     if (open.some((c) => c.visibilityState === 'visible' && c.focused)) return;
+    const https = (u) => (typeof u === 'string' && /^https:\/\//.test(u) ? u : undefined);   // only secure links from the server are used
     await self.registration.showNotification(d.title || 'fiiyou', {
       body: d.body || '',
+<<<<<<< HEAD
       icon: `${scope}icon-192.png`,
       badge: `${scope}badge.png`,
+=======
+      icon: https(d.icon) || `${scope}icon-192.png`,   // the person's picture (falls back to the fiiyou icon)
+      image: https(d.image),                            // the photo of the post, when there is one
+      badge: `${scope}icon-192.png`,
+>>>>>>> dalin/release
       tag: d.tag || undefined,          // same tag = replaces the older notification instead of stacking
       renotify: !!d.tag,
       data: { path: typeof d.path === 'string' ? d.path : '' },

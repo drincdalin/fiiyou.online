@@ -35,6 +35,12 @@ const TEXT: Record<string, string> = {
 // these happened on the receiving person's OWN profile, so a tap opens their profile, not the actor's
 const OWN_PROFILE = new Set(['wall_comment', 'photo_like']);
 
+/** A one-hour link to a private photo (the notification is shown within seconds, the phone downloads the picture then). undefined on any problem: the notification still goes out. */
+async function photoUrl(path?: string | null) {
+  if (!path) return undefined;
+  try { const { data } = await admin.storage.from('media').createSignedUrl(path, 3600); return data?.signedUrl || undefined; } catch { return undefined; }
+}
+
 /** Sends `payload` to every saved device of `userId`. Devices the push service says are gone (404 / 410) are forgotten. */
 async function deliver(userId: string, payload: Record<string, unknown>) {
   const { data: subs, error } = await admin.from('push_subscriptions').select('id, endpoint, p256dh, auth').eq('user_id', userId);
@@ -97,7 +103,7 @@ Deno.serve(async (req) => {
     if (!receiver || !actorId) return json({ ok: 'ignored' });
 
     const [actor, owner] = await Promise.all([
-      admin.from('profiles').select('username, display_name').eq('id', actorId).maybeSingle(),
+      admin.from('profiles').select('username, display_name, avatar_path').eq('id', actorId).maybeSingle(),
       !isMessage && OWN_PROFILE.has(n?.type ?? '') ? admin.from('profiles').select('username').eq('id', receiver).maybeSingle() : Promise.resolve({ data: null }),
     ]);
 
@@ -112,7 +118,13 @@ Deno.serve(async (req) => {
       path = n?.post_id ? `post/${n.post_id}` : username; text = TEXT[n?.type ?? ''] ?? 'sent you something';
       tag = `${n?.type}:${n?.post_id ?? n?.photo_id ?? n?.comment_id ?? n?.actor_id}`;
     }
-    const r = await deliver(receiver, { title: 'fiiyou', body: `${name} ${text}`, path, tag });
+    // the picture: the person who did it (icon) and, for likes / comments on a post or photo, the photo itself (image)
+    let imagePath: string | null = null;
+    if (!isMessage && n?.post_id) { const { data } = await admin.from('posts').select('image_path').eq('id', n.post_id).maybeSingle(); imagePath = data?.image_path ?? null; }
+    else if (!isMessage && n?.photo_id) { const { data } = await admin.from('photos').select('path').eq('id', n.photo_id).maybeSingle(); imagePath = data?.path ?? null; }
+    const [icon, image] = await Promise.all([photoUrl(actor.data?.avatar_path), photoUrl(imagePath)]);
+    // title = who, body = what they did ("Paul" / "liked your post"); the phone shows the app name next to it
+    const r = await deliver(receiver, { title: name, body: text, path, tag, ...(icon ? { icon } : {}), ...(image ? { image } : {}) });
     console.log(`push ${body.table}/${n?.type ?? 'message'} -> ${r.devices} device(s), ${r.sent} sent, ${r.failed} failed`);
     return json(r);
   } catch (e) {

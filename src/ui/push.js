@@ -80,3 +80,12 @@ export const forgetDevice = async () => {
   try { navigator.serviceWorker?.controller?.postMessage({ type: 'fiiyou:clear-private' }); } catch { /* ignore */ }
   await disablePush().catch(() => {});
 };
+
+/** Opening the app removes its notifications from the phone's notification shade, so old ones are never mistaken for new ones. */
+export async function clearDeliveredNotifications() {
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration?.();
+    const list = (await reg?.getNotifications?.()) || [];
+    list.forEach((n) => n.close());
+  } catch { /* not supported (some iPhones / old browsers): nothing to clear */ }
+}

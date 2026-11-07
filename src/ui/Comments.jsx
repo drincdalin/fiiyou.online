@@ -86,8 +86,8 @@ export default function Comments({ postId, postAuthorId, me, go, notify, fail, o
     {reply && <div className="cmreplying"><span>Replying to @{reply.username}</span>
       <button type="button" aria-label="Cancel reply" onClick={() => setReply(null)}><X size={14} weight="bold" aria-hidden="true" /></button></div>}
     <form className="inline cmform" onSubmit={send}>
-      <MentionInput inputRef={field} value={text} maxLength={500} placeholder="Write a comment… use @ to mention" onChange={(e) => setText(e.target.value)} />
-      <button className="primary sm" disabled={busy || !text.trim()}><PaperPlaneRight size={14} weight="bold" aria-hidden="true" />Send</button>
+      <MentionInput inputRef={field} name="fiiyou-comment" aria-label="Comment" autoComplete="off" enterKeyHint="send" data-lpignore="true" data-1p-ignore="true" data-form-type="other" value={text} maxLength={500} placeholder="Write a comment… use @ to mention" onChange={(e) => setText(e.target.value)} />
+      <button className="primary sm" disabled={busy || !text.trim()} onPointerDown={(e) => e.preventDefault()} onMouseDown={(e) => e.preventDefault()}><PaperPlaneRight size={14} weight="bold" aria-hidden="true" />Send</button>
     </form>
   </div>);
 }
