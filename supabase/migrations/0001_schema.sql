@@ -14,7 +14,7 @@ create table if not exists public.localities (
 );
 
 -- ---------- validators (used in CHECK constraints) ----------
-create function public.is_hex_color(v text) returns boolean
+create or replace function public.is_hex_color(v text) returns boolean
 language sql immutable as $$
   select coalesce(v ~ '^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$', false)
 $$;
