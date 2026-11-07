@@ -25,7 +25,7 @@ language sql immutable as $$
 $$;
 
 -- Profile theme: only whitelisted keys/values. No raw CSS on purpose (XSS).
-create function public.is_valid_theme(t jsonb) returns boolean
+create or replace function public.is_valid_theme(t jsonb) returns boolean
 language plpgsql immutable as $$
 declare k text; v jsonb; s text;
 begin
@@ -53,7 +53,7 @@ begin
 end $$;
 
 -- Per-card style (the "chaotic profile" knobs)
-create function public.is_valid_card_style(t jsonb) returns boolean
+create or replace function public.is_valid_card_style(t jsonb) returns boolean
 language plpgsql immutable as $$
 declare k text; v jsonb; s text;
 begin
@@ -80,7 +80,7 @@ end $$;
 
 -- Card content: generic shape checks. Content is ALWAYS plain text/data —
 -- the frontend must never render it as HTML.
-create function public.is_valid_card_content(c jsonb) returns boolean
+create or replace function public.is_valid_card_content(c jsonb) returns boolean
 language plpgsql immutable as $$
 declare el jsonb; s text;
 begin
@@ -117,12 +117,12 @@ begin
   return true;
 end $$;
 
-create function public.touch_updated_at() returns trigger
+create or replace function public.touch_updated_at() returns trigger
 language plpgsql as $$
 begin new.updated_at := now(); return new; end $$;
 
 -- Cheap spam brake: tg args = (max_rows, window, author_column)
-create function public.enforce_rate_limit() returns trigger
+create or replace function public.enforce_rate_limit() returns trigger
 language plpgsql as $$
 declare n int;
 begin
