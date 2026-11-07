@@ -70,12 +70,11 @@ html, body { overscroll-behavior-y: none; }   /* the browser's pull-down-to-relo
 .clist h2.clisth { margin: 0 0 6px; padding: 0 8px; font-size: 1.17em; font-weight: 700; }   /* was an h3 straight under the page title; keeps the old look */
 
 /* ---------- likes on chat messages ---------- */
-.bcol { position: relative; }
-.brow:has(.mheart) { margin-bottom: 12px; }
-.mheart { position: absolute; bottom: -11px; z-index: 2; display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-width: 26px; height: 24px; padding: 0 6px; margin: 0; border-radius: 999px; border: 2px solid var(--g1, #111); background: var(--g3, #333); color: var(--ink, #fff); font: inherit; font-size: .72rem; font-weight: 800; cursor: pointer; box-shadow: none; }
+.bub { position: relative; }
+.bub:has(> .mheart) { overflow: visible; }
+.brow:has(.mheart) { margin-bottom: 14px; }   /* the heart hangs 13px below the bubble: leave room for it */
+.mheart { position: absolute; bottom: -13px; left: 10px; z-index: 2; display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-width: 26px; height: 24px; padding: 0 6px; margin: 0; border-radius: 999px; border: 2px solid var(--g1, #111); background: var(--g3, #333); color: var(--ink, #fff); font: inherit; font-size: .72rem; font-weight: 800; cursor: pointer; box-shadow: none; }
 .mheart svg { color: #ff5a78; }
-.bub:has(+ .mheart) { padding-bottom: 20px; }   /* room under the text so the heart never covers the time */
-.brow.mine .mheart { left: 8px; } .brow:not(.mine) .mheart { right: 8px; }
 .mheart.pop svg { animation: likepop .5s cubic-bezier(.3, 1.6, .5, 1); }
 .replybtn.likebtn.on { color: var(--pink, #ff4d6d); }
 @media (prefers-reduced-motion: reduce) { .mheart.pop svg { animation: none; } }

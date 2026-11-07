@@ -27,7 +27,7 @@ import NotificationsView, { NotificationList, useNotifCount } from './Notificati
 import SettingsView from './SettingsView.jsx';
 import { PasswordMeter } from './PasswordMeter.jsx';
 import Captcha, { CAPTCHA_ON } from './Captcha.jsx';
-import { registerSW, forgetDevice, syncPush, listenForOpen } from './push.js';
+import { registerSW, forgetDevice, syncPush, listenForOpen, clearDeliveredNotifications } from './push.js';
 import GithubActivity from './GithubActivity.jsx';
 import { Bell, Eye, EyeSlash, Check, GearSix, Heart, MagnifyingGlass, PencilSimple, ShareNetwork, SignOut, Trash, UserPlus } from '@phosphor-icons/react';
 
@@ -341,6 +341,16 @@ export default function App() {
   useEffect(() => { if (!menu) return; const out = (e) => { if (!menuRef.current?.contains(e.target)) setMenu(false); }; const esc = (e) => { if (e.key === 'Escape') setMenu(false); };
     addEventListener('pointerdown', out); addEventListener('keydown', esc); return () => { removeEventListener('pointerdown', out); removeEventListener('keydown', esc); }; }, [menu]);
   useEffect(() => { if (!toast || paused) return undefined; const t = setTimeout(() => setToast(null), toast.type === 'err' ? 6000 : 3200); return () => clearTimeout(t); }, [toast, paused]);   // errors stay longer; hovering a toast keeps it
+  useEffect(() => {   // every time you are looking at the app, its notifications leave the phone's notification shade
+    if (!me) return undefined;
+    const clear = () => { if (!document.hidden) clearDeliveredNotifications(); };
+    clear(); document.addEventListener('visibilitychange', clear); addEventListener('focus', clear);
+    return () => { document.removeEventListener('visibilitychange', clear); removeEventListener('focus', clear); };
+  }, [me?.id]);
+  useEffect(() => {   // installed app: the number on the app icon (Android home screen) = unread messages + notifications
+    const n = unread + nCount;
+    try { if (n > 0) navigator.setAppBadge?.(n)?.catch?.(() => {}); else navigator.clearAppBadge?.()?.catch?.(() => {}); } catch { /* not supported */ }
+  }, [unread, nCount]);
   const mainRef = useRef(null); const h1Ref = useRef(null);
   useEffect(() => {   // every page needs one level-one heading: a hidden one is added only when the page has none of its own
     const main = mainRef.current; if (!main) return undefined;
