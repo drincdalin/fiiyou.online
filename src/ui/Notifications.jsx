@@ -80,7 +80,7 @@ export function NotificationList({ go, notify, tick, onRead, limit }) {
       : <ul className="nlist">{shown.map((g) => { const [Icon, single] = KINDS[g.type] || [Bell, 'did something']; const text = g.targetCount > 1 && PLURAL[g.type] ? PLURAL[g.type] : single; const r = g.latest; const count = g.rows.length; return (
         <li key={g.key} className="nitem">
           <button type="button" className={`nrow${g.unread ? ' new' : ''}`} onClick={() => visit(g)}>
-            <span className="nav2"><Avatar src={img[r.actor?.avatar_path]} size={36} /><i className="nic"><Icon size={10} weight="fill" aria-hidden="true" /></i></span>
+            <span className="nav2"><Avatar src={img[r.actor?.avatar_path]} size={36} name={r.actor?.display_name || r.actor?.username} /><i className="nic"><Icon size={10} weight="fill" aria-hidden="true" /></i></span>
             <span className="ntxt"><span><b>{actorsLabel(g.actors)}</b>{g.actors.length === 1 && g.actors[0].official && <Verified />} {text}{count > g.actors.length && g.actors.length === 1 && g.targetCount <= 1 ? ` (${count})` : ''}</span><small>{ago(r.created_at)}</small></span></button>
         </li>); })}</ul>}
     {limit && groups.length > limit && <button type="button" className="nseeall" onClick={() => go('notifications')}>See all notifications<ArrowRight size={14} weight="bold" aria-hidden="true" /></button>}

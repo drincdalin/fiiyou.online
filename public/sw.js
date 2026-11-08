@@ -96,6 +96,22 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
+/** The picture for a notification, as a data: link. The phone's own downloader does not always manage to fetch our private picture links (Chrome then draws a grey
+ *  circle with a letter); this worker can, and it keeps the picture by file path (imageFirst), so the same person's picture is downloaded once.
+ *  Returns undefined when the picture cannot be had within `ms` or is bigger than `max` bytes: the caller then uses its fallback. */
+async function notificationPicture(url, max, ms = 4000) {
+  try {
+    const u = new URL(url); if (u.protocol !== 'https:') return undefined;
+    const res = await Promise.race([imageFirst(u), new Promise((_, no) => setTimeout(() => no(new Error('slow')), ms))]);
+    if (!res || !res.ok) return undefined;
+    const type = (res.headers.get('content-type') || '').split(';')[0].trim();
+    if (!/^image\/(webp|png|jpeg|gif)$/.test(type)) return undefined;
+    const bytes = new Uint8Array(await res.clone().arrayBuffer()); if (!bytes.length || bytes.length > max) return undefined;
+    let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return `data:${type};base64,${btoa(bin)}`;
+  } catch { return undefined; }
+}
+
 self.addEventListener('push', (event) => {
   let d = {};
   try { d = event.data ? event.data.json() : {}; } catch { d = { body: event.data ? event.data.text() : '' }; }
@@ -105,8 +121,12 @@ self.addEventListener('push', (event) => {
     const open = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     if (open.some((c) => c.visibilityState === 'visible' && c.focused)) return;
     const https = (u) => (typeof u === 'string' && /^https:\/\//.test(u) ? u : undefined);   // only secure links from the server are used
+    const [icon, image] = await Promise.all([d.icon ? notificationPicture(d.icon, 150000) : undefined, d.image ? notificationPicture(d.image, 300000) : undefined]);
     await self.registration.showNotification(d.title || 'fiiyou', {
       body: d.body || '',
+      icon: icon || `${scope}icon-192.png`,   // the person's picture; if it cannot be had, the fiiyou icon (never a grey circle with a letter)
+      image: image || https(d.image),         // the photo of the post, when there is one (the link itself if it was too big to embed)
+      badge: `${scope}icon-192.png`,
       tag: d.tag || undefined,          // same tag = replaces the older notification instead of stacking
       renotify: !!d.tag,
       data: { path: typeof d.path === 'string' ? d.path : '' },
