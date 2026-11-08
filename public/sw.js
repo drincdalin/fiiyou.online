@@ -25,11 +25,16 @@ self.addEventListener('install', (e) => {
   e.waitUntil((async () => {
     try {   // best effort: the app still installs when this fails
       const c = await caches.open(SHELL);
-      await c.addAll([self.registration.scope, `${self.registration.scope}icon-192.png`]);
+      await c.addAll([
+        self.registration.scope,
+        `${self.registration.scope}icon-192.png`,
+        `${self.registration.scope}badge.png`
+      ]);
     } catch { /* ignore */ }
     await self.skipWaiting();
   })());
 });
+
 self.addEventListener('activate', (e) => e.waitUntil((async () => {
   for (const k of await caches.keys()) if (k.startsWith('fiiyou-') && k !== SHELL && k !== ASSETS && k !== IMG) await caches.delete(k);
   await self.clients.claim();
@@ -87,7 +92,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (/^(fonts\/|icon-|android-chrome|apple-touch|favicon|manifest\.webmanifest|og-image)/.test(rel)) {
+  if (/^(fonts\/|icon-|android-chrome|apple-touch|favicon|badge\.png|manifest\.webmanifest|og-image)/.test(rel)) {
     event.respondWith((async () => {
       const hit = await caches.match(req);
       const fresh = fetch(req).then((res) => { if (res.ok && !isHtml(res)) caches.open(ASSETS).then((c) => c.put(req, res.clone())).catch(() => {}); return res; }).catch(() => null);
@@ -124,10 +129,10 @@ self.addEventListener('push', (event) => {
     const [icon, image] = await Promise.all([d.icon ? notificationPicture(d.icon, 150000) : undefined, d.image ? notificationPicture(d.image, 300000) : undefined]);
     await self.registration.showNotification(d.title || 'fiiyou', {
       body: d.body || '',
-      icon: icon || `${scope}icon-192.png`,   // the person's picture; if it cannot be had, the fiiyou icon (never a grey circle with a letter)
-      image: image || https(d.image),         // the photo of the post, when there is one (the link itself if it was too big to embed)
-      badge: `${scope}icon-192.png`,
-      tag: d.tag || undefined,          // same tag = replaces the older notification instead of stacking
+      icon: icon || `${scope}badge.png`,       // profile/sender image fallback to badge.png
+      image: image || https(d.image),         // post photo attachment
+      badge: `${scope}badge.png`,             // status bar / island notification icon
+      tag: d.tag || undefined,                // same tag = replaces the older notification instead of stacking
       renotify: !!d.tag,
       data: { path: typeof d.path === 'string' ? d.path : '' },
     });
