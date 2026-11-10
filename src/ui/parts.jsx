@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { House, User, MapPin, ChatCircle, ShieldCheck, Heart, X, CaretLeft, CaretRight, Flag, PencilSimple, Trash, PaperPlaneRight, ImageSquare, CalendarBlank, ShareNetwork, DotsThree, Clock, ImageBroken, UsersThree, Link as LinkIcon, ArrowSquareOut } from '@phosphor-icons/react';
 import PostShareModal from './PostShare.jsx';
 import { posts, safety } from '../index.js';
+import { friendlyError } from './errors.jsx';
 import { Avatar, ago, Rich, useImages, FadeImg, fullDate, reducedMotion, useBackToClose, useDialog, useTouchScreen } from './shared.jsx';
 import { ask } from './dialog.jsx';
 import Comments from './Comments.jsx';
@@ -212,7 +213,7 @@ export function PostCard({ p, me, img, go, onChange, onDelete, notify, expanded 
  *  load() -> [{ id, username, display_name, avatar_path, is_official }], newest like first. Only the owner of the content gets to open it. */
 export function LikersModal({ load, go, onClose }) {
   const [rows, setRows] = useState(null); const [err, setErr] = useState(''); const [dy, setDy] = useState(0); const y0 = useRef(null);
-  useEffect(() => { let on = true; load().then((r) => on && setRows(r || [])).catch((e) => on && setErr(e.message || 'Could not load the list')); return () => { on = false; }; }, []);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { let on = true; load().then((r) => on && setRows(r || [])).catch((e) => on && setErr(friendlyError(e, 'Could not load the list.'))); return () => { on = false; }; }, []);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {   // Esc closes only this sheet (not the photo viewer behind it); the viewer's arrow keys are paused while it is open
     const key = (e) => { if (e.key === 'Escape') onClose(); if (['Escape', 'ArrowLeft', 'ArrowRight'].includes(e.key)) { e.stopImmediatePropagation(); e.preventDefault(); } };
     const prev = document.body.style.overflow; addEventListener('keydown', key, true); document.body.style.overflow = 'hidden';

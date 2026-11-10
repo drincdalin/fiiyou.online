@@ -3,6 +3,7 @@ import { X, DownloadSimple, ShareNetwork, PaperPlaneRight, Check, ImageSquare, C
 import { friends, social } from '../index.js';
 import { Avatar, useImages } from './shared.jsx';
 import './PostShare.css';
+import { friendlyError } from './errors.jsx';
 
 // ---------------------------------------------------------------------------------------------
 // The only two calls this file makes to your backend (adjust the names here if yours differ):
@@ -184,7 +185,7 @@ export default function PostShareModal({ p, img, onClose, notify }) {
     let on = true;
     renderPostImage(p, { avatarUrl: img[p.author_avatar_path], imageUrl: img[p.image_path] })
       .then((b) => { if (!on) return; urlRef.current = URL.createObjectURL(b); setBlob(b); setUrl(urlRef.current); })
-      .catch((e) => on && setErr(e.message || 'Could not create the image'));
+      .catch((e) => on && setErr(friendlyError(e, 'Could not create the image.')));
     return () => { on = false; if (urlRef.current) URL.revokeObjectURL(urlRef.current); };
   }, [p.id]);   // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -202,7 +203,7 @@ export default function PostShareModal({ p, img, onClose, notify }) {
   const send = async (f) => {
     setBusy(f.id);
     try { await sendChat(f.id, encodeSharedPost(p, note)); setSent((s) => ({ ...s, [f.id]: true })); notify(`Sent to ${f.display_name || f.username}`); }
-    catch (e) { notify(e?.message?.includes('rate_limit') ? 'Slow down a bit.' : e?.message || 'Could not send', 'err'); }
+    catch (e) { notify(friendlyError(e, 'Could not send.'), 'err'); }
     setBusy(null);
   };
 
