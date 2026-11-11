@@ -90,10 +90,14 @@ span.av.av { display: inline-block; position: relative; flex: none; aspect-ratio
 .av img, .av i { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; object-fit: cover; object-position: 50% 30%; }
 .av .avl { position: absolute; inset: 0; display: grid; place-items: center; line-height: 1; }
 
-/* ---------- account menu / notifications: nothing is clipped on the right ----------
+/* ---------- account menu / notifications: nothing is clipped, long lines wrap ----------
    .menu is a grid with overflow: hidden. Its single implicit "auto" column used to grow to the widest child's min-content width,
-   so rows, the header and "See all notifications" ended up wider than the menu and were cut off. The column now shrinks to the menu. */
+   so rows, the header and "See all notifications" ended up wider than the menu and were cut off. The column now shrinks to the menu,
+   and the text column of every notification row may shrink and break onto a new line instead of running past the edge (no sideways scrolling). */
 .menu { grid-template-columns: minmax(0, 1fr); }
-.menu > *, .nsec, .nlist, .nitem { min-width: 0; }
-.menu .nrow, .nseeall { min-width: 0; max-width: 100%; box-sizing: border-box; }
-.nlist { overflow-x: hidden; }
+.menu > *, .menu .nsec, .menu .nlist, .menu .nitem { min-width: 0; max-width: 100%; }
+.menu .nlist { overflow-x: hidden; overflow-y: auto; }
+.menu .nrow { min-width: 0; max-width: 100%; box-sizing: border-box; overflow: hidden; white-space: normal; }
+.menu .nrow .ntxt { flex: 1 1 0; min-width: 0; white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
+.menu .nrow .ntxt > span { display: block; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.menu .nseeall { min-width: 0; max-width: 100%; box-sizing: border-box; }
