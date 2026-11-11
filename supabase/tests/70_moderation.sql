@@ -20,7 +20,7 @@ begin
   perform t.as_user(mod_u);   perform t.ok(staff_role() = 'moderator' and not is_admin(), 'moderator is a moderator, not an admin');
   perform t.as_user(admin_u); perform t.ok(staff_role() = 'admin', 'admin is admin');
   perform t.as_user(other);   perform t.ok(staff_role() is null, 'regular member has no staff role');
-  perform t.ok((select count(*) from staff_roles) = 0, 'staff_roles is invisible to members');
+  perform t.ok(not has_table_privilege('authenticated', 'public.staff_roles', 'select'), 'staff_roles is invisible to members');
   perform t.fails(format($q$insert into staff_roles (user_id, role) values (%L, 'moderator')$q$, other), 'members cannot promote themselves');
   perform t.fails(format($q$select admin_set_moderator(%L, true)$q$, other), 'members cannot grant moderator', 'forbidden');
   perform t.as_user(mod_u);
