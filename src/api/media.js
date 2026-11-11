@@ -12,6 +12,10 @@ export async function compressImage(file, preset = 'photo') {
   const { max, kb } = PRESETS[preset] ?? PRESETS.photo;
   if (file.type === 'image/gif') {                       // keep animation; must already be small
     if (file.size > 600_000) throw new Error('GIF is over 600 KB. Use a smaller GIF or a still image.');
+    if (preset === 'avatar') {                           // a GIF cannot be cropped here without losing the animation, so it must already be square
+      const g = await createImageBitmap(file); const w = g.width, h = g.height; g.close?.();
+      if (Math.abs(w - h) > 1) throw new Error('Animated avatars must be square (same width and height). Crop the GIF, or use a still image.');
+    }
     return file;
   }
   const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });

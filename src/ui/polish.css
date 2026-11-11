@@ -81,3 +81,11 @@ html, body { overscroll-behavior-y: none; }   /* the browser's pull-down-to-relo
 
 /* Avatars that were uploaded before square-cropping existed (non-square files): never stretch, keep faces in frame. */
 .av img, .avatar img { object-fit: cover; object-position: 50% 30%; }
+
+/* Round avatars: the picture always fills a perfect circle, whatever its shape.
+   Cause of the old bug: rules such as ".who span", ".likerow span" and ".mentionpop span" (display: grid / flex) also matched the
+   <span class="av"> of the Avatar component, so a non-square picture was laid out by its own proportions and the circle only showed a corner of it.
+   Fix: the circle keeps its own display, is always square, and the picture is pinned to it (absolute) instead of being sized by the layout. */
+span.av.av { display: inline-block; position: relative; flex: none; aspect-ratio: 1; line-height: 0; }
+.av img, .av i { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; object-fit: cover; object-position: 50% 30%; }
+.av .avl { position: absolute; inset: 0; display: grid; place-items: center; line-height: 1; }
