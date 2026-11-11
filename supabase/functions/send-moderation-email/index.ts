@@ -26,6 +26,8 @@ const REASONS: Record<string, string> = {
   inaccurate_location: 'Its location data was inaccurate.',
   spam: 'It was spam or commercial abuse.',
   duplicate: 'It duplicated another marker on the map.',
+  explicit: 'It contained explicit or inappropriate material.',
+  abuse: 'It was abusive or harassing towards others.',
   custom: '',   // the moderator's own words are used instead
 };
 
@@ -90,6 +92,37 @@ function contentRemoved(row: { username?: string; payload: Record<string, unknow
   return { subject, html, text };
 }
 
+/** c) A post or a comment was removed by a moderator. Tells the person what was removed and WHY. */
+function itemRemoved(kind: string, row: { username?: string; payload: Record<string, unknown> }, cfg: Cfg): Rendered {
+  const p = row.payload; const who = oneLine(row.username, 40);
+  const ct = String(p.content_type ?? 'post');
+  const what = kind === 'post_removed' ? 'post' : ct === 'wall_comment' ? 'comment on a profile wall' : 'comment';
+  const title = oneLine(p.title, 80); const excerpt = oneLine(p.excerpt, 300);
+  const reason = reasonOf(p);
+  const subject = `Your ${what} was removed`;
+  const quoted = title || excerpt;
+
+  const html = shell(subject, `
+    <p style="margin:0 0 12px;">Hi${who ? ` ${esc(who)}` : ''},</p>
+    <p style="margin:0 0 12px;">A moderator removed your ${esc(what)} on fiiyou.</p>
+    ${quoted ? box(`${title ? `<div style="font-weight:700;">${esc(title)}</div>` : ''}${excerpt ? `<div style="color:#52525b;margin-top:${title ? '4' : '0'}px;">${esc(excerpt)}</div>` : ''}`) : ''}
+    <p style="margin:0 0 4px;font-weight:700;">Reason</p>
+    ${box(`<div>${esc(reason)}</div>`)}
+    <p style="margin:0 0 12px;">Your account is not affected. Please read our <a href="${esc(cfg.siteUrl)}/terms.html" style="color:${ACCENT};">Community Guidelines</a> before posting again; repeated violations can lead to your account being suspended.</p>
+    <p style="margin:0;">If you think this was a mistake, reply to this message or write to <a href="mailto:${esc(cfg.supportEmail)}" style="color:${ACCENT};">${esc(cfg.supportEmail)}</a> within ${cfg.appealDays} days and tell us why. A different person will look at it.</p>`, cfg);
+
+  const text = [
+    `Hi${who ? ` ${who}` : ''},`, '',
+    `A moderator removed your ${what} on fiiyou.`, '',
+    title ? `Title: ${title}` : null, excerpt ? `Text: ${excerpt}` : null, quoted ? '' : null,
+    `Reason: ${reason}`, '',
+    'Your account is not affected. Repeated violations can lead to your account being suspended.', '',
+    `If you think this was a mistake, reply to this message or write to ${cfg.supportEmail} within ${cfg.appealDays} days. A different person will look at it.`, '',
+    `Community Guidelines: ${cfg.siteUrl}/terms.html`,
+  ].filter((l) => l !== null).join('\n');
+  return { subject, html, text };
+}
+
 /** b) The account was banned. By the time this is sent the account is already deleted, so the wording says so plainly. */
 function accountBanned(row: { username?: string; payload: Record<string, unknown> }, cfg: Cfg): Rendered {
   const who = oneLine(row.username, 40);
@@ -115,6 +148,7 @@ function accountBanned(row: { username?: string; payload: Record<string, unknown
 function render(kind: string, row: { username?: string; payload: Record<string, unknown> }, cfg: Cfg): Rendered {
   if (kind === 'content_removed') return contentRemoved(row, cfg);
   if (kind === 'account_banned') return accountBanned(row, cfg);
+  if (kind === 'post_removed' || kind === 'comment_removed') return itemRemoved(kind, row, cfg);
   throw new Error(`unknown kind: ${kind}`);
 }
 
