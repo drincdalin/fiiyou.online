@@ -84,7 +84,7 @@ function Banned({ onBack }) {
 
 function NewPassword({ onDone }) {
   const [pw, setPw] = useState(''); const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
-  const save = async (e) => { e.preventDefault(); setBusy(true); try { await auth.updatePassword(pw); onDone(); } catch (er) { setMsg(er.message); setBusy(false); } };
+  const save = async (e) => { e.preventDefault(); setBusy(true); try { await auth.updatePassword(pw); onDone(); } catch (er) { setMsg(friendlyError(er)); setBusy(false); } };
   return (<div className="authwrap"><form className="authcard" onSubmit={save}><h1 className="brand">New password</h1><p className="muted">Choose a new password for your account.</p>
     <input type="password" minLength={8} required autoFocus placeholder="new password (8+ characters)" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="new-password" />
     <PasswordMeter value={pw} />
@@ -289,7 +289,7 @@ function toRoute(path) {
 
 export default function App() {
   const [session, setSession] = useState(undefined); const [me, setMe] = useState(null); const path = usePath(); const route = useMemo(() => toRoute(path), [path]);
-  const [isAdmin, setIsAdmin] = useState(false); const [recovery, setRecovery] = useState(false);
+  const [staffRole, setStaffRole] = useState(null); const [recovery, setRecovery] = useState(false);
   const [menu, setMenu] = useState(false); const { n: nCount, setN: setNCount, tick: nTick } = useNotifCount(me?.id); const [toast, setToast] = useState(null); const [paused, setPaused] = useState(false); const [unread, setUnread] = useState(0);
   const refreshMe = useCallback(() => profiles.getMyProfile().then(setMe).catch(() => {}), []);
   const [meErr, setMeErr] = useState(null); const [inviteOpen, setInviteOpen] = useState(false);
@@ -329,7 +329,7 @@ export default function App() {
     if (!me || me.onboarded_at === null) return; const u = getInvite(); if (!u) return; clearInvite(); if (u !== me.username.toLowerCase()) navigate(`/${u}`);
   }, [me?.id, me?.onboarded_at]);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (!me) return; refreshUnread(); const t = setInterval(refreshUnread, 30000); const off = social.onMessage(me.id, refreshUnread); return () => { clearInterval(t); off(); }; }, [me?.id]);
-  useEffect(() => { if (me?.id) adminApi.isAdmin().then(setIsAdmin).catch(() => setIsAdmin(false)); else setIsAdmin(false); }, [me?.id]);   // display only: the database re-checks every admin call
+  useEffect(() => { if (me?.id) adminApi.role().then(setStaffRole).catch(() => setStaffRole(null)); else setStaffRole(null); }, [me?.id]);   // display only: the database re-checks every admin call
   useEffect(() => { if (me?.id) media.sweepOrphans().catch(() => {}); }, [me?.id]);   // clears files nothing references any more
   useEffect(() => { applyAppTheme(me?.theme); }, [me?.theme]);   // the whole UI is coloured from the signed-in person's theme (Mono when signed out)
   useEffect(() => {   // "/" opens search from anywhere (not while typing in a field)
@@ -374,7 +374,7 @@ export default function App() {
       : v === 'home' ? '/' : `/${v}`;
     setMenu(false); navigate(to); };
   const top = (v) => { if (active(v) && !(v === 'profile' && route.edit)) { window.scrollTo({ top: 0, behavior: 'smooth' }); if (v === 'home') window.dispatchEvent(new Event('fiiyou:refresh')); } else go(v); };   // pressing the page you are on = back to the top (and a fresh feed on Home)
-  const NAV = [['home', 'Home'], ['profile', 'Me'], ['map', 'Map'], ['messages', 'Chat'], ['people', 'People'], ...(isAdmin ? [['admin', 'Admin']] : [])];
+  const NAV = [['home', 'Home'], ['profile', 'Me'], ['map', 'Map'], ['messages', 'Chat'], ['people', 'People'], ...(staffRole ? [['admin', staffRole === 'admin' ? 'Admin' : 'Mod']] : [])];
   const active = (v) => (v === 'profile' ? route.v === 'profile' && (!route.username || route.username === me.username.toLowerCase()) : route.v === v);
   const PAGE = { home: 'Home', profile: 'Profile', map: 'Map', messages: 'Messages', people: 'People', search: 'Search', settings: 'Settings', notifications: 'Notifications', post: 'Post', admin: 'Admin' };
   return (<div className="app">
@@ -396,7 +396,7 @@ export default function App() {
     {route.v === 'home' && <HomeView me={me} go={go} notify={notify} unread={unread} />}
     {route.v === 'map' && <MapView me={me} go={go} notify={notify} />}
     {route.v === 'messages' && <MessagesView key="chat" me={me} peer={route.peer} go={go} notify={notify} refreshUnread={refreshUnread} />}
-    {route.v === 'admin' && isAdmin && <Suspense fallback={<Boot />}><AdminView go={go} notify={notify} /></Suspense>}
+    {route.v === 'admin' && staffRole && <Suspense fallback={<Boot />}><AdminView go={go} notify={notify} role={staffRole} /></Suspense>}
     {route.v === 'search' && <Suspense fallback={<Boot />}><SearchView key={`${route.tag || ''}|${route.q || ''}`} me={me} go={go} notify={notify} initialQuery={route.q || ''} initialTag={route.tag || ''} /></Suspense>}
     {route.v === 'notifications' && <NotificationsView go={go} notify={notify} tick={nTick} onRead={setNCount} />}
     {route.v === 'settings' && <SettingsView notify={notify} go={go} />}

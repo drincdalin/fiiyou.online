@@ -3,10 +3,11 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { posts, social, friends, discover, profiles } from '../index.js';
 import { useImages, Avatar, ago, reducedMotion, useTouchScreen } from './shared.jsx';
-import { PostCard, Composer, Lightbox } from './parts.jsx';
+import { PostCard, Composer, Lightbox, ReportModal } from './parts.jsx';
 import { SharedPostCard, decodeSharedPost, previewText } from './PostShare.jsx';
 import { MessageMenu, MessageEditor, MessageSheet } from './MessageMenu.jsx';
 import { ask } from './dialog.jsx';
+import { DeletePlaceModal, useStaffRole } from './ModerationModals.jsx';
 import { ErrorState, friendlyError } from './errors.jsx';
 import { ArrowBendUpLeft, ArrowDown, CalendarBlank, ChatsCircle, Heart, MagnifyingGlass, PaperPlaneRight, PushPin, UsersThree, X } from '@phosphor-icons/react';
 import './more.css';
@@ -110,7 +111,7 @@ const TILE = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const hash = (s) => [...s].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
 
 function PlaceSheet({ place, me, go, notify, onClose, onChanged }) {
-  const [rows, setRows] = useState(null); const [lb, setLb] = useState(null);
+  const [rows, setRows] = useState(null); const [lb, setLb] = useState(null); const [rep, setRep] = useState(false); const [mod, setMod] = useState(false); const staff = useStaffRole();
   const load = () => posts.feed({ placeId: place.id, limit: 30 }).then(setRows).catch((e) => { notify(e.message, 'err'); setRows([]); });
   useEffect(() => { setRows(null); load(); }, [place.id]);
   const img = useImages((rows || []).flatMap((p) => [p.image_path, p.author_avatar_path]));
@@ -123,6 +124,10 @@ function PlaceSheet({ place, me, go, notify, onClose, onChanged }) {
     <Composer me={me} fixedPlace={place.id} onPosted={() => { load(); onChanged(); }} notify={notify} />
     {rows ? (rows.length ? rows.map((p) => <PostCard key={p.id} p={p} me={me} img={img} go={go} onChange={change} onDelete={drop} notify={notify} />) : <p className="empty">Nobody has posted here yet.</p>) : <div className="boot">Loading…</div>}
     {place.created_by === me.id && <button className="ghost sm danger" onClick={async () => { if (!(await ask({ title: 'Delete this place?', message: 'Posts stay, but lose the place tag.', confirmLabel: 'Delete', danger: true }))) return; try { await social.deletePlace(place.id); onChanged(); onClose(); notify('Place deleted'); } catch (e) { notify(e.message, 'err'); } }}>Delete place</button>}
+    {place.created_by !== me.id && <button className="ghost sm" onClick={() => setRep(true)}>Report place</button>}
+    {staff && place.created_by !== me.id && <button className="ghost sm danger" onClick={() => setMod(true)}>Delete place (moderator)…</button>}
+    {rep && <ReportModal target={{ type: 'place', id: place.id }} onClose={() => setRep(false)} notify={notify} />}
+    {mod && <DeletePlaceModal place={{ id: place.id, name: place.name }} notify={notify} onClose={() => setMod(false)} onDone={() => { setMod(false); onChanged(); onClose(); }} />}
     {lb != null && <Lightbox items={pics.map((p) => ({ id: p.id, src: img[p.image_path], caption: p.body }))} index={lb} onClose={() => setLb(null)} onIndex={setLb} />}
   </aside>);
 }

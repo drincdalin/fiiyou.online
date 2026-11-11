@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { House, User, MapPin, ChatCircle, ShieldCheck, Heart, X, CaretLeft, CaretRight, Flag, PencilSimple, Trash, PaperPlaneRight, ImageSquare, CalendarBlank, ShareNetwork, DotsThree, Clock, ImageBroken, UsersThree, Link as LinkIcon, ArrowSquareOut } from '@phosphor-icons/react';
 import PostShareModal from './PostShare.jsx';
 import { posts, safety } from '../index.js';
+import { friendlyError } from './errors.jsx';
 import { Avatar, ago, Rich, useImages, FadeImg, fullDate, reducedMotion, useBackToClose, useDialog, useTouchScreen } from './shared.jsx';
 import { ask } from './dialog.jsx';
 import Comments from './Comments.jsx';
@@ -212,7 +213,7 @@ export function PostCard({ p, me, img, go, onChange, onDelete, notify, expanded 
  *  load() -> [{ id, username, display_name, avatar_path, is_official }], newest like first. Only the owner of the content gets to open it. */
 export function LikersModal({ load, go, onClose }) {
   const [rows, setRows] = useState(null); const [err, setErr] = useState(''); const [dy, setDy] = useState(0); const y0 = useRef(null);
-  useEffect(() => { let on = true; load().then((r) => on && setRows(r || [])).catch((e) => on && setErr(e.message || 'Could not load the list')); return () => { on = false; }; }, []);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { let on = true; load().then((r) => on && setRows(r || [])).catch((e) => on && setErr(friendlyError(e, 'Could not load the list.'))); return () => { on = false; }; }, []);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {   // Esc closes only this sheet (not the photo viewer behind it); the viewer's arrow keys are paused while it is open
     const key = (e) => { if (e.key === 'Escape') onClose(); if (['Escape', 'ArrowLeft', 'ArrowRight'].includes(e.key)) { e.stopImmediatePropagation(); e.preventDefault(); } };
     const prev = document.body.style.overflow; addEventListener('keydown', key, true); document.body.style.overflow = 'hidden';
@@ -234,14 +235,16 @@ export function LikersModal({ load, go, onClose }) {
 
 export function ReportModal({ target, onClose, notify }) {
   const dlg = useRef(null); useDialog(dlg, onClose);
-  const [reason, setReason] = useState(''); const [busy, setBusy] = useState(false);
+  const [reason, setReason] = useState(''); const [busy, setBusy] = useState(false); const [cat, setCat] = useState('spam');
+  const place = target.type === 'place';           // places use a category + optional details (submit_report); everything else keeps the free-text report
   const send = async (e) => { e.preventDefault(); setBusy(true);
-    try { await safety.report(target.type, target.id, reason.trim()); notify('Report sent. Thank you.'); onClose(); }
-    catch (er) { notify(er.message?.includes('rate_limit') ? 'Too many reports. Try again later.' : 'Could not send the report.', 'err'); setBusy(false); } };
+    try { if (place) await safety.reportContent('place', target.id, cat, reason.trim()); else await safety.report(target.type, target.id, reason.trim()); notify('Report sent. Thank you.'); onClose(); }
+    catch (er) { const m = `${er?.message || ''}`; notify(m.includes('rate_limit') ? 'Too many reports. Try again later.' : er?.code === '23505' ? 'You already reported this. We will review it.' : m.includes('cannot_report_own') ? 'This is your own place.' : 'Could not send the report.', 'err'); setBusy(false); } };
   return (<div className="modal" onClick={onClose}><form className="panel mform" role="dialog" aria-modal="true" aria-label="Report" ref={dlg} onClick={(e) => e.stopPropagation()} onSubmit={send}>
     <h3>Report</h3><p className="muted">Tell us what is wrong. Reports are reviewed by the operator.</p>
-    <textarea autoFocus required rows="3" maxLength={500} placeholder="What is the problem?" value={reason} onChange={(e) => setReason(e.target.value)} />
-    <div className="acts"><button className="primary" disabled={busy || !reason.trim()}>Send report</button><button type="button" className="ghost" onClick={onClose}>Cancel</button></div></form></div>);
+    {place && <select value={cat} onChange={(e) => setCat(e.target.value)} aria-label="Reason">{safety.REPORT_CATEGORIES.map(([c, l]) => <option key={c} value={c}>{l}</option>)}</select>}
+    <textarea autoFocus required={!place || cat === 'other'} rows="3" maxLength={500} placeholder={place ? 'Details (optional unless “Something else”)' : 'What is the problem?'} value={reason} onChange={(e) => setReason(e.target.value)} />
+    <div className="acts"><button className="primary" disabled={busy || (place ? cat === 'other' && !reason.trim() : !reason.trim())}>Send report</button><button type="button" className="ghost" onClick={onClose}>Cancel</button></div></form></div>);
 }
 
 /** One composer for posts, questions and events. Stays one line until you focus it. fixedPlace = place id when posting from a map place.
