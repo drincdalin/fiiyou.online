@@ -89,3 +89,11 @@ html, body { overscroll-behavior-y: none; }   /* the browser's pull-down-to-relo
 span.av.av { display: inline-block; position: relative; flex: none; aspect-ratio: 1; line-height: 0; }
 .av img, .av i { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; object-fit: cover; object-position: 50% 30%; }
 .av .avl { position: absolute; inset: 0; display: grid; place-items: center; line-height: 1; }
+
+/* ---------- account menu / notifications: nothing is clipped on the right ----------
+   .menu is a grid with overflow: hidden. Its single implicit "auto" column used to grow to the widest child's min-content width,
+   so rows, the header and "See all notifications" ended up wider than the menu and were cut off. The column now shrinks to the menu. */
+.menu { grid-template-columns: minmax(0, 1fr); }
+.menu > *, .nsec, .nlist, .nitem { min-width: 0; }
+.menu .nrow, .nseeall { min-width: 0; max-width: 100%; box-sizing: border-box; }
+.nlist { overflow-x: hidden; }

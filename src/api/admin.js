@@ -64,8 +64,13 @@ export async function deleteUser(id) {
 /** Same as deleteUser, but the database also remembers the (hashed) email so it can never sign up again. */
 export async function banUser(id, reason, userMessage) {
   await removeUserFiles(id);
-  await rpc('admin_ban_user', { p_user: id, p_reason: reason || null, p_user_message: userMessage || null });   // p_reason is internal; p_user_message is emailed to the person
+  return rpc('admin_ban_user', { p_user: id, p_reason: reason || null, p_user_message: userMessage || null });   // p_reason is internal; p_user_message is emailed to the person
 }
+
+/** Emails queued for members (ban notices, removed posts...). Admin only. Rows: { id, kind, username, status, attempts, last_error, created_at, sent_at }. Needs migration 0036. */
+export const outbox = () => rpc('admin_outbox', { p_limit: 50 });
+/** Puts a failed or stuck email back in the queue; it goes out the next time the Edge Function is called with {"retry":true}. */
+export const requeueEmail = (id) => rpc('admin_requeue_email', { p_id: id });
 /** Undo a ban by email (not used in the UI yet). */
 export const unbanEmail = (email) => rpc('admin_unban_email', { p_email: email });
 

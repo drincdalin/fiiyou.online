@@ -2,10 +2,12 @@
 // Callers: (1) the database webhook on public.moderation_outbox (INSERT), (2) you, with {"retry":true}, to resend failed mails.
 // Both prove themselves with the x-webhook-secret header; anything else gets 403.
 //
-// Deploy: Supabase dashboard -> Edge Functions -> Deploy a new function -> Via Editor -> paste this whole file. Turn OFF "Verify JWT".
-// Secrets (dashboard -> Edge Functions -> Secrets): SMTP_HOST=mail.privateemail.com SMTP_PORT=465 SMTP_USER=contact@fiiyou.online SMTP_PASS='mailbox password' \
-//                                MOD_WEBHOOK_SECRET=<long random string> SITE_URL=https://app.fiiyou.online SUPPORT_EMAIL=contact@fiiyou.online
-// Works with any SMTP mailbox (Namecheap Private Email, Gmail with an app password: SMTP_HOST=smtp.gmail.com, ...).
+// Deploy: Supabase dashboard -> Edge Functions -> send-moderation-email -> edit -> paste this whole file -> Deploy updates. Keep "Verify JWT" OFF.
+// Secrets (dashboard -> Edge Functions -> Secrets), example with Resend:
+//   SMTP_HOST=smtp.resend.com  SMTP_PORT=465  SMTP_USER=resend  SMTP_PASS=<Resend API key, sending access only>
+//   MAIL_FROM=noreply@fiiyou.online        (the address people see; must be on a domain verified at the provider)
+//   MOD_WEBHOOK_SECRET=<long random string>  SITE_URL=https://app.fiiyou.online  SUPPORT_EMAIL=contact@fiiyou.online
+// Any SMTP provider works. With a plain mailbox (Private Email, Gmail app password) leave MAIL_FROM unset: SMTP_USER is used as the sender.
 // (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided to Edge Functions automatically; never put the service key anywhere else.)
 //
 // SMTP over port 465 (implicit TLS) on purpose: as far as I know Supabase Edge Functions block outbound 25 and 587. Check the current docs.
@@ -153,17 +155,20 @@ function render(kind: string, row: { username?: string; payload: Record<string, 
 }
 
 // ---------------- function ----------------
-const env = (k: string, d = '') => Deno.env.get(k) ?? d;
+const env = (k: string, d = '') => (Deno.env.get(k) ?? d).trim();   // trim: a pasted trailing newline in a secret must not break auth
 const db = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), { auth: { persistSession: false } });
 const cfg = { siteUrl: env('SITE_URL', 'https://app.fiiyou.online').replace(/\/$/, ''), supportEmail: env('SUPPORT_EMAIL', 'contact@fiiyou.online'), appealDays: Number(env('APPEAL_DAYS', '14')) };
 const FROM_NAME = env('MAIL_FROM_NAME', 'fiiyou');
 const MAX_ATTEMPTS = 5;
 
 const SMTP_USER = env('SMTP_USER');
+const MAIL_FROM = env('MAIL_FROM', SMTP_USER);   // providers like Resend use a non-address SMTP user, so the visible sender is separate
 const SMTP_PORT = Number(env('SMTP_PORT', '465'));
 const mailer = nodemailer.createTransport({
   host: env('SMTP_HOST'), port: SMTP_PORT, secure: SMTP_PORT === 465,
   auth: { user: SMTP_USER, pass: env('SMTP_PASS') },
+  // Never hang: a mail server that does not answer must turn into a 'failed' row, not a row stuck in 'sending'.
+  connectionTimeout: 10_000, greetingTimeout: 10_000, socketTimeout: 20_000,
 });
 
 const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json' } });
@@ -176,11 +181,13 @@ function safeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-/** Sends one outbox row. Compare-and-swap on `status` means two parallel invocations can never both send the same mail. */
-async function processRow(id: string): Promise<string> {
+/** Sends one outbox row. Compare-and-swap on `status` means two parallel invocations can never both send the same mail.
+ *  `force` (manual retry only) also takes rows stuck in 'sending' (a crashed or timed-out run). Use it a minute after the last attempt. */
+async function processRow(id: string, force = false): Promise<string> {
   const { data: row } = await db.from('moderation_outbox').select('*').eq('id', id).maybeSingle();
   if (!row) return 'missing';
-  if (!['pending', 'failed'].includes(row.status) || row.attempts >= MAX_ATTEMPTS) return `skipped:${row.status}`;
+  const open = force ? ['pending', 'failed', 'sending'] : ['pending', 'failed'];
+  if (!open.includes(row.status) || row.attempts >= MAX_ATTEMPTS) return `skipped:${row.status}${row.attempts >= MAX_ATTEMPTS ? ':max_attempts' : ''}`;
   const { data: claimed } = await db.from('moderation_outbox')
     .update({ status: 'sending', attempts: row.attempts + 1 }).eq('id', id).eq('status', row.status).eq('attempts', row.attempts).select('id');
   if (!claimed?.length) return 'claimed-elsewhere';
@@ -188,7 +195,7 @@ async function processRow(id: string): Promise<string> {
     if (!row.to_email) throw new Error('no recipient');
     const m = render(row.kind, { username: row.username, payload: row.payload ?? {} }, cfg);
     await mailer.sendMail({
-      from: { name: FROM_NAME, address: SMTP_USER }, to: row.to_email,
+      from: { name: FROM_NAME, address: MAIL_FROM }, to: row.to_email,
       replyTo: cfg.supportEmail, subject: m.subject, text: m.text, html: m.html,
       headers: { 'X-Auto-Response-Suppress': 'All', 'Auto-Submitted': 'auto-generated' },
     });
@@ -198,21 +205,21 @@ async function processRow(id: string): Promise<string> {
     const msg = String((e as Error)?.message ?? e).slice(0, 300);
     console.error('moderation mail failed', id, msg);
     await db.from('moderation_outbox').update({ status: 'failed', last_error: msg }).eq('id', id);
-    return 'failed';
+    return `failed:${msg}`;
   }
 }
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'method' }, 405);
-  if (!env('MOD_WEBHOOK_SECRET') || !safeEqual(req.headers.get('x-webhook-secret') ?? '', env('MOD_WEBHOOK_SECRET'))) return json({ error: 'forbidden' }, 403);
+  if (!env('MOD_WEBHOOK_SECRET') || !safeEqual((req.headers.get('x-webhook-secret') ?? '').trim(), env('MOD_WEBHOOK_SECRET'))) return json({ error: 'forbidden' }, 403);
   if (!SMTP_USER || !env('SMTP_PASS') || !env('SMTP_HOST')) return json({ error: 'smtp_not_configured' }, 500);
 
   let body: any = {}; try { body = await req.json(); } catch { /* empty body is fine */ }
 
   if (body?.retry) {                                          // manual resend of everything that is stuck
-    const { data } = await db.from('moderation_outbox').select('id').in('status', ['pending', 'failed']).lt('attempts', MAX_ATTEMPTS).order('created_at').limit(25);
-    const results: Record<string, string> = {}; for (const r of data ?? []) results[r.id] = await processRow(r.id);
-    return json({ results });
+    const { data } = await db.from('moderation_outbox').select('id').in('status', ['pending', 'failed', 'sending']).lt('attempts', MAX_ATTEMPTS).order('created_at').limit(25);
+    const results: Record<string, string> = {}; for (const r of data ?? []) results[r.id] = await processRow(r.id, true);
+    return json({ count: Object.keys(results).length, results });
   }
   const id = body?.record?.id;                                // database webhook shape: { type, table, record: {...} }
   if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id)) return json({ error: 'bad_payload' }, 400);
