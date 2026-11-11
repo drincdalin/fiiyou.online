@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { admin } from '../index.js';
 import { useImages, Avatar, ago } from './shared.jsx';
-import { DeletePlaceModal } from './ModerationModals.jsx';
+import { DeletePlaceModal, DeleteContentModal } from './ModerationModals.jsx';
 import { Flag, UsersThree, HardDrives, ClipboardText } from '@phosphor-icons/react';
 
 const TAB_ICONS = { reports: Flag, users: UsersThree, storage: HardDrives, log: ClipboardText };
@@ -9,7 +9,7 @@ const TAB_ICONS = { reports: Flag, users: UsersThree, storage: HardDrives, log: 
 const mb = (n) => `${(n / 1048576).toFixed(1)} MB`;
 
 function Reports({ go, notify, refresh, role }) {
-  const [status, setStatus] = useState('open'); const [rows, setRows] = useState(null); const [dp, setDp] = useState(null);
+  const [status, setStatus] = useState('open'); const [rows, setRows] = useState(null); const [dp, setDp] = useState(null); const [dc, setDc] = useState(null);
   const load = () => admin.reports(status).then(setRows).catch((e) => { notify(e.message, 'err'); setRows([]); }); useEffect(() => { setRows(null); load(); }, [status]);
   const img = useImages((rows || []).flatMap((r) => [r.preview?.image_path, r.preview?.avatar_path]));
   const run = async (fn, msg) => { try { await fn(); notify(msg); await load(); refresh(); } catch (e) { notify(e.message || 'Failed', 'err'); } };
@@ -28,13 +28,14 @@ function Reports({ go, notify, refresh, role }) {
         <div className="acts">
           {p && <button className="ghost sm" onClick={() => go('profile', p.author)}>Open profile</button>}
           {p && r.target_type === 'place' && <button className="ghost sm danger" onClick={() => setDp({ id: r.target_id, name: p.title, creator: p.author })}>Delete place…</button>}
-          {p && r.target_type !== 'profile' && r.target_type !== 'place' && <button className="ghost sm danger" onClick={() => confirm('Delete this content?') && run(async () => { r.target_type === 'post' ? await admin.deletePost(r.target_id) : await admin.deleteComment(r.target_type, r.target_id); await admin.setReport(r.id, 'reviewed'); }, 'Content deleted')}>Delete content</button>}
+          {p && r.target_type !== 'profile' && r.target_type !== 'place' && <button className="ghost sm danger" onClick={() => setDc({ type: r.target_type, id: r.target_id, reportId: r.id, author: p.author })}>Delete content…</button>}
           {p && role === 'admin' && <button className="ghost sm danger" onClick={() => delAccount(p.author_id, p.author)}>Delete account</button>}
           {p && role === 'admin' && <button className="ghost sm danger" onClick={() => banAccount(p.author_id, p.author, r.reason)}>Ban &amp; delete</button>}
           {status === 'open' && <><button className="primary sm" onClick={() => run(() => admin.setReport(r.id, 'reviewed'), 'Marked reviewed')}>Mark reviewed</button><button className="ghost sm" onClick={() => run(() => admin.setReport(r.id, 'dismissed'), 'Dismissed')}>Dismiss</button></>}
           {status !== 'open' && <button className="ghost sm" onClick={() => run(() => admin.setReport(r.id, 'open'), 'Reopened')}>Reopen</button>}
         </div></article>); })}
     {dp && <DeletePlaceModal place={dp} notify={notify} onClose={() => setDp(null)} onDone={() => { setDp(null); load(); refresh(); }} />}
+    {dc && <DeleteContentModal target={dc} notify={notify} onClose={() => setDc(null)} onDone={() => { setDc(null); load(); refresh(); }} />}
   </>);
 }
 

@@ -35,3 +35,34 @@ export function DeletePlaceModal({ place, onClose, onDone, notify }) {
     <div className="acts"><button className="primary danger" disabled={busy || !ok}>{busy ? 'Deleting…' : 'Delete place'}</button><button type="button" className="ghost" onClick={onClose}>Cancel</button></div>
   </form></div>);
 }
+
+/** Moderator / admin: remove a post or comment with a predefined (or custom) reason. The author is emailed that reason.
+ *  target = { type: 'post' | 'post_comment' | 'wall_comment', id, reportId?, author? } */
+export function DeleteContentModal({ target, onClose, onDone, notify }) {
+  const dlg = useRef(null); useDialog(dlg, onClose);
+  const [code, setCode] = useState('guidelines'); const [text, setText] = useState(''); const [busy, setBusy] = useState(false);
+  const custom = code === 'custom'; const ok = !custom || text.trim().length >= 5;
+  const what = target.type === 'post' ? 'post' : 'comment';
+  const send = async (e) => {
+    e.preventDefault(); if (!ok || busy) return; setBusy(true);
+    try {
+      const r = target.type === 'post'
+        ? await admin.deletePost(target.id, code, text.trim())
+        : await admin.deleteComment(target.type, target.id, code, text.trim());
+      if (target.reportId) { try { await admin.setReport(target.reportId, 'reviewed'); } catch { /* the content is already gone; the report can be closed by hand */ } }
+      notify(`${what === 'post' ? 'Post' : 'Comment'} removed${r?.notified ? ' · author emailed' : ''}`);
+      onDone?.();
+    } catch (er) {
+      const m = String(er?.message || '');
+      notify(m.includes('forbidden') ? 'You are not allowed to do this.' : m.includes('not_found') ? `This ${what} is already gone.` : m.includes('reason_required') ? 'Write a reason (at least 5 characters).' : `Could not delete the ${what}.`, 'err');
+      setBusy(false);
+    }
+  };
+  return (<div className="modal" onClick={onClose}><form className="panel mform" role="dialog" aria-modal="true" aria-label={`Delete ${what}`} ref={dlg} onClick={(e) => e.stopPropagation()} onSubmit={send}>
+    <h3>Delete this {what}?</h3>
+    <p className="muted">The reason below is emailed to the author{target.author ? ` (@${target.author})` : ''}, and the report is marked as reviewed.</p>
+    <select value={code} onChange={(e) => setCode(e.target.value)} aria-label="Reason">{admin.CONTENT_REASONS.map(([c, l]) => <option key={c} value={c}>{l}</option>)}</select>
+    <textarea rows="3" maxLength={300} required={custom} placeholder={custom ? 'Explain why (required, shown to the author)' : 'Optional extra note for the author'} value={text} onChange={(e) => setText(e.target.value)} />
+    <div className="acts"><button className="primary danger" disabled={busy || !ok}>{busy ? 'Deleting…' : `Delete ${what}`}</button><button type="button" className="ghost" onClick={onClose}>Cancel</button></div>
+  </form></div>);
+}
