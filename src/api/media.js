@@ -15,10 +15,14 @@ export async function compressImage(file, preset = 'photo') {
     return file;
   }
   const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
-  let scale = Math.min(1, max / Math.max(bmp.width, bmp.height)), blob;
+  // Avatars are stored SQUARE. Everything that shows one (circles, the 5:6 profile frame, chat bubbles, notifications) then looks right
+  // without guessing. Landscape: centred. Portrait: the square starts 30% from the top, because faces sit in the upper part of a photo.
+  let sx = 0, sy = 0, sw = bmp.width, sh = bmp.height;
+  if (preset === 'avatar') { const s = Math.min(bmp.width, bmp.height); sx = (bmp.width - s) / 2; sy = bmp.height > bmp.width ? (bmp.height - s) * 0.3 : 0; sw = sh = s; }
+  let scale = Math.min(1, max / Math.max(sw, sh)), blob;
   for (let round = 0; round < 6; round++) {
-    const c = new OffscreenCanvas(Math.max(1, Math.round(bmp.width * scale)), Math.max(1, Math.round(bmp.height * scale)));
-    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    const c = new OffscreenCanvas(Math.max(1, Math.round(sw * scale)), Math.max(1, Math.round(sh * scale)));
+    c.getContext('2d').drawImage(bmp, sx, sy, sw, sh, 0, 0, c.width, c.height);
     for (let q = 0.82; q >= 0.4; q -= 0.14) { blob = await c.convertToBlob({ type: 'image/webp', quality: q }); if (blob.size <= kb * 1024) return blob; }
     scale *= 0.85;                                       // still too big: shrink and retry
   }

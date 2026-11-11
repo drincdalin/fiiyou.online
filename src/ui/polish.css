@@ -78,3 +78,6 @@ html, body { overscroll-behavior-y: none; }   /* the browser's pull-down-to-relo
 .mheart.pop svg { animation: likepop .5s cubic-bezier(.3, 1.6, .5, 1); }
 .replybtn.likebtn.on { color: var(--pink, #ff4d6d); }
 @media (prefers-reduced-motion: reduce) { .mheart.pop svg { animation: none; } }
+
+/* Avatars that were uploaded before square-cropping existed (non-square files): never stretch, keep faces in frame. */
+.av img, .avatar img { object-fit: cover; object-position: 50% 30%; }

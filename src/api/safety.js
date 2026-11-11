@@ -20,3 +20,9 @@ export async function report(targetType, targetId, reason) {
   const { data: { user } } = await supabase.auth.getUser();
   unwrap(await supabase.from('reports').insert({ reporter_id: user.id, target_type: targetType, target_id: targetId, reason }));
 }
+
+export const REPORT_CATEGORIES = [['spam', 'Spam or advertising'], ['explicit', 'Explicit content'], ['inaccurate_location', 'Inaccurate location'], ['abuse', 'Abuse or harassment'], ['other', 'Something else']];
+/** Report a place (or a post) with a category. Throws 'duplicate' (23505) if you already have an open report on it, 'cannot_report_own' for your own place. */
+export async function reportContent(targetType, targetId, category, details) {
+  unwrap(await supabase.rpc('submit_report', { p_type: targetType, p_id: targetId, p_category: category, p_details: details || null }));
+}

@@ -235,14 +235,16 @@ export function LikersModal({ load, go, onClose }) {
 
 export function ReportModal({ target, onClose, notify }) {
   const dlg = useRef(null); useDialog(dlg, onClose);
-  const [reason, setReason] = useState(''); const [busy, setBusy] = useState(false);
+  const [reason, setReason] = useState(''); const [busy, setBusy] = useState(false); const [cat, setCat] = useState('spam');
+  const place = target.type === 'place';           // places use a category + optional details (submit_report); everything else keeps the free-text report
   const send = async (e) => { e.preventDefault(); setBusy(true);
-    try { await safety.report(target.type, target.id, reason.trim()); notify('Report sent. Thank you.'); onClose(); }
-    catch (er) { notify(er.message?.includes('rate_limit') ? 'Too many reports. Try again later.' : 'Could not send the report.', 'err'); setBusy(false); } };
+    try { if (place) await safety.reportContent('place', target.id, cat, reason.trim()); else await safety.report(target.type, target.id, reason.trim()); notify('Report sent. Thank you.'); onClose(); }
+    catch (er) { const m = `${er?.message || ''}`; notify(m.includes('rate_limit') ? 'Too many reports. Try again later.' : er?.code === '23505' ? 'You already reported this. We will review it.' : m.includes('cannot_report_own') ? 'This is your own place.' : 'Could not send the report.', 'err'); setBusy(false); } };
   return (<div className="modal" onClick={onClose}><form className="panel mform" role="dialog" aria-modal="true" aria-label="Report" ref={dlg} onClick={(e) => e.stopPropagation()} onSubmit={send}>
     <h3>Report</h3><p className="muted">Tell us what is wrong. Reports are reviewed by the operator.</p>
-    <textarea autoFocus required rows="3" maxLength={500} placeholder="What is the problem?" value={reason} onChange={(e) => setReason(e.target.value)} />
-    <div className="acts"><button className="primary" disabled={busy || !reason.trim()}>Send report</button><button type="button" className="ghost" onClick={onClose}>Cancel</button></div></form></div>);
+    {place && <select value={cat} onChange={(e) => setCat(e.target.value)} aria-label="Reason">{safety.REPORT_CATEGORIES.map(([c, l]) => <option key={c} value={c}>{l}</option>)}</select>}
+    <textarea autoFocus required={!place || cat === 'other'} rows="3" maxLength={500} placeholder={place ? 'Details (optional unless “Something else”)' : 'What is the problem?'} value={reason} onChange={(e) => setReason(e.target.value)} />
+    <div className="acts"><button className="primary" disabled={busy || (place ? cat === 'other' && !reason.trim() : !reason.trim())}>Send report</button><button type="button" className="ghost" onClick={onClose}>Cancel</button></div></form></div>);
 }
 
 /** One composer for posts, questions and events. Stays one line until you focus it. fixedPlace = place id when posting from a map place.

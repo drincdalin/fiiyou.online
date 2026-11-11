@@ -2,6 +2,11 @@ import { supabase, unwrap } from '../lib/client.js';
 // Every call is re-checked by the database (is_admin()); hiding the UI is only a convenience.
 const rpc = async (fn, args) => unwrap(await supabase.rpc(fn, args));
 export const isAdmin = async () => { try { return !!(await rpc('is_admin')); } catch { return false; } };
+/** 'admin' | 'moderator' | null. Display only (which tabs to show): the database re-checks the role on every call. */
+export const role = async () => {
+  try { return (await rpc('staff_role')) || null; }
+  catch { return (await isAdmin()) ? 'admin' : null; }   // migration 0035 not run yet: an admin keeps the Admin tab
+};
 export const stats = () => rpc('admin_stats');
 export const reports = (status = 'open') => rpc('admin_reports', { p_status: status });
 export const setReport = (id, status) => rpc('admin_set_report', { p_id: id, p_status: status });
@@ -9,6 +14,19 @@ export const deleteComment = (type, id) => rpc('admin_delete_comment', { p_type:
 export const setVerified = (id, on) => rpc('admin_set_verified', { p_profile: id, p_on: on });
 export const searchUsers = (q) => rpc('admin_search_users', { p_q: q || '' });
 export const log = () => rpc('admin_log', { p_limit: 50 });
+export const setModerator = (id, on) => rpc('admin_set_moderator', { p_user: id, p_on: on });
+
+/** Predefined reasons for removing a place. 'custom' needs a written reason. Codes must match the CHECK on deletion_log. */
+export const DELETION_REASONS = [
+  ['guidelines', 'Violates Community Guidelines'],
+  ['inaccurate_location', 'Inaccurate Location Data'],
+  ['spam', 'Spam / Commercial Abuse'],
+  ['duplicate', 'Duplicate Marker'],
+  ['custom', 'Custom Reason'],
+];
+/** Any moderator or admin may remove any place. Closes its open reports, logs it, and emails the creator the chosen reason. */
+export const deletePlace = (id, reasonCode, reasonText) => rpc('admin_delete_place', { p_id: id, p_reason_code: reasonCode, p_reason_text: reasonText || null });
+export const deletionLog = () => rpc('admin_deletion_log', { p_limit: 50 });
 
 async function removeFiles(bucket, paths) { for (let i = 0; i < paths.length; i += 100) unwrap(await supabase.storage.from(bucket).remove(paths.slice(i, i + 100))); }
 /** Deletes the post, then its image file (SQL can't delete files; the Storage API can, and admins are allowed to). */
@@ -28,9 +46,9 @@ export async function deleteUser(id) {
   await rpc('admin_delete_user', { p_user: id });
 }
 /** Same as deleteUser, but the database also remembers the (hashed) email so it can never sign up again. */
-export async function banUser(id, reason) {
+export async function banUser(id, reason, userMessage) {
   await removeUserFiles(id);
-  await rpc('admin_ban_user', { p_user: id, p_reason: reason || null });
+  await rpc('admin_ban_user', { p_user: id, p_reason: reason || null, p_user_message: userMessage || null });   // p_reason is internal; p_user_message is emailed to the person
 }
 /** Undo a ban by email (not used in the UI yet). */
 export const unbanEmail = (email) => rpc('admin_unban_email', { p_email: email });
