@@ -2,7 +2,7 @@
 -- Run once in the SQL editor AFTER the function is deployed. Same mechanism as push_webhooks.sql. Safe to re-run.
 do $$
 declare
-  fn_url text := 'https://imwgljavptixnmhstufg.supabase.co';
+  fn_url text := 'https://imwgljavptixnmhstufg.supabase.co/functions/v1/send-moderation-email';
   secret text := '7dc5162d2d97c6f7a691dd44aa2d52d902f9aded0bf0ff25dbeadd5cf170a815';
   hdrs   text;
 begin
@@ -12,6 +12,3 @@ begin
   execute format('create trigger mail_on_moderation_outbox after insert on public.moderation_outbox for each row execute function supabase_functions.http_request(%L, %L, %L, %L, %L)',
                  fn_url, 'POST', hdrs, '{}', '8000');
 end $$;
--- Check:  select tgname from pg_trigger where tgname = 'mail_on_moderation_outbox';   -> 1 row
--- Stuck or failed mails:  select id, kind, status, attempts, last_error from public.moderation_outbox where status <> 'sent' order by created_at;
--- Resend them all:  curl -X POST https://YOUR-PROJECT-REF.supabase.co/functions/v1/send-moderation-email -H 'x-webhook-secret: ...' -d '{"retry":true}'
