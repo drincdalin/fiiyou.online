@@ -27,7 +27,7 @@ export default function Player({ src, title, artist, cover, cid, children }) {
 function YouTubePlayer({ id, title, artist, cover, cid, children }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className={`player${open ? ' live' : ''}`} data-cid={cid}>
+    <div className={`player ytp${open ? ' live' : ''}`} data-cid={cid}>
       <div className="pcover">
         {open
           ? <iframe className="pyt" title={title || 'Video player'} src={`https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&playsinline=1`}

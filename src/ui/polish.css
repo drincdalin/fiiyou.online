@@ -150,9 +150,8 @@ span.av.av { display: inline-block; position: relative; flex: none; aspect-ratio
    (align-content: space-between), so "0:00 / -0:00" floated half-way between the seek bar and the volume line, far from both.
    Now the cover / title / buttons sit at the top, and seek bar + times + volume stay together at the bottom; the spare height is one calm gap between the two groups. */
 @media (min-width: 1001px) {
-  .frame[data-layout=single] .side > .player:not(.live) { align-content: stretch; grid-template-rows: auto auto minmax(0, 1fr) auto auto; }
-  .frame[data-layout=single] .side > .player:not(.live) .seek { align-self: end; }
-  .frame[data-layout=single] .side > .player:not(.live) .times { align-self: start; }
+  /* when the picture is taller than the player, the player's content stays together in the middle of the box (it used to be pushed apart, leaving a hole) */
+  .frame[data-layout=single] .side > .player:not(.live) { align-content: center; grid-template-rows: none; }
 }
 
 
@@ -160,25 +159,28 @@ span.av.av { display: inline-block; position: relative; flex: none; aspect-ratio
 .mapbar { top: 12px; left: 12px; right: 12px; max-width: none; gap: 8px; align-items: center; }
 .mapview.open .mapbar { max-width: calc(100% - 400px - 24px); }
 @media (max-width: 1000px) { .mapview.open .mapbar { max-width: none; } }
-.mapbar .msearch { position: relative; display: flex; align-items: center; gap: 8px; flex: 1 1 280px; min-width: 0; max-width: 440px; height: 44px; padding: 0 5px 0 14px;
-  background: var(--scrim-hi, var(--g1)); border: 1px solid var(--g4); border-radius: 999px; box-shadow: 0 8px 24px -10px rgba(0, 0, 0, .7); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); transition: border-color .15s, box-shadow .15s; }
-.mapbar .msearch:focus-within { border-color: var(--accent); box-shadow: 0 8px 24px -10px rgba(0, 0, 0, .7), 0 0 0 3px var(--ring, color-mix(in srgb, var(--accent) 25%, transparent)); }
+/* The map controls look like the rest of the app: solid fills, 1px grey borders, the app's corner radius (--rad-m), and the accent colour only for the
+   active state, exactly like the fields, the tab buttons and the primary buttons everywhere else. */
+.mapbar .msearch { position: relative; display: flex; align-items: center; gap: 8px; flex: 1 1 280px; min-width: 0; max-width: 440px; height: 42px; padding: 0 4px 0 12px;
+  background: var(--g0); border: 1px solid var(--g3); border-radius: var(--rad-m, 12px); box-shadow: 0 4px 14px -6px rgba(0, 0, 0, .7); transition: border-color .15s, box-shadow .15s; }
+.mapbar .msearch:hover { border-color: var(--g4); }
+.mapbar .msearch:focus-within { border-color: var(--accent); box-shadow: 0 4px 14px -6px rgba(0, 0, 0, .7), 0 0 0 3px var(--ring, color-mix(in srgb, var(--accent) 25%, transparent)); }
 .mapbar .msearch > svg { flex: none; color: var(--muted); }
-.mapbar .msearch input, .mapbar .msearch input:hover, .mapbar .msearch input:focus { flex: 1; min-width: 0; width: auto; height: 100%; padding: 0; font-size: 1rem; font-weight: 500; background: none !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; outline: 0 !important; -webkit-appearance: none; appearance: none; }
-.mapbar .msearch .mclear { flex: none; display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 50%; background: var(--g3); color: var(--ink); height: 26px; }
-.mapbar .msearch .mclear:hover { background: var(--g4); }
-.mapbar .msearch .primary { flex: none; height: 34px; padding: 0 1rem; border-radius: 999px; box-shadow: none; }
-.mapbar .mtogs { display: inline-flex; gap: 4px; padding: 4px; height: 44px; box-sizing: border-box; background: var(--scrim-hi, var(--g1)); border: 1px solid var(--g4); border-radius: 999px; box-shadow: 0 8px 24px -10px rgba(0, 0, 0, .7); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
-.mapbar .mtog { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 .8rem; border: 1px solid transparent; border-radius: 999px; background: none; color: var(--muted); font-weight: 650; font-size: .9rem; white-space: nowrap; box-shadow: none; transition: background .15s, color .15s, border-color .15s; }
-.mapbar .mtog:hover { background: var(--hover); color: var(--ink); }
-.mapbar .mtog.on { background: color-mix(in srgb, var(--accent) 22%, transparent); border-color: color-mix(in srgb, var(--accent) 70%, transparent); color: var(--ink); }
-.mapbar .mtog .mcount { min-width: 1.4em; padding: 0 .35em; border-radius: 99px; background: var(--g3); color: var(--ink); font-size: .75rem; font-weight: 750; line-height: 1.5; text-align: center; }
+.mapbar .msearch input, .mapbar .msearch input:hover, .mapbar .msearch input:focus { flex: 1; min-width: 0; width: auto; height: 100%; padding: 0; font-size: inherit; font-weight: 500; background: none !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; outline: 0 !important; -webkit-appearance: none; appearance: none; }
+.mapbar .msearch .mclear { flex: none; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%; background: var(--g2); color: var(--ink); box-shadow: none; }
+.mapbar .msearch .mclear:hover { background: var(--g3); }
+.mapbar .msearch .primary { flex: none; height: 32px; min-height: 0; padding: 0 .9rem; border-radius: calc(var(--rad-m, 12px) - 3px); font-size: .9rem; box-shadow: none; }
+.mapbar .mtogs { display: inline-flex; gap: 8px; padding: 0; background: none; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.mapbar .mtog { display: inline-flex; align-items: center; gap: 7px; height: 42px; padding: 0 .9rem; background: var(--g1); border: 1px solid var(--g3); border-radius: var(--rad-m, 12px); color: var(--muted); font-weight: 650; font-size: .95rem; white-space: nowrap; box-shadow: 0 4px 14px -6px rgba(0, 0, 0, .7); transition: background .15s, color .15s, border-color .15s; }
+.mapbar .mtog:hover { background: var(--g1); border-color: var(--accent-fg, var(--accent)); color: var(--ink); }
+.mapbar .mtog.on, .mapbar .mtog.on:hover { background: color-mix(in srgb, var(--accent) 20%, var(--g1)); border-color: var(--accent); color: var(--ink); }   /* "showing": tinted + accent border, so the one solid accent button on this screen stays Add a place */
+.mapbar .mtog .mcount { min-width: 1.5em; margin: 0; padding: 0 .4em; border-radius: 99px; background: var(--g3); color: var(--ink); font-size: .75rem; font-weight: 750; line-height: 1.5; text-align: center; }
 .mapbar .mtog.on .mcount { background: var(--accent); color: var(--on-accent); }
-.mapbar .madd { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 1.05rem; border-radius: 999px; font-weight: 700; font-size: .92rem; white-space: nowrap; background: var(--accent); border: 1px solid var(--accent); color: var(--on-accent); box-shadow: 0 8px 24px -10px rgba(0, 0, 0, .7); }
+.mapbar .madd { display: inline-flex; align-items: center; gap: 6px; height: 42px; padding: 0 1rem; border-radius: var(--rad-m, 12px); font-weight: 700; font-size: .95rem; white-space: nowrap; background: var(--accent); border: 1px solid var(--accent); color: var(--on-accent); box-shadow: 0 4px 14px -6px rgba(0, 0, 0, .7); }
 .mapbar .madd:hover { filter: brightness(.92); border-color: var(--accent); }
-.mapbar .madd.on { background: var(--scrim-hi, var(--g1)); color: var(--ink); border-color: var(--g4); }
+.mapbar .madd.on { background: var(--g1); color: var(--ink); border-color: var(--g3); filter: none; }
 .mapbar button:focus-visible { outline: 2px solid var(--accent-fg, var(--accent)); outline-offset: 2px; }
-.sresults { top: 52px; }
+.sresults { top: 50px; }
 .sresults .muted { margin: 6px 10px; }
 .mrecenter { position: absolute; z-index: 500; right: 10px; bottom: 134px; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border-radius: var(--rad-m, 10px); background: var(--g1); color: var(--ink); border: 1px solid var(--g3); box-shadow: 0 4px 14px -6px rgba(0, 0, 0, .7); }
 .mrecenter:hover { background: var(--hover); border-color: var(--accent); }
@@ -188,9 +190,48 @@ span.av.av { display: inline-block; position: relative; flex: none; aspect-ratio
 .leaflet-control-attribution { font-size: 10px; }
 @media (max-width: 700px) {
   .mapbar { left: 8px; right: 8px; top: 8px; gap: 6px; }
-  .mapbar .msearch { flex: 1 1 100%; max-width: none; height: 46px; }
-  .mapbar .mtogs, .mapbar .madd { height: 44px; }
-  .mapbar .mtog { padding: 0 .6rem; gap: 4px; } .mapbar .madd { flex: 1 1 auto; justify-content: center; padding: 0 .8rem; }
+  .mapbar .msearch { flex: 1 1 100%; max-width: none; height: 44px; }
+  .mapbar .msearch input { font-size: 16px; }   /* 16px: iOS does not zoom the page when the field is focused */
+  .mapbar .mtogs { gap: 6px; }
+  .mapbar .mtog, .mapbar .madd { height: 44px; }
+  .mapbar .mtog { padding: 0 .75rem; gap: 5px; } .mapbar .madd { flex: 1 1 auto; justify-content: center; padding: 0 .8rem; }
+  .sresults { top: 52px; }
   .mrecenter { bottom: 78px; }
 }
 @media (prefers-reduced-motion: reduce) { .mapbar .mtog, .mapbar .msearch { transition: none; } }
+
+/* ---------- place panel (PlaceSheet in views.jsx) ----------
+   The title row stays at the top while the posts scroll, so the close button is always in reach (on a phone the panel is only half the screen).
+   Only the panel's OWN header is styled here: a post card inside it has a <header> too, and it must keep its normal layout. */
+.sheet { --sheet-pad: 14px; padding: var(--sheet-pad); padding-bottom: calc(var(--sheet-pad) + env(safe-area-inset-bottom, 0px)); }
+.sheet > header { position: sticky; top: calc(var(--sheet-pad) * -1); z-index: 10; margin: calc(var(--sheet-pad) * -1) calc(var(--sheet-pad) * -1) 0; padding: var(--sheet-pad) var(--sheet-pad) 10px; background: inherit; border-bottom: 1px solid var(--g3); }
+.sheet > header h3 { overflow-wrap: anywhere; }
+.sheet > header .muted { margin: 2px 0 0; }
+.sheet .post { width: 100%; }
+@media (max-width: 700px) { .sheet { --sheet-pad: 12px; } }
+/* phone: while a place is open the map only gets the top part of the screen, so just the search stays on it (the toggles and "Add a place" return when the panel is closed) */
+@media (max-width: 700px) { .mapview.open .mapbar .mtogs, .mapview.open .mapbar .madd { display: none; } }
+/* the panel slides in from the side, which used to push the whole page 24px wider than a phone screen for a moment: the map screen clips its own contents */
+.mapview { overflow: hidden; }
+
+/* ---------- profile, one-row layout (desktop): the top row is as tall as the picture ----------
+   The player used to decide the row height: padding taken from the theme's spacing, a song title that wrapped onto four lines in its narrow column, and
+   loose gaps. It was ~80px taller than the picture, so the name box and the picture were left with empty space. Now the player is compact enough
+   to fit beside the picture, whatever spacing the theme uses (the picture still wins when it is taller: the player simply stretches to it). */
+@media (min-width: 1001px) {
+  .frame[data-layout=single] .side > .player:not(.live) { padding: min(max(var(--step), 12px), 14px); row-gap: 6px; }
+  .frame[data-layout=single] .side { row-gap: 12px; }   /* was the theme's spacing: with a big value it alone made the left column taller than the picture */
+  .frame[data-layout=single] .player:not(.live) .ptitle { font-size: 1rem; line-height: 1.25; }
+  .frame[data-layout=single] .player:not(.live) .ptitle b { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+  .frame[data-layout=single] .player:not(.live) .ptitle span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .frame[data-layout=single] .player:not(.live) .volrow { padding-top: 4px; }
+}
+
+/* YouTube player (one-row layout): the cover is a 16:9 picture across the box, the same shape the video takes when you press play, so nothing jumps and
+   the box has no empty area under a small square. Its content sits in the middle when the picture beside it is taller. */
+@media (min-width: 1001px) {
+  .frame[data-layout=single] .side > .player.ytp { grid-template-columns: minmax(0, 1fr); grid-template-areas: "cover" "title" "ctrl"; grid-template-rows: none; align-content: center; row-gap: 10px; }
+  .frame[data-layout=single] .player.ytp .pcover { width: 100%; aspect-ratio: 16 / 9; align-self: auto; }
+  .frame[data-layout=single] .player.ytp .ptitle { text-align: center; align-self: auto; }
+  .frame[data-layout=single] .player.ytp .ctrl { justify-content: center; }
+}
