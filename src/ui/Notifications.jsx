@@ -3,7 +3,7 @@ import { Bell, ArrowRight, Heart, ChatCircle, UserPlus, UsersThree, ArrowBendUpL
 import { social } from '../index.js';
 import { Avatar, ago, useImages } from './shared.jsx';
 import { Verified } from './parts.jsx';
-import { groupNotifications, actorsLabel } from '../lib/notifGroups.js';
+import { groupNotifications, ungroupNotifications, actorsLabel } from '../lib/notifGroups.js';
 
 // ---------------------------------------------------------------------------------------------
 // The only calls this file makes to your backend (see api/social.js, 0020_notifications.sql and 0025_wall_notifications.sql):
@@ -14,7 +14,8 @@ import { groupNotifications, actorsLabel } from '../lib/notifGroups.js';
 //   social.unreadNotifications()      -> number
 //   social.markNotificationsReadIds(ids) -> marks those notifications as read
 //   social.onNotification(meId, cb)   -> realtime hook, returns an unsubscribe function
-// Notifications of the same kind on the same post / photo / comment are shown as one line ("Ana and 3 others liked your post").
+// In the account menu, notifications of the same kind on the SAME post / photo / comment are shown as one line ("Ana and 3 others liked your post").
+// The /notifications page (grouped={false}) shows every single notification on its own line, newest first, 50 at a time ("Show older").
 // Opening the list IS seeing it: everything shown is marked read straight away (no buttons to tap). Lines that were new when the list
 // opened keep their highlight until it is closed, so you can still tell what is new.
 // ---------------------------------------------------------------------------------------------
@@ -48,10 +49,13 @@ export function useNotifCount(meId) {
 }
 
 /** The list that sits inside the account menu (and on the /notifications page). Opening it marks what it shows as read. `onRead(remainingUnread)` keeps the badge in step. */
-export function NotificationList({ go, notify, tick, onRead, limit }) {
+export const PAGE_SIZE = 50;
+export function NotificationList({ go, notify, tick, onRead, limit, grouped = true }) {
   const [rows, setRows] = useState(null);
+  const [fetchN, setFetchN] = useState(PAGE_SIZE);   // how many rows to ask the database for; "Show older" raises it (page only)
+  const fetchRef = useRef(PAGE_SIZE); fetchRef.current = fetchN;
   const fresh = useRef(new Set());   // ids that were unread when they arrived here: they stay highlighted while this list is open
-  const load = useCallback(() => social.listNotifications().then((r) => {
+  const load = useCallback(() => social.listNotifications(fetchRef.current).then((r) => {
     const list = r || [];
     const unseen = list.filter((x) => !x.read).map((x) => x.id);
     unseen.forEach((id) => fresh.current.add(id));
@@ -61,9 +65,9 @@ export function NotificationList({ go, notify, tick, onRead, limit }) {
       social.markNotificationsReadIds(unseen).catch(() => onRead(unseen.length));
     }
   }).catch(() => { setRows((x) => x || []); notify('Could not load notifications', 'err'); }), []);   // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { load(); }, [tick]);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, [tick, fetchN]);   // eslint-disable-line react-hooks/exhaustive-deps
 
-  const groups = useMemo(() => groupNotifications(rows || []), [rows]);
+  const groups = useMemo(() => (grouped ? groupNotifications(rows || []) : ungroupNotifications(rows || [])), [rows, grouped]);
   const img = useImages(groups.map((g) => g.latest.actor?.avatar_path));
   const shown = limit ? groups.slice(0, limit) : groups;   // the account menu shows the latest few; the page shows all
 
@@ -83,11 +87,12 @@ export function NotificationList({ go, notify, tick, onRead, limit }) {
             <span className="nav2"><Avatar src={img[r.actor?.avatar_path]} size={36} name={r.actor?.display_name || r.actor?.username} /><i className="nic"><Icon size={10} weight="fill" aria-hidden="true" /></i></span>
             <span className="ntxt"><span><b>{actorsLabel(g.actors)}</b>{g.actors.length === 1 && g.actors[0].official && <Verified />} {text}{count > g.actors.length && g.actors.length === 1 && g.targetCount <= 1 ? ` (${count})` : ''}</span><small>{ago(r.created_at)}</small></span></button>
         </li>); })}</ul>}
-    {limit && groups.length > limit && <button type="button" className="nseeall" onClick={() => go('notifications')}>See all notifications<ArrowRight size={14} weight="bold" aria-hidden="true" /></button>}
+    {limit && (groups.length > limit || (rows?.length || 0) > shown.length) && <button type="button" className="nseeall" onClick={() => go('notifications')}>See all notifications<ArrowRight size={14} weight="bold" aria-hidden="true" /></button>}
+    {!limit && rows && rows.length >= fetchN && <button type="button" className="nseeall nmore" onClick={() => setFetchN((n) => n + PAGE_SIZE)}>Show older notifications</button>}
   </section>);
 }
 
 /** The /notifications page. */
 export default function NotificationsView(props) {
-  return (<div className="plain view"><h2>Notifications</h2><div className="panel npanel"><NotificationList {...props} /></div></div>);
+  return (<div className="plain view"><h2>Notifications</h2><div className="panel npanel"><NotificationList {...props} grouped={false} /></div></div>);
 }

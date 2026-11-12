@@ -2,8 +2,8 @@
 -- Run once in the SQL editor AFTER the function is deployed. Same mechanism as push_webhooks.sql. Safe to re-run.
 do $$
 declare
-  fn_url text := 'https://imwgljavptixnmhstufg.supabase.co/functions/v1/send-moderation-email';
-  secret text := '7dc5162d2d97c6f7a691dd44aa2d52d902f9aded0bf0ff25dbeadd5cf170a815';
+  fn_url text := 'https://YOUR-PROJECT-REF.supabase.co/functions/v1/send-moderation-email';
+  secret text := 'THE-SAME-MOD_WEBHOOK_SECRET-AS-IN-THE-FUNCTION-SECRETS';
   hdrs   text;
 begin
   if fn_url like '%YOUR-PROJECT-REF%' or secret like 'THE-SAME-%' then raise exception 'Fill in fn_url and secret first'; end if;

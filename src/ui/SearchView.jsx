@@ -3,6 +3,7 @@ import { posts, discover, friends } from '../index.js';
 import { useImages, Avatar } from './shared.jsx';
 import { PostCard } from './parts.jsx';
 import { ErrorState, friendlyError } from './errors.jsx';
+import LocalityPicker from './LocalityPicker.jsx';
 
 /** Search (/search?q=…) and the hashtag page (/tag/<tag>). One place for finding things:
  *  - nothing typed: trending hashtags + people to discover (random or newest, any locality)
@@ -75,7 +76,7 @@ export default function SearchView({ me, go, notify, onInvite, initialQuery = ''
     <div className="inline" role="search">
       <input autoFocus={!embedded && !initialQuery && !initialTag} type="search" inputMode="search" enterKeyHint="search" value={tag ? `#${tag}` : q} maxLength={80} placeholder="Search people, posts and #hashtags"
         aria-label="Search" onChange={(e) => { if (tag) setTag(''); setQ(e.target.value); setTab('all'); }} />
-      {!tag && <select value={loc} onChange={(e) => setLoc(e.target.value)} aria-label="Show people from"><option value="">People: anywhere</option>{locs.map((l) => <option key={l.id} value={l.id}>People: {l.name}</option>)}</select>}
+      {!tag && <LocalityPicker locs={locs} value={loc} onChange={setLoc} emptyLabel="People: anywhere" ariaLabel="Show people from" />}
       {(q || tag) && <button type="button" className="ghost sm" onClick={() => { setQ(''); setTag(''); }}>Clear</button>}
     </div>
 

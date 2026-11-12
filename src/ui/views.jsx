@@ -11,6 +11,7 @@ import { DeletePlaceModal, useStaffRole } from './ModerationModals.jsx';
 import { ErrorState, friendlyError } from './errors.jsx';
 import { ArrowBendUpLeft, ArrowDown, CalendarBlank, ChatsCircle, Heart, MagnifyingGlass, PaperPlaneRight, PushPin, UsersThree, X } from '@phosphor-icons/react';
 import './more.css';
+import LocalityPicker from './LocalityPicker.jsx';
 
 /* The feeds you already opened stay in memory while the app is open: Back from a profile or a post shows the feed (and your place in it)
    at once and refreshes it quietly, instead of an empty screen and a reload. Keyed by person + filter, so nobody sees someone else's feed. */
@@ -102,7 +103,7 @@ export function HomeView({ me, go, notify, unread }) {
   return (<div className="plain wide view"><div className="homegrid"><Snapshot go={go} unread={unread} />
     <div className="homemain"><Composer me={me} places={places} onPosted={() => f.load(false)} notify={notify} />
       <div className="tabs"><div role="tablist" aria-label="Feed" className="tabsin"><button role="tab" aria-selected={tab === 'nearby'} className={tab === 'nearby' ? 'on' : ''} onClick={() => setTab('nearby')}>Around you</button><button role="tab" aria-selected={tab === 'friends'} className={tab === 'friends' ? 'on' : ''} onClick={() => setTab('friends')}>Friend updates</button><button role="tab" aria-selected={tab === 'events'} className={tab === 'events' ? 'on' : ''} onClick={() => setTab('events')}>Events</button></div>
-        <select value={loc} onChange={(e) => setLoc(e.target.value)} aria-label="Place"><option value="">All localities</option>{locs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></div>
+        <LocalityPicker locs={locs} value={loc} onChange={setLoc} emptyLabel="All localities" ariaLabel="Place" pinnedIds={me?.locality_id ? [me.locality_id] : []} /></div>
       <List f={f} me={me} go={go} notify={notify} Icon={tab === 'friends' ? UsersThree : tab === 'events' ? CalendarBlank : ChatsCircle} empty={tab === 'friends' ? 'Nothing from friends yet. Add a few people and their posts show up here.' : tab === 'events' ? 'No upcoming events. Post one and invite your neighbours.' : 'No posts yet. Be the first to say something.'} /></div></div></div>);
 }
 
@@ -181,7 +182,7 @@ export function MapView({ me, go, notify }) {
     {pin && <div className="modal" onClick={() => setPin(null)}><form className="panel mform" onClick={(e) => e.stopPropagation()} onSubmit={savePlace}><h3>New place</h3>
       <input autoFocus required minLength={2} maxLength={80} placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
       <textarea rows="2" maxLength={300} placeholder="Short description (optional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-      <select aria-label="Locality" value={form.locality} onChange={(e) => setForm({ ...form, locality: e.target.value })}><option value="">Locality (optional)</option>{locs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select>
+      <LocalityPicker locs={locs} value={form.locality} onChange={(id) => setForm({ ...form, locality: id })} emptyLabel="Locality (optional)" ariaLabel="Locality" />
       <div className="acts"><button className="primary">Save place</button><button type="button" className="ghost" onClick={() => setPin(null)}>Cancel</button></div></form></div>}
   </div>);
 }
@@ -322,7 +323,7 @@ export function PeopleView({ me, go, notify }) {
   return (<div className="plain view"><div className="tabs">
     {[['discover', 'Discover'], ['friends', `Friends`], ['requests', 'Requests']].map(([k, l]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l} {k === 'friends' && <span className="count">{fl.length}</span>}{k === 'requests' && inc.length > 0 && <span className="count hot">{inc.length}</span>}</button>)}</div>
     {tab === 'discover' && <><div className="inline"><input placeholder="Search name or @username" value={q} onChange={(e) => setQ(e.target.value)} />
-      <select aria-label="Place" value={loc} onChange={(e) => setLoc(e.target.value)}><option value="">Anywhere</option>{locs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select>
+      <LocalityPicker locs={locs} value={loc} onChange={setLoc} emptyLabel="Anywhere" ariaLabel="Place" />
       <select aria-label="Order" value={mode} onChange={(e) => setMode(e.target.value)}><option value="random">Random</option><option value="new">Newest</option></select></div>
       {!people.length && <p className="empty">No one to show.</p>}
       {people.map((p) => row(p, sent[p.id] ? <small>Request sent</small> : <button className="primary sm" onClick={() => friends.sendRequest(p.id).then(() => { setSent({ ...sent, [p.id]: 1 }); notify('Request sent'); }).catch((e) => notify(e.message, 'err'))}>Add</button>,

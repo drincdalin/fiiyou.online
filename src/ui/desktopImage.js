@@ -213,11 +213,13 @@ export async function renderDesktop(opts) {
     },
     links: (iw, c) => {
       const items = (c.content?.links || []).filter((l) => l?.url).slice(0, 20), lts = textStyle('link'), L = lts.LH;
+      const lb = css.box('link'), lfx = lb.filter || (lb.opacity != null && lb.opacity < 1) ? { filter: lb.filter, opacity: lb.opacity } : null;   // a link is inline: filter and opacity apply, tilt does not
       return { h: items.length * L, draw: (x, y) => { const keep = curTS; use(lts); items.forEach((l, i) => {
         const ly = y + i * L; g.fillStyle = keep.ink; g.beginPath(); g.arc(x + 29, ly + L / 2, 2.6, 0, 7); g.fill();
         const label = l.label || l.url, font = F(400, lts.fs);
-        g.font = font; const s = ellipsize(g, label, iw - 40); put(s, x + 40, ly, font, lts.link, L);
-        g.fillStyle = lts.link; g.fillRect(x + 40, ly + L / 2 + lts.fs * 0.42, g.measureText(s).width, Math.max(1, lts.fs / 15));
+        g.font = font; const s = ellipsize(g, label, iw - 40), tw = g.measureText(s).width;
+        const paint = () => { put(s, x + 40, ly, font, lts.link, L); g.fillStyle = lts.link; g.fillRect(x + 40, ly + L / 2 + lts.fs * 0.42, tw, Math.max(1, lts.fs / 15)); };
+        if (lfx) fx.group({ x: x + 40, y: ly, w: tw, h: L, r: 0 }, lfx, paint); else paint();
       }); use(keep); } };
     },
     interests: (iw, c) => {
@@ -317,7 +319,7 @@ export async function renderDesktop(opts) {
       });
     } };
   };
-  const nameplateBlock = (w) => {
+  const nameplateBlock = (w, inHeadline = false) => {                       // inHeadline: the "single" layout shows the headline inside the name plate, like the page
     const nts = textStyle('nameplate'); use(nts);
     const vp = NP.pad ?? 16, hp = NP.pad ?? 12;                                // .nameplate { padding: 16px 12px }
     const iw = w - 2 * NP.bw - 2 * hp, h1f = F(800, fs * 1.5, nameStack), sf = F(500, fs * 0.88), badge = !!profile.verified, bd = fs * 1.5 * 0.8;
@@ -325,17 +327,20 @@ export async function renderDesktop(opts) {
     const handle = `@${profile.username}${profile.locality ? ` · ${profile.locality}` : ''}`, hl = wrapPlain(setF(sf), handle, iw);
     const fr = profile.friends ?? profile.friends_count, vw = profile.views;
     const stats = [fr != null ? plural(fr, 'friend') : '', vw != null ? plural(vw, 'view') : ''].filter(Boolean).join(' · ');
-    const h = 2 * NP.bw + 2 * vp + nameLines.length * h1LH + 4 + hl.length * sLH + (stats ? 4 + 2 + sLH : 0);
-    return { kind: 'nameplate', h, w, draw(x, y) {
+    const hf = F(400, fs * 0.9), hlh = fs * 0.9 * 1.45, hdl = inHeadline && profile.headline ? wrapPlain(setF(hf), profile.headline, iw - 12) : [];
+    const h = 2 * NP.bw + 2 * vp + nameLines.length * h1LH + 4 + hl.length * sLH + (stats ? 4 + 2 + sLH : 0) + (hdl.length ? 8 + hdl.length * hlh : 0);
+    return { kind: 'nameplate', h, w, draw(x, y, hh) {
       use(nts);
-      wrap(NP, { x, y, w, h }, () => {
-        let yy = y + NP.bw + vp; const mid = x + w / 2, al = nts.ta, ax = al === 'left' ? x + NP.bw + hp : al === 'right' ? x + w - NP.bw - hp : mid, an = al || 'center', dim = dimOf();
+      const bh = Math.max(h, hh || 0), off = (bh - h) / 2;                       // taller box (grid row): the content stays centred in it
+      wrap(NP, { x, y, w, h: bh }, () => {
+        let yy = y + off + NP.bw + vp; const mid = x + w / 2, al = nts.ta, ax = al === 'left' ? x + NP.bw + hp : al === 'right' ? x + w - NP.bw - hp : mid, an = al || 'center', dim = dimOf();
         nameLines.forEach((ln, i) => {
           const tw = wOf(h1f, ln), extra = badge && i === nameLines.length - 1 ? bd * 0.8 + 3 : 0, left = mid - (tw + extra) / 2;
           put(ln, left, yy + i * h1LH, h1f, ink, h1LH); if (extra) badgeAt(left + tw + 3 + bd * 0.4, yy + i * h1LH + h1LH / 2, bd * 0.4);
         });
         yy += nameLines.length * h1LH + 4; hl.forEach((ln, i) => put(ln, ax, yy + i * sLH, sf, dim, sLH, an)); yy += hl.length * sLH;
-        if (stats) put(stats, ax, yy + 6, sf, dim, sLH, an);
+        if (stats) { put(stats, ax, yy + 6, sf, dim, sLH, an); yy += 4 + 2 + sLH; }
+        if (hdl.length) { const hc = nts.custom ? rgba(nts.hex, nts.a * 0.78) : rgba(t.text_color, 0.78), hax = an === 'left' ? x + NP.bw + hp + 6 : an === 'right' ? x + w - NP.bw - hp - 6 : mid; hdl.forEach((ln, i) => put(ln, hax, yy + 8 + i * hlh, hf, hc, hlh, an)); }
       }, true);
     } };
   };
@@ -347,8 +352,44 @@ export async function renderDesktop(opts) {
       lines.forEach((ln, i) => put(ln, ax, y + i * lh, f, col, lh, al));
     } };
   };
-  const playerBlock = (w) => {
+  /** Single layout: what the page does at desktop width. A small square cover with the title and the buttons beside it, then the seek bar,
+   *  the times and the volume underneath, in a column that is never wider than 360px. `draw(x, y, hh)` stretches the box to hh (grid row span) and
+   *  spreads the rows out (align-content: space-between). */
+  const playerBlockWide = (w) => {
+    const pts = textStyle('player'); use(pts);
+    const pad = PL.pad, iw = w - 2 * PL.bw - 2 * pad, COV = cover ? Math.min(92, iw) : 0, gx = 14, gy = 6, CTRL = 32;
+    const tw = Math.max(40, cover ? iw - COV - gx : iw), tf = F(700, 19.2), af = F(400, 19.2 * 0.85);
+    const tl = wrapPlain(setF(tf), music.title || 'Untitled', tw).slice(0, 2), al = music.artist ? wrapPlain(setF(af), music.artist, tw).slice(0, 2) : [];
+    const tLH = 19.2 * 1.5, aLH = 19.2 * 0.85 * 1.5, titleH = tl.length * tLH + al.length * aLH, pairH = titleH + gy + CTRL, topH = Math.max(COV, pairH);
+    const SEEK = 16, TIMES = 10.5 * 1.5 - 6, VOL = 1 + 8 + 28;
+    const h = 2 * PL.bw + 2 * pad + topH + SEEK + TIMES + VOL + 3 * gy;
+    return { kind: 'player', h, w, draw(x, y, hh) {
+      use(pts);
+      const bh = Math.max(h, hh || 0), gp = gy, gTop = gy + (bh - h);   // spare height goes in ONE gap, above the seek bar (same as the page: seek bar + times + volume stay together)
+      wrap(PL, { x, y, w, h: bh }, () => {
+        let yy = y + PL.bw + pad; const ix = x + PL.bw + pad, soft = pts.custom ? rgba(pts.hex, pts.a * 0.6) : rgba(t.text_color, 0.6);
+        if (cover) pic(cover, ix, yy, COV, COV, r3, '♪', null);
+        const tx = cover ? ix + COV + gx : ix, al0 = cover ? 'left' : 'center', ax = cover ? tx : ix + iw / 2, py = yy + (topH - pairH) / 2;
+        tl.forEach((ln, i) => put(ln, ax, py + i * tLH, tf, ink, tLH, al0));
+        al.forEach((ln, i) => put(ln, ax, py + tl.length * tLH + i * aLH, af, soft, aLH, al0));
+        const cy = py + titleH + gy + CTRL / 2, st = 34, mid = cover ? tx + 14 + st : ix + iw / 2;           // buttons: 28px wide, 6px apart
+        g.fillStyle = ink;
+        g.beginPath(); g.rect(mid - st - 6, cy - 7, 2.5, 14); g.moveTo(mid - st + 11, cy - 7); g.lineTo(mid - st + 11, cy + 7); g.lineTo(mid - st - 3, cy); g.fill();
+        g.beginPath(); g.moveTo(mid - 7, cy - 10); g.lineTo(mid + 9, cy); g.lineTo(mid - 7, cy + 10); g.fill();
+        g.beginPath(); g.rect(mid + st + 3.5, cy - 7, 2.5, 14); g.moveTo(mid + st - 11, cy - 7); g.lineTo(mid + st - 11, cy + 7); g.lineTo(mid + st + 3, cy); g.fill();
+        yy += topH + gTop;
+        rr(g, ix, yy + 5, iw, 6, 3); g.fillStyle = rgba(t.text_color, 0.25); g.fill(); g.beginPath(); g.arc(ix + 7, yy + 8, 8, 0, 7); g.fillStyle = t.accent_color; g.fill(); yy += SEEK + gp;
+        const tf2 = F(400, 10.5); put('0:00', ix, yy, tf2, rgba(t.text_color, 0.6), 15.75); put('-0:00', ix + iw, yy, tf2, rgba(t.text_color, 0.6), 15.75, 'right'); yy += TIMES + gp;
+        g.fillStyle = t.border_color; g.fillRect(ix, yy, iw, 1); const vy = yy + 8 + 14;
+        g.fillStyle = ink; g.beginPath(); g.moveTo(ix + 3, vy - 3); g.lineTo(ix + 7, vy - 3); g.lineTo(ix + 12, vy - 8); g.lineTo(ix + 12, vy + 8); g.lineTo(ix + 7, vy + 3); g.lineTo(ix + 3, vy + 3); g.fill();
+        const sx = ix + 28, sw = iw - 28 - 44; rr(g, sx, vy - 3, sw, 6, 3); g.fillStyle = rgba(t.text_color, 0.25); g.fill(); rr(g, sx, vy - 3, sw * 0.7, 6, 3); g.fillStyle = t.accent_color; g.fill();
+        g.beginPath(); g.arc(sx + sw * 0.7, vy, 7, 0, 7); g.fillStyle = t.accent_color; g.fill(); put('70%', ix + iw, vy - 12, F(400, fs * 0.75), rgba(t.text_color, 0.7), 24, 'right');
+      }, true);
+    } };
+  };
+  const playerBlock = (w, wide = false) => {
     if (!hasMusic) return null;
+    if (wide) return playerBlockWide(w);
     const pts = textStyle('player'); use(pts);
     const pad = PL.pad, iw = w - 2 * PL.bw - 2 * pad, tf = F(700, 19.2), af = F(400, 19.2 * 0.85), gap = 10;
     const cov = cover ? iw : 0, tl = wrapPlain(setF(tf), music.title || 'Untitled', iw).slice(0, 2), al = music.artist ? wrapPlain(setF(af), music.artist, iw).slice(0, 2) : [];
@@ -388,12 +429,17 @@ export async function renderDesktop(opts) {
   /* place the sidebar blocks (inside the sidebar's own border + padding) */
   let sideBlocks, sideH;
   if (layout === 'single') {
-    const w1 = Math.min(sidebar, sideInner), w2 = Math.max(0, sideInner - w1 - gapSide);
-    const items = [[avatarBlock(w1)], [nameplateBlock(w2)], [headlineBlock(w1)], [playerBlock(w2)], [actionsBlock(w1)]].map(([b]) => b).filter(Boolean);
-    const grid = []; items.forEach((b, i) => { const col = i % 2, row = Math.floor(i / 2); grid[row] = grid[row] || []; grid[row][col] = b; });
-    let yy = 0; sideBlocks = [];
-    grid.forEach((row) => { const rh = Math.max(...row.filter(Boolean).map((b) => b.h)); row.forEach((b, col) => { if (b) sideBlocks.push({ b, dx: col ? w1 + gapSide : 0, dy: yy }); }); yy += rh + gapSide; });
-    sideH = Math.max(0, yy - gapSide);
+    /* what the page does at desktop width:  [ avatar ] [ name plate (+ headline) ] [ player ]
+                                             [ avatar ] [ buttons                 ] [ player ]      the player column is clamp(280px, 30%, 360px) */
+    const colGap = Math.max(num(t.card_gap, 24), 18), rowGap = Math.max(step, 12);
+    const A = Math.min(sidebar, sideInner), pw = hasMusic ? clamp(sideInner * 0.3, 280, 360) : 0;
+    const mw = Math.max(80, sideInner - A - colGap - (pw ? pw + colGap : 0));
+    const av = avatarBlock(A), np = nameplateBlock(mw, true), ac = actionsBlock(mw), pl = pw ? playerBlock(pw, true) : null;
+    const acH = ac ? rowGap + ac.h : 0, H = Math.max(av.h, np.h + acH, pl ? pl.h : 0), midX = A + colGap;
+    sideH = H;
+    sideBlocks = [{ b: av, dx: 0, dy: 0 }, { b: np, dx: midX, dy: 0, fillH: H - acH }];
+    if (ac) sideBlocks.push({ b: ac, dx: midX, dy: H - ac.h });
+    if (pl) sideBlocks.push({ b: pl, dx: midX + mw + colGap, dy: 0, fillH: H });
   } else {
     const items = [avatarBlock(sideInner), nameplateBlock(sideInner), headlineBlock(sideInner), playerBlock(sideInner), actionsBlock(sideInner)].filter(Boolean);
     let yy = 0; sideBlocks = items.map((b) => { const o = { b, dx: 0, dy: yy }; yy += b.h + gapSide; return o; }); sideH = Math.max(0, yy - gapSide);
@@ -486,7 +532,7 @@ export async function renderDesktop(opts) {
   const cardsX0 = cardsX + cardsPB, cardsY0 = cardsY + cardsPB;
 
   wrap(FR, { x: FX, y: FY, w: FRAME_W, h: frameH }, () => {
-    wrap(SD, sideRect, () => sideBlocks.forEach(({ b: blk, dx, dy }) => blk.draw(sideRect.x + sidePB + dx, sideRect.y + sidePB + dy)));
+    wrap(SD, sideRect, () => sideBlocks.forEach(({ b: blk, dx, dy, fillH }) => blk.draw(sideRect.x + sidePB + dx, sideRect.y + sidePB + dy, fillH)));
     if (layout !== 'single') { g.fillStyle = t.border_color; const dx = layout === 'side-left' ? gx + sidebar + gapCol : gx + cardsW + gapCol; g.fillRect(dx, gy, 1, gridH); }
     wrap(CS, cardsRect, () => {
       let yy = cardsRect.y + cardsPB;
