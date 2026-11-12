@@ -1,0 +1,180 @@
+/* ============================================================================================================================
+   Music player: mini dock, full-screen "Now playing" sheet, queue, seek bars, the profile card's extras.
+   Everything is prefixed .mp- (nothing here restyles an existing class except the few .player.mpcard lines at the end).
+   Loaded after polish.css in main.jsx.
+
+   DESIGN: the dock and the sheet are app chrome, so they are drawn exactly like the nav and the panels (design.css): the signed-in person's
+   theme tokens only (--g0..g4, --ink, --muted, --accent, --accent-fg, --on-accent, --edge, --lift, --lift-lg, --rad-*), flat surfaces,
+   2px borders, square-ish radii (no pills), a hard "lift" under the main buttons, heavy Ubuntu Sans weights. No fixed white / black except
+   over cover pictures, so every theme works, Paper (light) included. The cover picture only tints the background and fills the art.
+   ============================================================================================================================ */
+
+.mp-dock, .mp-sheet, .mp-stage {
+  --mp-dim: var(--muted); --mp-line: var(--g3); --mp-line2: var(--g4); --mp-hover: var(--hover);
+  --mp-acc: var(--accent); --mp-acc-fg: var(--accent-fg, var(--accent)); --mp-on: var(--on-accent);
+  --mp-ease: var(--ease, cubic-bezier(.2, .7, .2, 1)); --mp-spring: cubic-bezier(.34, 1.45, .5, 1);
+  font-family: var(--ui-font, system-ui, sans-serif);
+}
+
+/* ---------- pictures ---------- */
+.mp-cover, .mp-art-pic { width: 100%; height: 100%; object-fit: cover; display: block; user-select: none; -webkit-user-drag: none; animation: mp-fade .45s both; }
+.mp-cover.lb, .mp-art-pic.lb, .player .pplay .cover.lb { transform: scale(1.34); }   /* YouTube's 4:3 thumbnails carry black bars: zoom them out of the square */
+.mp-cover.ph, .mp-art-pic.ph, .mp-qthumb .ph { background: color-mix(in srgb, var(--mp-acc) 40%, var(--g2)); animation: none; }
+@keyframes mp-fade { from { opacity: 0; } }
+@keyframes mp-rot { to { transform: rotate(360deg); } }
+.mp-spin { animation: mp-rot .8s linear infinite; }
+
+/* ---------- buttons (same family as .tabs / .ghost / .primary) ---------- */
+.mp-ib { display: inline-grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: var(--rad-m, 12px); background: none; color: var(--ink); cursor: pointer; transition: background .15s, transform .15s var(--mp-spring), color .15s; -webkit-tap-highlight-color: transparent; }
+.mp-ib:hover { background: var(--mp-hover); } .mp-ib:active { transform: scale(.92); }
+.mp-ib:focus-visible, .mp-chip:focus-visible, .mp-playbig:focus-visible, .mp-dock-main:focus-visible, .mp-qmain:focus-visible, .mp-qdel:focus-visible, .mp-queue-head button:focus-visible, .mp-note button:focus-visible { outline: 2px solid var(--mp-acc-fg); outline-offset: 2px; }
+.mp-tog { position: relative; opacity: .7; } .mp-tog[aria-pressed="true"] { opacity: 1; color: var(--mp-acc-fg); }
+.mp-tog[aria-pressed="true"]::after { content: ""; position: absolute; bottom: 5px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: currentColor; }
+/* the one filled button: accent fill, readable text, hard lift that presses in (design.css .primary) */
+.mp-play-sm, .mp-playbig { display: inline-grid; place-items: center; border: 2px solid var(--edge); background: var(--mp-acc); color: var(--mp-on); cursor: pointer; box-shadow: var(--lift); transition: transform .12s, box-shadow .12s, filter .15s; -webkit-tap-highlight-color: transparent; }
+.mp-play-sm:hover, .mp-playbig:hover { filter: brightness(1.08); background: var(--mp-acc); }
+.mp-play-sm:active, .mp-playbig:active { transform: translateY(2px); box-shadow: 0 1px 0 color-mix(in srgb, var(--shade) 60%, transparent); }
+.mp-play-sm { width: 44px; height: 44px; margin: 0 2px; border-radius: var(--rad-m, 12px); }
+
+/* ---------- seek / volume bars (same look as the app's range inputs: thin track, accent thumb with a surface-coloured ring) ---------- */
+.mp-scrub { position: relative; display: block; width: 100%; height: 22px; cursor: pointer; touch-action: none; outline: none; -webkit-tap-highlight-color: transparent; --mp-h: 6px; --mp-fill: var(--mp-acc-fg); --mp-track: var(--g3); --mp-ring: var(--g1); }
+.mp-scrub:hover, .mp-scrub.dragging, .mp-scrub:focus-visible { --mp-h: 10px; }
+.mp-scrub-rail { position: absolute; left: 0; right: 0; top: 50%; height: var(--mp-h); transform: translateY(-50%); border-radius: 6px; background: var(--mp-track); overflow: hidden; transition: height .15s var(--mp-ease); }
+.mp-scrub-buf, .mp-scrub-fill { position: absolute; inset: 0 auto 0 0; border-radius: inherit; }
+.mp-scrub-buf { background: var(--g4); } .mp-scrub-fill { background: var(--mp-fill); }
+.mp-scrub-thumb { position: absolute; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: var(--mp-fill); border: 3px solid var(--mp-ring); box-shadow: 0 0 0 1px var(--mp-fill); transform: scale(0); transition: transform .15s var(--mp-spring); pointer-events: none; }
+.mp-scrub:hover .mp-scrub-thumb, .mp-scrub.dragging .mp-scrub-thumb, .mp-scrub:focus-visible .mp-scrub-thumb { transform: scale(1); }
+.mp-scrub:focus-visible { outline: 2px solid var(--mp-acc-fg); outline-offset: 3px; border-radius: 8px; }
+.mp-scrub.off { opacity: .45; cursor: default; } .mp-scrub.off .mp-scrub-thumb { display: none; }
+
+/* ---------- mini dock: a panel, like the nav, floating above the page ---------- */
+.mp-dock { position: fixed; z-index: 50; left: 0; right: 0; margin-inline: auto; bottom: 14px; width: min(440px, calc(100vw - 24px)); height: 54px; display: flex; align-items: center; gap: 2px; padding: 6px 6px 6px 6px;
+  border-radius: var(--rad-l, 14px); color: var(--ink); overflow: hidden; isolation: isolate; background: var(--g1); border: 2px solid var(--g3); box-shadow: 0 8px 24px -10px color-mix(in srgb, var(--shade) 80%, transparent);
+  animation: mp-dock-in .55s var(--mp-spring) backwards; transition: transform .38s var(--mp-ease), opacity .25s, border-color .25s; }
+.mp-dock[data-playing="true"] { border-color: var(--g4); }
+.mp-dock[data-hidden] { transform: translateY(140%); opacity: 0; pointer-events: none; }
+@keyframes mp-dock-in { from { transform: translateY(40px) scale(.94); opacity: 0; } }
+.mp-dock-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; border-radius: var(--rad-m, 12px); -webkit-tap-highlight-color: transparent; }
+.mp-dock-art { position: relative; flex: none; width: 38px; height: 38px; border-radius: var(--rad-s, 10px); overflow: hidden; background: var(--g2); border: 0; transition: transform .5s var(--mp-spring); }
+.mp-dock[data-playing="false"] .mp-dock-art { transform: scale(.94); }
+.mp-dock-meta { display: grid; min-width: 0; line-height: 1.25; } .mp-dock-meta b { font-weight: 800; font-size: .88rem; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mp-dock-meta small { color: var(--mp-dim); font-size: .75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mp-dock-ctl { display: flex; align-items: center; flex: none; }
+.mp-dock-prog { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--mp-acc-fg); transform-origin: 0 50%; transform: scaleX(0); pointer-events: none; }
+
+.mp-dock .mp-ib { width: 34px; height: 34px; border-radius: var(--rad-s, 10px); }
+.mp-dock .mp-play-sm { width: 36px; height: 36px; margin: 0 1px; box-shadow: 0 2px 0 color-mix(in srgb, var(--shade) 55%, transparent); }
+
+/* ---------- full-screen sheet: the app's own near-black page, tinted by the cover ---------- */
+.mp-sheet { position: fixed; inset: 0; z-index: 700; display: flex; flex-direction: column; color: var(--ink); font-weight: 600; overflow: hidden; outline: none;
+  padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); background: var(--g0);
+  animation: mp-sheet-in .46s var(--mp-ease) backwards; }
+.mp-sheet[data-closing] { animation: mp-sheet-out .3s var(--mp-ease) forwards; }
+@keyframes mp-sheet-in { from { transform: translateY(100%); } } @keyframes mp-sheet-out { to { transform: translateY(100%); } }
+html.mp-lock { overflow: hidden; }
+.mp-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.mp-bg img { position: absolute; left: -25%; top: -25%; width: 150%; height: 150%; object-fit: cover; filter: blur(70px) saturate(1.6); opacity: .3; animation: mp-fade .8s both; }
+.mp-bg i { position: absolute; inset: 0; background: linear-gradient(color-mix(in srgb, var(--g0) 35%, transparent), var(--g0) 92%); }
+.mp-top { position: relative; z-index: 2; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; touch-action: none; }
+.mp-grab { position: absolute; left: 50%; top: 14px; width: 42px; height: 5px; margin-left: -21px; border-radius: 9px; background: var(--g4); pointer-events: none; }
+.mp-body { position: relative; z-index: 1; flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); }
+.mp-main { display: flex; flex-direction: column; justify-content: center; gap: 14px; width: 100%; max-width: 560px; margin: 0 auto; padding: 0 24px 18px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+
+.mp-art { position: relative; width: min(100%, 40vh, 380px); aspect-ratio: 1; margin: 0 auto 6px; flex: none; transition: transform .65s var(--mp-spring); }
+.mp-art[data-playing="false"] { transform: scale(.9); }
+.mp-art[data-video] { width: min(100%, 560px, calc(36vh * 16 / 9)); aspect-ratio: 16 / 9; transform: none; }   /* video view: a true 16:9 window instead of a cropped square */
+.mp-art[data-video] .mp-art-glow, .mp-art[data-video] .mp-art-img { border-radius: var(--rad-xl, 18px); }
+.mp-art-glow { position: absolute; inset: 9% 4% -7%; background: center / cover; filter: blur(38px) saturate(1.5); opacity: .5; border-radius: 30%; transition: opacity .5s, border-radius .6s; }
+.mp-art[data-playing="false"] .mp-art-glow { opacity: .2; }
+.mp-art-img { position: relative; width: 100%; height: 100%; border-radius: var(--rad-xl, 18px); overflow: hidden; background: var(--g2); border: 2px solid var(--g3); box-shadow: var(--lift-lg); transition: border-radius .6s var(--mp-ease), opacity .3s; }
+.mp-art[data-video] .mp-art-img { opacity: 0; }
+.mp-art-video { position: absolute; inset: 0; border-radius: var(--rad-xl, 18px); pointer-events: none; }
+.mp-vinyl-fx { display: none; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, var(--g0) 0 4.5%, var(--ink) 4.5% 5.6%, rgba(0, 0, 0, .55) 5.6% 7.5%, transparent 7.7%), repeating-radial-gradient(circle, rgba(0, 0, 0, .3) 0 1px, transparent 1px 4px); }
+.mp-art[data-vinyl] .mp-art-img { border-radius: 50%; animation: mp-rot 18s linear infinite paused; }
+.mp-art[data-vinyl][data-playing="true"] .mp-art-img { animation-play-state: running; }
+.mp-art[data-vinyl] .mp-art-glow { border-radius: 50%; } .mp-art[data-vinyl] .mp-vinyl-fx { display: block; }
+
+.mp-info { min-width: 0; } .mp-title { margin: 0; font-size: 1.35rem; line-height: 1.2; font-weight: 850; letter-spacing: -.02em; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+.mp-artist { margin: 2px 0 0; color: var(--mp-dim); font-size: .95rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mp-note { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: var(--rad-m, 12px); background: var(--g2); border: 2px solid var(--g3); font-size: .9rem; font-weight: 650; line-height: 1.35; }
+.mp-note.err { background: var(--red); border-color: var(--edge); color: var(--on-red); } .mp-note span { flex: 1; min-width: 0; }
+.mp-note button { flex: none; background: none; border: 0; color: inherit; font-weight: 800; text-decoration: underline; cursor: pointer; padding: 4px; border-radius: 6px; }
+.mp-times { display: flex; justify-content: space-between; margin-top: 1px; font-size: .75rem; font-weight: 650; color: var(--mp-dim); font-variant-numeric: tabular-nums; }
+.mp-transport { display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 420px; margin: 0 auto; }
+.mp-playbig { width: 64px; height: 64px; border-radius: var(--rad-xl, 18px); }
+.mp-extras { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.mp-vol { display: flex; align-items: center; gap: 4px; flex: 1; max-width: 230px; } .mp-toggles { display: flex; gap: 8px; margin-left: auto; }
+/* chips = the app's .tabs buttons: 2px border, 12px radius, heavy label, filled + lifted when on */
+.mp-chip { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 12px; border-radius: var(--rad-m, 12px); border: 2px solid var(--g3); background: var(--g1); color: var(--ink); font-weight: 800; font-size: .85rem; cursor: pointer; transition: background .15s, border-color .15s, transform .15s var(--mp-spring); }
+.mp-chip:hover { border-color: var(--muted); background: var(--g2); } .mp-chip:active { transform: scale(.95); }
+.mp-chip[aria-pressed="true"] { background: var(--mp-acc); color: var(--mp-on); border-color: var(--edge); box-shadow: var(--lift); } .mp-chip:disabled { opacity: .4; cursor: default; }
+
+/* queue = an app panel */
+.mp-queue { display: none; flex-direction: column; min-height: 0; margin: 0 12px 12px; padding: 14px 8px 10px; border-radius: var(--rad-xl, 18px); background: var(--g1); border: 2px solid var(--g3); }
+.mp-sheet[data-panel="queue"] .mp-queue { display: flex; } .mp-sheet[data-panel="queue"] .mp-main { display: none; }
+.mp-queue-head { display: flex; align-items: baseline; justify-content: space-between; padding: 0 10px 8px; }
+.mp-queue-head h3 { margin: 0; font-size: 1.05rem; font-weight: 800; } .mp-queue-head small { color: var(--mp-dim); font-weight: 600; margin-left: 4px; }
+.mp-queue-head button { background: none; border: 0; color: var(--mp-dim); font-weight: 800; font-size: .85rem; cursor: pointer; padding: 6px 8px; border-radius: var(--rad-s, 10px); } .mp-queue-head button:hover { color: var(--ink); background: var(--g2); }
+.mp-qlist { list-style: none; margin: 0; padding: 0; overflow-y: auto; overscroll-behavior: contain; display: grid; gap: 4px; }
+.mp-qrow { display: flex; align-items: center; border: 2px solid transparent; border-radius: var(--rad-l, 14px); transition: background .15s, border-color .15s; } .mp-qrow:hover { background: var(--g2); } .mp-qrow.cur { background: var(--g2); border-color: var(--mp-acc-fg); } .mp-qrow.done { opacity: .55; }
+.mp-qmain { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 5px 8px; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; border-radius: var(--rad-l, 14px); }
+.mp-qthumb { position: relative; flex: none; width: 40px; height: 40px; border-radius: var(--rad-s, 10px); overflow: hidden; background: var(--g2); } .mp-qthumb img, .mp-qthumb .ph { display: block; width: 100%; height: 100%; object-fit: cover; }
+.mp-qeq { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0, 0, 0, .55); color: #fff; }   /* over a picture: fixed colours on purpose */
+.mp-qmeta { display: grid; min-width: 0; line-height: 1.3; } .mp-qmeta b { font-weight: 800; font-size: .92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .mp-qmeta small { color: var(--mp-dim); font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mp-qdel { flex: none; width: 36px; height: 36px; margin-right: 4px; display: grid; place-items: center; border: 0; border-radius: var(--rad-s, 10px); background: none; color: var(--mp-dim); cursor: pointer; opacity: 0; transition: opacity .15s, background .15s; }
+.mp-qrow:hover .mp-qdel, .mp-qdel:focus-visible { opacity: 1; } .mp-qdel:hover { background: var(--hover); color: var(--ink); }
+@media (hover: none) { .mp-qdel { opacity: .8; } }
+.mp-qnote { margin: 6px 10px 0; color: var(--mp-dim); font-size: .8rem; }
+.mp-eq { display: inline-flex; align-items: flex-end; gap: 2px; width: 16px; height: 14px; } .mp-eq i { flex: 1; height: 28%; background: currentColor; border-radius: 1px; }
+.mp-eq.on i { animation: mp-eq 1s ease-in-out infinite; } .mp-eq.on i:nth-child(2) { animation-duration: .8s; animation-delay: -.4s; } .mp-eq.on i:nth-child(3) { animation-duration: 1.2s; animation-delay: -.2s; }
+@keyframes mp-eq { 0%, 100% { height: 25%; } 50% { height: 100%; } }
+
+/* desktop: art + controls on the left, queue always visible on the right */
+@media (min-width: 900px) {
+  .mp-body { grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr); gap: clamp(24px, 4vw, 64px); padding: 0 clamp(24px, 5vw, 72px) 28px; align-items: center; }
+  .mp-main, .mp-sheet[data-panel="queue"] .mp-main { display: flex; max-width: 520px; padding: 0; overflow: visible; }
+  .mp-queue, .mp-sheet[data-panel="queue"] .mp-queue { display: flex; margin: 0; max-height: min(72vh, 680px); padding: 16px 10px 12px; }
+  .mp-only-sm { display: none; } .mp-art { width: min(100%, 44vh, 420px); } .mp-art[data-video] { width: min(100%, 560px, calc(36vh * 16 / 9)); }
+}
+@media (max-width: 700px), (hover: none) and (pointer: coarse) { .mp-vol { display: none; } .mp-toggles { margin-left: 0; width: 100%; justify-content: center; } }
+@media (max-height: 640px) and (max-width: 899px) { .mp-art { width: min(100%, 34vh); } .mp-title { font-size: 1.25rem; } }
+
+/* ---------- the real YouTube player: one box, never moved in the DOM (moving an iframe reloads it) ---------- */
+.mp-stage { position: fixed; z-index: 720; overflow: hidden; background: #000; }
+.mp-stage[data-live="false"] { display: none; }
+.mp-stage[data-mode="parked"] { left: -9999px; top: 0; width: 356px; height: 200px; pointer-events: none; }
+.mp-stage[data-mode="dock"] { right: 12px; bottom: 80px; width: 220px; height: 220px; border-radius: var(--rad-xl, 18px); border: 2px solid var(--g3); box-shadow: var(--lift-lg); }
+.mp-stage-in { position: absolute; left: 50%; top: 50%; height: 100%; aspect-ratio: 16 / 9; transform: translate(-50%, -50%); }   /* 16:9 video centred in the box and cropped to it */
+.mp-stage-in iframe { display: block; width: 100%; height: 100%; border: 0; }
+
+/* ---------- room for the dock; toasts step above it ---------- */
+html.mp-on body::after { content: ""; display: block; height: 72px; }
+html.mp-on .toast { bottom: 82px; }
+@media (max-width: 700px) {
+  .mp-dock { bottom: calc(var(--nav-h, 60px) + env(safe-area-inset-bottom, 0px) + 8px); width: calc(100vw - 16px); height: 54px; }
+  .mp-hide-sm { display: none; } .mp-stage[data-mode="dock"] { bottom: calc(var(--nav-h, 60px) + env(safe-area-inset-bottom, 0px) + 72px); right: 8px; width: 180px; height: 180px; }
+  html.mp-on .toast { bottom: calc(var(--nav-h, 60px) + 72px); }
+  .mp-main { padding: 0 20px 14px; }
+}
+html.kb .mp-dock { bottom: 8px; }
+
+/* ---------- the profile card (.player.mpcard): follows the PROFILE's own theme (--text, --accent, --card), not the app chrome ---------- */
+.player.mpcard .pbadge { transition: opacity .2s; }
+.player.mpcard .mp-badge { display: grid; place-items: center; width: 3rem; height: 3rem; border-radius: 50%; background: #000a; color: #fff; transition: transform .15s; }   /* sits on the cover picture: fixed colours */
+.player.mpcard .pplay:hover .mp-badge, .player.mpcard .pplay:focus-visible .mp-badge { transform: scale(1.08); }
+.player.mpcard[data-playing] .pbadge { opacity: 0; } .player.mpcard[data-playing] .pplay:hover .pbadge, .player.mpcard[data-playing] .pplay:focus-visible .pbadge { opacity: 1; }
+.player.mpcard .pplay { overflow: hidden; } .player.mpcard .pplay:focus-visible { outline: 2px solid var(--accent-fg, var(--accent)); outline-offset: -3px; }
+.mp-cardeq { position: absolute; left: 10px; bottom: 10px; color: #fff; filter: drop-shadow(0 1px 3px #000a); }
+.player .mp-cardnote { grid-column: 1 / -1; text-align: center; opacity: .85; font-size: .8em; }
+.player .mp-scrub { --mp-fill: var(--accent, #fff); --mp-track: color-mix(in srgb, var(--text, #fff) 22%, transparent); --mp-ring: var(--card, #111); }
+.player .mp-scrub-buf { background: color-mix(in srgb, var(--text, #fff) 22%, transparent); }
+.player .mp-scrub:focus-visible { outline-color: var(--accent-fg, var(--accent)); }
+.player .volrow .vol.mp-scrub { height: 22px; } .player .seek.mp-scrub { height: 22px; }
+.player .ctrl button:disabled { opacity: .4; cursor: default; }
+.player.mpcard .ctrl .big { display: inline-flex; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mp-dock, .mp-sheet, .mp-art, .mp-art-img, .mp-art-glow, .mp-dock-art, .mp-bg img, .mp-cover, .mp-art-pic { animation: none !important; transition: none !important; }
+  .mp-art[data-vinyl] .mp-art-img { animation: none !important; } .mp-eq.on i { animation: none; height: 60%; } .mp-art[data-playing="false"] { transform: none; }
+}

@@ -11,7 +11,9 @@ export default defineConfig(({ mode }) => {
   // Scripts only from this site; no inline scripts; no plugins; network only to Supabase, OSM search, GitHub's public API (official account's profile only), YouTube (nocookie) embeds.
   // Turnstile (optional CAPTCHA, only when VITE_TURNSTILE_SITE_KEY is set at build time) needs its script, frame and connection allowed, and nothing else changes.
   const ts = env.VITE_TURNSTILE_SITE_KEY ? ' https://challenges.cloudflare.com' : '';
-  const csp = ["default-src 'self'", `script-src 'self'${ts}`, "style-src 'self' 'unsafe-inline'", `img-src 'self' data: blob: ${sb} https://tile.openstreetmap.org https://avatars.githubusercontent.com`,
+  // YouTube music player: the IFrame API script (www.youtube.com, s.ytimg.com), cover art (i.ytimg.com) and the nocookie player frame. Nothing is requested until a visitor presses play (see src/lib/musicConfig.js).
+  const yt = ' https://www.youtube.com https://s.ytimg.com';
+  const csp = ["default-src 'self'", `script-src 'self'${yt}${ts}`, "style-src 'self' 'unsafe-inline'", `img-src 'self' data: blob: ${sb} https://tile.openstreetmap.org https://avatars.githubusercontent.com https://i.ytimg.com`,
     "media-src 'self' blob: https:", "font-src 'self'", `connect-src 'self' ${sb} ${ws} https://nominatim.openstreetmap.org https://api.github.com${ts}`, `frame-src https://www.youtube-nocookie.com${ts}`,
     "object-src 'none'", "base-uri 'self'", "form-action 'self'"].join('; ');
   // No canonical / og:url here: index.html is served for every path (/map, /<username>, ...), so a fixed "/" would mark every page as a copy of the home page.

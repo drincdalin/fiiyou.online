@@ -777,11 +777,11 @@ function MusicSection({ ctx }) {
       ) : (
         <>
           <FilePick accept="audio/*" icon={MusicNote} disabled={busy} block onFiles={(fs) => upload('audio', fs[0])}>Upload audio</FilePick>
-          <p className="cz-hint">mp3, m4a or ogg, up to 8 MB. Plays on its own, with no video. Only upload music you have the right to share.</p>
+          <p className="cz-hint">mp3, m4a or ogg, up to 3 MB. Plays on its own, with no video. Only upload music you have the right to share.</p>
           <Field label="Or paste a link">
             <input className="cz-input" placeholder="YouTube or direct .mp3 link" value={m.url || ''} onChange={(e) => setMusic({ url: e.target.value.trim() })} />
           </Field>
-          <p className="cz-hint">YouTube links show their video.</p>
+          <p className="cz-hint">YouTube links play in the app's music player (cover art, queue, mini player); the video only shows if a listener opens it.</p>
         </>
       )}
       <div className="cz-grid2">
