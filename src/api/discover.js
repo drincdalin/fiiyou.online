@@ -9,8 +9,21 @@ export async function searchProfiles(query, limit = 20, localityId = null) {
   return unwrap(await supabase.rpc('search_profiles', { p_query: query, p_limit: limit, ...(localityId ? { p_locality: localityId } : {}) }));
 }
 
-export async function listLocalities() {
-  return unwrap(await supabase.from('localities').select('*').order('name'));
+// The API returns at most 1000 rows per request, so this pages through the table. Without it a list of ~1500 places would silently stop
+// around the letter M. The result is kept for the rest of the session: every screen with a locality picker asks for it.
+let localitiesCache = null;
+export function listLocalities() {
+  if (!localitiesCache) {
+    localitiesCache = (async () => {
+      const out = [];
+      for (let from = 0; ; from += 1000) {
+        const rows = unwrap(await supabase.from('localities').select('*').order('name').order('id').range(from, from + 999)) || [];
+        out.push(...rows); if (rows.length < 1000) break;
+      }
+      return out.sort((a, b) => a.name.localeCompare(b.name, 'ro'));
+    })().catch((e) => { localitiesCache = null; throw e; });
+  }
+  return localitiesCache;
 }
 
 /** Friends who opted in, pinned at their locality's coordinates (skip rows where lat/lng is null).

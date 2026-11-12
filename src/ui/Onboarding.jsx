@@ -4,6 +4,7 @@ import { Avatar, useImages } from './shared.jsx';
 import { friendlyError } from './errors.jsx';
 import { clearInvite, USERNAME_RE } from '../lib/invite.js';
 import './onboarding.css';
+import LocalityPicker from './LocalityPicker.jsx';
 const InviteModal = lazy(() => import('./InviteModal.jsx'));
 
 const STEPS = ['Who are you?', 'Add a photo', 'About you', 'Find your people'];
@@ -67,7 +68,7 @@ export default function Onboarding({ me, inviter: rawInviter, onDone, notify }) 
 
     {step === 0 && <>
       <label className="field"><span>Display name</span><input value={name} onChange={(e) => setName(e.target.value)} maxLength={50} placeholder="How people see you" /></label>
-      <label className="field"><span>Where are you from?</span><select value={loc} onChange={(e) => setLoc(e.target.value)}><option value="">Choose a locality (optional)</option>{locs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
+      <div className="field"><span>Where are you from?</span><LocalityPicker locs={locs} value={loc} onChange={setLoc} emptyLabel="Choose a locality (optional)" ariaLabel="Where are you from" /></div>
       <p className="muted obhint">People nearby find you by locality. You can change it any time, and you decide whether you show up on the map.</p>
       <label className="field"><span>Mood (optional)</span><input value={mood} onChange={(e) => setMood(e.target.value)} maxLength={80} placeholder="What's up today?" /></label></>}
 

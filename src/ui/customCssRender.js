@@ -113,17 +113,9 @@ function rrp(g, x, y, w, h, radius) {
 
 const cssFilter = (kind, scale) => ({ grayscale: 'grayscale(1)', sepia: 'sepia(0.7)', blur: `blur(${(2 * scale).toFixed(2)}px)` }[kind] || 'none');
 
-/** Same result as ctx.filter for browsers that do not have it (Safari): works on the layer's pixels. */
-function filterPixels(layer, kind, scale) {
+/** grayscale / sepia done on the layer's own pixels, exactly like CSS does them. Returns false when the canvas is tainted (cannot be read). */
+function filterColors(layer, kind) {
   const w = layer.width, h = layer.height;
-  if (kind === 'blur') {
-    const f = Math.max(2, Math.round(2 * scale * 1.5));
-    const small = document.createElement('canvas'); small.width = Math.max(1, Math.round(w / f)); small.height = Math.max(1, Math.round(h / f));
-    const sg = small.getContext('2d'); sg.imageSmoothingQuality = 'high'; sg.drawImage(layer, 0, 0, small.width, small.height);
-    const out = document.createElement('canvas'); out.width = w; out.height = h;
-    const og = out.getContext('2d'); og.imageSmoothingQuality = 'high'; og.drawImage(small, 0, 0, w, h);
-    return out;
-  }
   try {
     const ctx = layer.getContext('2d'), img = ctx.getImageData(0, 0, w, h), d = img.data;
     const k = kind === 'sepia' ? 0.3 : 0; // sepia(.7): 30% of the original colour is kept
@@ -138,7 +130,37 @@ function filterPixels(layer, kind, scale) {
       }
     }
     ctx.putImageData(img, 0, 0);
-  } catch { /* tainted canvas: leave unfiltered */ }
+    return true;
+  } catch { return false; }
+}
+
+/**
+ * Prepares `layer` for drawing with the Fine-tune filter `kind`. Returns the canvas to draw; when the browser's own ctx.filter has to do the work
+ * it is set on `g0` here (the caller has save()d the context and restores it afterwards).
+ * Colour filters (grayscale, sepia) never depend on ctx.filter: some browsers do not have it (older Safari) and others skip it on very large canvases
+ * without saying so, which left the image unfiltered. ctx.filter is only the fallback for a canvas that cannot be read. Blur uses ctx.filter when there is one.
+ */
+function applyFilter(g0, layer, kind, scale) {
+  if (kind === 'grayscale' || kind === 'sepia') {
+    if (!filterColors(layer, kind) && 'filter' in g0) g0.filter = cssFilter(kind, scale);
+    return layer;
+  }
+  if ('filter' in g0) { g0.filter = cssFilter(kind, scale); return layer; }
+  return filterPixels(layer, kind, scale);
+}
+
+/** Same result as ctx.filter for browsers that do not have it (Safari): works on the layer's pixels. */
+function filterPixels(layer, kind, scale) {
+  const w = layer.width, h = layer.height;
+  if (kind === 'blur') {
+    const f = Math.max(2, Math.round(2 * scale * 1.5));
+    const small = document.createElement('canvas'); small.width = Math.max(1, Math.round(w / f)); small.height = Math.max(1, Math.round(h / f));
+    const sg = small.getContext('2d'); sg.imageSmoothingQuality = 'high'; sg.drawImage(layer, 0, 0, small.width, small.height);
+    const out = document.createElement('canvas'); out.width = w; out.height = h;
+    const og = out.getContext('2d'); og.imageSmoothingQuality = 'high'; og.drawImage(small, 0, 0, w, h);
+    return out;
+  }
+  filterColors(layer, kind);
   return layer;
 }
 
@@ -204,11 +226,7 @@ export function createFx({ getG, setG, mk, colors, unit = 1, full = false }) {
       g0.translate(c.x, c.y); g0.rotate((b.rotate * Math.PI) / 180); g0.translate(-c.x, -c.y);
     }
     if (b.opacity != null) g0.globalAlpha *= b.opacity;
-    let src = layer;
-    if (b.filter) {
-      if ('filter' in g0) g0.filter = cssFilter(b.filter, sc * unit);
-      else src = filterPixels(layer, b.filter, sc * unit);
-    }
+    const src = b.filter ? applyFilter(g0, layer, b.filter, sc * unit) : layer;
     g0.drawImage(src, x0, y0);
     g0.restore();
   }
@@ -226,8 +244,7 @@ export function createFx({ getG, setG, mk, colors, unit = 1, full = false }) {
     const sc = Math.hypot(g0.getTransform().a, g0.getTransform().b) || 1;
     g0.save(); g0.setTransform(1, 0, 0, 1, 0, 0); g0.clearRect(0, 0, cw, ch);
     if (b.opacity != null) g0.globalAlpha = b.opacity;
-    let src = copy;
-    if (b.filter) { if ('filter' in g0) g0.filter = cssFilter(b.filter, sc * unit); else src = filterPixels(copy, b.filter, sc * unit); }
+    const src = b.filter ? applyFilter(g0, copy, b.filter, sc * unit) : copy;
     g0.drawImage(src, 0, 0); g0.restore();
   }
 

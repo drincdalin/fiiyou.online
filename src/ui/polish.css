@@ -81,3 +81,72 @@ html, body { overscroll-behavior-y: none; }   /* the browser's pull-down-to-relo
 
 /* Avatars that were uploaded before square-cropping existed (non-square files): never stretch, keep faces in frame. */
 .av img, .avatar img { object-fit: cover; object-position: 50% 30%; }
+
+/* Round avatars: the picture always fills a perfect circle, whatever its shape.
+   Cause of the old bug: rules such as ".who span", ".likerow span" and ".mentionpop span" (display: grid / flex) also matched the
+   <span class="av"> of the Avatar component, so a non-square picture was laid out by its own proportions and the circle only showed a corner of it.
+   Fix: the circle keeps its own display, is always square, and the picture is pinned to it (absolute) instead of being sized by the layout. */
+span.av.av { display: inline-block; position: relative; flex: none; aspect-ratio: 1; line-height: 0; }
+.av img, .av i { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; object-fit: cover; object-position: 50% 30%; }
+.av .avl { position: absolute; inset: 0; display: grid; place-items: center; line-height: 1; }
+
+/* ---------- account menu / notifications: nothing is clipped, long lines wrap ----------
+   .menu is a grid with overflow: hidden. Its single implicit "auto" column used to grow to the widest child's min-content width,
+   so rows, the header and "See all notifications" ended up wider than the menu and were cut off. The column now shrinks to the menu,
+   and the text column of every notification row may shrink and break onto a new line instead of running past the edge (no sideways scrolling). */
+.menu { grid-template-columns: minmax(0, 1fr); }
+.menu > *, .menu .nsec, .menu .nlist, .menu .nitem { min-width: 0; max-width: 100%; }
+.menu .nlist { overflow-x: hidden; overflow-y: auto; }
+.menu .nrow { min-width: 0; max-width: 100%; box-sizing: border-box; overflow: hidden; white-space: normal; }
+.menu .nrow .ntxt { flex: 1 1 0; min-width: 0; white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
+.menu .nrow .ntxt > span { display: block; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.menu .nseeall { min-width: 0; max-width: 100%; box-sizing: border-box; }
+
+/* ---------- account menu: always inside the screen, on every page ----------
+   The grid fix above is not enough on pages that restyle the page (the profile pages): the menu's column could still grow wider than the menu
+   and the right side (text, "See all notifications") was cut off. A flex column cannot do that: every child is exactly as wide as the menu,
+   long text wraps inside it, and the menu itself never gets wider than the window or taller than the space under the top bar. */
+.nav .more .menu {
+  display: flex; flex-direction: column; box-sizing: border-box;
+  width: min(360px, calc(100vw - 24px)); min-width: 0; max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - var(--nav-h, 64px) - 16px); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+}
+.nav .more .menu > * { flex: none; min-width: 0; max-width: 100%; box-sizing: border-box; }
+.nav .more .menu > .nsec { flex: 0 1 auto; }
+.nav .more .menu .mhead { width: 100%; }
+.nav .more .menu .nrow, .nav .more .menu .nitem { width: 100%; }
+
+/* "See all" / "Show older" as a button on the /notifications page */
+.npage .nseeall.nmore { display: flex; align-items: center; justify-content: center; gap: 6px; width: calc(100% - 8px); margin: 10px 4px 4px; padding: .55rem .9rem; border-radius: 999px; background: var(--g2); color: var(--ink); border: 1px solid var(--g3); font-size: .85rem; font-weight: 700; cursor: pointer; }
+.npage .nseeall.nmore:hover { background: var(--hover); }
+
+/* ---------- locality picker (LocalityPicker.jsx): searchable replacement for the long <select> ---------- */
+.locpick { display: inline-flex; align-items: center; gap: 8px; width: 100%; max-width: 100%; min-width: 0; background: var(--g1); border: 1px solid var(--g3); border-radius: 12px; padding: .5rem .75rem; color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: border-color .15s; }
+.locpick:hover { border-color: var(--g4); } .locpick:focus-visible, .locpick[aria-expanded=true] { outline: 0; border-color: var(--accent); }
+.locpick svg { flex: none; color: var(--muted); } .locpick .lpv { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); } .locpick.has .lpv { color: var(--ink); }
+.locpick:disabled { opacity: .55; cursor: not-allowed; }
+.tabs .locpick { width: auto; max-width: 11rem; }
+.lppop { position: fixed; z-index: 1000; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; padding: 8px; background: var(--g1); color: var(--ink); border: 1px solid var(--g3); border-radius: 16px; box-shadow: 0 14px 40px -12px rgba(0, 0, 0, .6); animation: rise .14s var(--ease, ease-out); }
+.lpsearch { display: flex; align-items: center; gap: 8px; padding: 0 10px; background: var(--g2); border: 1px solid var(--g3); border-radius: 12px; }
+.lpsearch:focus-within { border-color: var(--accent); } .lpsearch svg { flex: none; color: var(--muted); }
+.lpsearch input { flex: 1; min-width: 0; width: auto; background: none; border: 0; padding: .55rem 0; font-size: 1rem; }   /* 16px: iOS does not zoom the page when it is focused */
+.lpsearch input:focus { outline: 0; border: 0; }
+.lplist { list-style: none; margin: 0; padding: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 1px; }
+.lpgroup { padding: 8px 10px 2px; font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.lpopt { display: flex; align-items: center; gap: 8px; padding: .5rem .65rem; border-radius: 10px; cursor: pointer; min-height: 40px; }
+.lpopt .lpn { font-weight: 650; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lpopt small { margin-left: auto; padding-left: 8px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: .78rem; }
+.lpopt svg { flex: none; color: var(--accent-fg, var(--accent)); } .lpopt.act { background: var(--hover); }
+.lpopt[aria-selected=true] .lpn { color: var(--accent-fg, var(--accent)); }
+.lphelp { padding: 8px 10px; font-size: .82rem; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .lppop { animation: none; } }
+
+/* ---------- music player (desktop "single" layout): time labels stay under the seek bar ----------
+   The player box is as tall as the name plate + buttons next to it, and it used to hand that extra height out between ALL its rows
+   (align-content: space-between), so "0:00 / -0:00" floated half-way between the seek bar and the volume line, far from both.
+   Now the cover / title / buttons sit at the top, and seek bar + times + volume stay together at the bottom; the spare height is one calm gap between the two groups. */
+@media (min-width: 1001px) {
+  .frame[data-layout=single] .side > .player:not(.live) { align-content: stretch; grid-template-rows: auto auto minmax(0, 1fr) auto auto; }
+  .frame[data-layout=single] .side > .player:not(.live) .seek { align-self: end; }
+  .frame[data-layout=single] .side > .player:not(.live) .times { align-self: start; }
+}

@@ -30,6 +30,8 @@ import { PRESETS } from './themes.js';
 import { stickerModel, withModel, pinTo } from './stickerAnchor.js';
 import { buildThemeExport, download } from './themeFile.js';
 import ImportModal from './ImportModal.jsx';
+import LocalityPicker from './LocalityPicker.jsx';
+import { friendlyError } from './errors.jsx';
 
 // ═══ 1. CONSTANTS & HELPERS ═════════════════════════════════════════════════
 
@@ -811,10 +813,7 @@ function ProfileTab({ ctx }) {
         </Group>
         <TextField label="Display name" max={50} value={draft.fields.display_name} onChange={(v) => setField('display_name', v)} />
         <TextField label="Mood or headline" max={80} value={draft.fields.headline || ''} onChange={(v) => setField('headline', v)} />
-        <Select label="Locality" value={draft.fields.locality_id ?? ''} onChange={(e) => setField('locality_id', e.target.value ? +e.target.value : null)}>
-          <option value="">Not set</option>
-          {locs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-        </Select>
+        <Field label="Locality"><LocalityPicker locs={locs} value={draft.fields.locality_id ?? ''} onChange={(id) => setField('locality_id', id ? +id : null)} emptyLabel="Not set" ariaLabel="Locality" /></Field>
       </Section>
 
       <Section title="Privacy" icon={ShieldCheck}>
@@ -1155,7 +1154,7 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
   // ── async actions ──────────────────────────────────────────────────────
   const run = async (fn, kind = 'work') => {
     setJob(kind); setErr('');
-    try { await fn(); } catch (e) { setErr(e?.message || 'Something went wrong'); }
+    try { await fn(); } catch (e) { setErr(friendlyError(e)); }
     setJob(null);
   };
 
@@ -1192,7 +1191,7 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
         visible: c.visible,
       }))));
     const bad = res.filter((x) => x.status === 'rejected');
-    if (bad.length) throw new Error(`${bad.length} card(s) failed to save: ${bad[0].reason?.message || 'unknown error'}`);
+    if (bad.length) throw new Error(`${bad.length === 1 ? 'One card or sticker' : `${bad.length} cards or stickers`} could not be saved. ${friendlyError(bad[0].reason)}`);
     await reload(); notify('Saved'); onClose();
   }, 'save');
 

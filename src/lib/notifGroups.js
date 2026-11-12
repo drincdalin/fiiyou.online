@@ -1,10 +1,11 @@
 // Groups notifications the way people read them: "Ana and 3 others liked your post".
-// Likes are merged per kind, whichever post / photo / comment they are on (two lines that both read "Ana and 2 others liked your post"
-// cannot be told apart anyway). Comments are merged per post, because the line opens that post. A friend request, reply or mention always stays on its own.
+// A group is always ONE thing: likes are merged per post / photo / comment, comments per post, so "Ana and 3 others liked your post"
+// means exactly those 4 people liked that one post (it used to merge likes from every post into one line, which made the number
+// look wrong next to the post's own like count). A friend request, reply or mention always stays on its own.
 const GROUP_BY = {
-  post_like: () => 'all',
-  photo_like: () => 'all',
-  comment_like: () => 'all',
+  post_like: (r) => r.post_id,
+  photo_like: (r) => r.photo_id,
+  comment_like: (r) => r.comment_id,
   comment: (r) => r.post_id,
   wall_comment: () => 'wall',
 };
@@ -31,4 +32,13 @@ export function actorsLabel(actors) {
   if (n <= 1) return actors[0]?.name || 'Someone';
   if (n === 2) return `${actors[0].name} and ${actors[1].name}`;
   return `${actors[0].name} and ${n - 1} others`;
+}
+
+/** No grouping at all: one entry per notification, same shape as groupNotifications(). This is what the full /notifications page shows. */
+export function ungroupNotifications(rows) {
+  return (rows || []).map((r) => {
+    const a = r.actor; const aid = a?.id || a?.username || r.id;
+    return { key: `one:${r.id}`, type: r.type, latest: r, rows: [r], ids: [r.id], unreadIds: r.read ? [] : [r.id], targets: new Set([targetOf(r)]), targetCount: 1, unread: !r.read,
+      actors: [{ id: aid, name: a?.display_name || a?.username || 'Someone', official: !!a?.is_official }] };
+  });
 }
