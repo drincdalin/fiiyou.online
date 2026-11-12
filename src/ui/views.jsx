@@ -159,10 +159,16 @@ export function MapView({ me, go, notify }) {
     else if (home) m.setView([home.lat, home.lng], 12, { animate });
   }, [places, fr, home]);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (!ready || fitted.current || !map.current) return; fitted.current = true; frame(false); }, [ready, frame]);
-  useEffect(() => { if (sel) map.current.panTo([sel.lat, sel.lng]); }, [sel?.id]);
+  // The map box changes size when the place panel opens or closes (and when a phone is rotated). Leaflet only listens for window resizes, so without this
+  // it keeps the old size: the tiles stop short, and the place does not land in the middle of what you can see.
+  useEffect(() => {
+    const el = box.current; if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(() => map.current?.invalidateSize({ animate: false })); ro.observe(el); return () => ro.disconnect();
+  }, []);
+  useEffect(() => { if (!sel) return; map.current.invalidateSize({ animate: false }); map.current.panTo([sel.lat, sel.lng]); }, [sel?.id]);
   useEffect(() => {
     const g = group.current; g.clearLayers();
-    if (show.places) places.forEach((p) => L.marker([p.lat, p.lng], { title: p.name, icon: L.divIcon({ className: 'mk', iconSize: [34, 34], iconAnchor: [17, 17],
+    if (show.places) places.forEach((p) => L.marker([p.lat, p.lng], { title: p.name, zIndexOffset: 1000, icon: L.divIcon({ className: 'mk', iconSize: [34, 34], iconAnchor: [17, 17],
       html: `<div class="mkp${p.friends_there ? ' hot' : ''}"><b>${Number(p.post_count)}</b></div>` }) }).on('click', () => setSel(p)).addTo(g));
     if (show.friends) fr.forEach((f) => { const h = hash(f.id); const src = img[f.avatar_path];
       L.marker([f.lat + ((h % 100) - 50) / 50 * 0.0025, f.lng + (((h >> 7) % 100) - 50) / 50 * 0.0035], { title: f.display_name,
@@ -182,7 +188,7 @@ export function MapView({ me, go, notify }) {
     <div className="mapbar"><form className="msearch" onSubmit={search} role="search"><MagnifyingGlass size={18} weight="bold" aria-hidden="true" />
         <input value={q} onChange={(e) => { setQ(e.target.value); if (res) setRes(null); }} onKeyDown={(e) => { if (e.key === 'Escape') { setRes(null); setQ(''); } }} placeholder="Search a café, school, park…" aria-label="Search for a real place" autoComplete="off" enterKeyHint="search" maxLength={80} />
         {q && <button type="button" className="mclear" aria-label="Clear search" onClick={() => { setQ(''); setRes(null); }}><X size={14} weight="bold" aria-hidden="true" /></button>}
-        <button className="primary sm" disabled={searching || q.trim().length < 3} title={q.trim().length < 3 ? 'Type at least 3 letters' : undefined}>{searching ? 'Searching…' : 'Search'}</button></form>
+        {q.trim() && <button className="primary sm" disabled={searching || q.trim().length < 3} title={q.trim().length < 3 ? 'Type at least 3 letters' : undefined}>{searching ? 'Searching…' : 'Search'}</button>}</form>
       {res && <div className="sresults" role="region" aria-label="Search results">{!res.length && <p className="muted">Nothing found near this part of the map. Zoom out or try another name.</p>}{res.map((r) => <button key={r.ref} onClick={() => pick(r)}><b>{r.name}</b><small>{r.label}</small></button>)}<button className="ghost sm" onClick={() => setRes(null)}>Close</button></div>}
       <div className="mtogs" role="group" aria-label="What to show on the map">
         <button type="button" className={`mtog${show.places ? ' on' : ''}`} aria-pressed={show.places} onClick={() => setShow({ ...show, places: !show.places })}><MapPin size={16} weight="bold" aria-hidden="true" />Places<span className="mcount">{places.length}</span></button>

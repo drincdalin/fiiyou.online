@@ -141,9 +141,9 @@ input[type=range]::-moz-range-thumb { background: var(--accent); border: 3px sol
 .sheet > * { min-width: 0; }
 
 /* the place panel: close button was stretching to the height of the title block */
-.sheet header { align-items: flex-start; }
-.sheet header > div { min-width: 0; }
-.sheet header > button, .sheet header > .ghost { flex: none; align-self: flex-start; width: 40px; height: 40px; min-height: 0; padding: 0; display: inline-grid; place-items: center; }
+.sheet > header { align-items: flex-start; }
+.sheet > header > div { min-width: 0; }
+.sheet > header > button, .sheet > header > .ghost { flex: none; align-self: flex-start; width: 40px; height: 40px; min-height: 0; padding: 0; display: inline-grid; place-items: center; }
 .sheet .wide, .sheet button.wide { min-height: 0; padding-top: .5rem; padding-bottom: .5rem; }
 .sheet .pstrip button { flex: none; width: auto; height: auto; min-height: 0; }
 
@@ -307,4 +307,4 @@ input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px var(--ring); }
 .mapview.open .mapbar { max-width: calc(100% - 400px - 70px); }
 .mapview .sheet { position: relative; z-index: 600; }
 @media (max-width: 1000px) { .mapview.open .mapbar { max-width: calc(100% - 70px); } }
-.sheet header > button, .sheet header > .ghost { position: relative; z-index: 1; }
+.sheet > header > button, .sheet > header > .ghost { position: relative; z-index: 1; }
