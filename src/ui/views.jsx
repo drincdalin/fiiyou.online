@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { visiblePoll, debounce } from '../lib/poll.js';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { posts, social, friends, discover, profiles } from '../index.js';
@@ -236,7 +237,7 @@ export function MessagesView({ me, peer, go, notify, refreshUnread }) {
   const touch = useTouchScreen(); const [sheet, setSheet] = useState(null); const box = useRef(null); const stick = useRef(true); const initial = useRef(true); const prevLen = useRef(0); const curRef = useRef(cur); curRef.current = cur; const [newBelow, setNewBelow] = useState(false);
   const [pins, setPins] = useState([]); const [peerTyping, setPeerTyping] = useState(false); const [findOpen, setFindOpen] = useState(false); const typing = useRef(null); const typingT = useRef(); const pendingJump = useRef(null);
   const loadConvs = () => social.conversations().then(setConvs).catch(() => {});
-  const loadThread = useCallback(async (id) => { try { const m = await social.thread(id); if (curRef.current !== id) return; setMsgs(m); await social.markRead(id); loadConvs(); refreshUnread(); } catch (e) { if (curRef.current === id) notify(e.message, 'err'); } }, []);   // an answer for a chat you already left is dropped, so it can never show under the wrong name
+  const loadThread = useCallback(async (id) => { try { const m = await social.thread(id); if (curRef.current !== id) return; setMsgs(m); if (m.some((x) => x.sender_id === id && !x.read_at)) { await social.markRead(id); loadConvs(); refreshUnread(); } } catch (e) { if (curRef.current === id) notify(e.message, 'err'); } }, []);   // an answer for a chat you already left is dropped, so it can never show under the wrong name
   useEffect(() => { loadConvs(); friends.listFriends().then(setFl); }, []);
   useEffect(() => { initial.current = true; stick.current = true; prevLen.current = 0; setNewBelow(false); setMsgs(null); setReplyTo(null); setEditing(null); setPins([]); setPeerTyping(false); setFindOpen(false); if (cur) { loadThread(cur); social.listPins(cur).then(setPins).catch(() => {}); } }, [cur]);
   useEffect(() => {   // "is typing…": a private realtime channel between the two of us; silent when Realtime is not available
@@ -246,8 +247,12 @@ export function MessagesView({ me, peer, go, notify, refreshUnread }) {
   }, [cur]);
   useEffect(() => { setPeerTyping(false); }, [msgs?.length]);   // a new message from them ends the indicator
   useEffect(() => { if (msgs && pendingJump.current) { const id = pendingJump.current; pendingJump.current = null; setTimeout(() => jump(id), 60); } }, [msgs]);
-  useEffect(() => { const off = social.onMessage(me.id, () => { loadConvs(); if (cur) loadThread(cur); });
-    const t = setInterval(() => { loadConvs(); if (cur) loadThread(cur); }, 12000); return () => { off(); clearInterval(t); }; }, [cur]);
+  useEffect(() => {
+    const soon = debounce(() => { loadConvs(); if (cur) loadThread(cur); }, 800);   // one refresh per burst of realtime events (mark-as-read fires one event per message)
+    const off = social.onMessage(me.id, soon);
+    const stop = visiblePoll(() => { if (cur) loadThread(cur); else loadConvs(); }, 60000);   // fallback only; was every 12 s, hidden tabs included
+    return () => { off(); stop(); soon.cancel(); };
+  }, [cur]);
   const toEnd = (smooth) => { const el = box.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: smooth && !reducedMotion() ? 'smooth' : 'auto' }); };
   useEffect(() => {   // open a chat = jump to the newest message; a new message only pulls you down if you were already at the bottom (or you sent it)
     if (!msgs) return; const len = msgs.length; const grew = len > prevLen.current; prevLen.current = len;

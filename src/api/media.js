@@ -30,7 +30,7 @@ export async function compressImage(file, preset = 'photo') {
     for (let q = 0.82; q >= 0.4; q -= 0.14) { blob = await c.convertToBlob({ type: 'image/webp', quality: q }); if (blob.size <= kb * 1024) return blob; }
     scale *= 0.85;                                       // still too big: shrink and retry
   }
-  if (blob.size > 1_400_000) throw new Error('Image is too large.');
+  if (blob.size > 300_000) throw new Error('Image is too large.');   // was 1.4 MB: a photo that could not be squeezed still went up at up to 1.4 MB
   return blob;
 }
 
@@ -78,10 +78,10 @@ export async function signedUrls(paths, bucket = BUCKET) {
 export async function signedUrl(path, bucket = BUCKET) { return path ? (await signedUrls([path], bucket))[path] : null; }
 
 const AUDIO_TYPES = ['audio/mpeg', 'audio/ogg', 'audio/mp4', 'audio/x-m4a', 'audio/aac', 'audio/wav', 'audio/webm'];
-/** Audio-only music, max 8 MB. Returns the storage path for profile.music.audio. */
+/** Audio-only music, max 3 MB (was 8 MB: every full play of a track costs its whole size in egress). Returns the storage path for profile.music.audio. */
 export async function uploadAudio(file) {
   if (!AUDIO_TYPES.includes(file.type)) throw new Error('Unsupported audio format (use mp3, m4a, ogg or wav).');
-  if (file.size > 8 * 1024 * 1024) throw new Error('Audio file is over 8 MB.');
+  if (file.size > 3 * 1024 * 1024) throw new Error('Audio file is over 3 MB. Use a shorter or lower-bitrate file, or paste a YouTube link instead.');
   const ext = (file.name.split('.').pop() || 'mp3').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) || 'mp3';
   const path = `${await myId()}/${crypto.randomUUID()}.${ext}`;
   unwrap(await supabase.storage.from('audio').upload(path, file, { contentType: file.type, upsert: false }));

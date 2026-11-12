@@ -15,12 +15,15 @@ let localitiesCache = null;
 export function listLocalities() {
   if (!localitiesCache) {
     localitiesCache = (async () => {
+      try { const c = JSON.parse(localStorage.getItem('fy:loc:v1') || 'null'); if (c?.rows?.length && Date.now() - c.t < 30 * 864e5) return c.rows; } catch { /* no cache */ }
       const out = [];
       for (let from = 0; ; from += 1000) {
         const rows = unwrap(await supabase.from('localities').select('*').order('name').order('id').range(from, from + 999)) || [];
         out.push(...rows); if (rows.length < 1000) break;
       }
-      return out.sort((a, b) => a.name.localeCompare(b.name, 'ro'));
+      const rows = out.sort((a, b) => a.name.localeCompare(b.name, 'ro'));
+      try { localStorage.setItem('fy:loc:v1', JSON.stringify({ t: Date.now(), rows })); } catch { /* storage full or blocked */ }
+      return rows;
     })().catch((e) => { localitiesCache = null; throw e; });
   }
   return localitiesCache;

@@ -9,6 +9,7 @@ import Onboarding from './Onboarding.jsx';
 import { friendlyError, ErrorState } from './errors.jsx';
 import { useDraftAutosave, DraftRestoreBar } from './draft.jsx';
 import { clearDraft } from '../lib/draftStore.js';
+import { visiblePoll, debounce } from '../lib/poll.js';
 import { getInvite, clearInvite } from '../lib/invite.js';
 import { themeStyle } from './theme.js';
 import { useCustomFont } from './fonts.js';
@@ -310,7 +311,7 @@ export default function App() {
         log.push({ t: new Date().toISOString(), ev, has: !!sess });
         localStorage.setItem('auth_log', JSON.stringify(log.slice(-30)));
       } catch {}
-      setSession(sess);
+      setSession((cur) => (ev !== 'USER_UPDATED' && cur?.user?.id && cur.user.id === sess?.user?.id ? cur : sess));   // same person: keep the same object, so nothing reloads on tab refocus / token refresh
       if (ev === 'PASSWORD_RECOVERY') setRecovery(true);
     });
   }, []);
@@ -320,7 +321,7 @@ export default function App() {
   useEffect(() => {
     if (!me?.id) return undefined;
     const tick = () => posts.publishDue().then((n) => { if (n > 0) window.dispatchEvent(new Event('fiiyou:published')); }).catch(() => {});
-    tick(); const t = setInterval(tick, 60000); return () => clearInterval(t);
+    tick(); return visiblePoll(tick, 300000);   // was every 60 s even in a hidden tab
   }, [me?.id]);   // service worker: installable app + push notifications
   useEffect(() => { const t = { home: 'Home', profile: route.username ? `@${route.username}` : 'Me', map: 'Map', messages: 'Chat', people: 'People', admin: 'Admin', post: 'Post', search: 'Search', tag: 'Tag', notifications: 'Notifications', settings: 'Settings' }[route.v]; const b = unread + nCount; document.title = `${b > 0 ? `(${b > 99 ? '99+' : b}) ` : ''}fiiyou · ${t}`; }, [route, unread, nCount]);
   useEffect(() => { if (route.legacyMe && me) navigate(`/${me.username.toLowerCase()}${route.edit ? '/edit' : ''}`, { replace: true }); }, [route.legacyMe, route.edit, me?.username]);   // old /me -> /<username>
@@ -328,9 +329,13 @@ export default function App() {
   useEffect(() => {   // someone who is already a member opened an invite link: take them to the person who sent it
     if (!me || me.onboarded_at === null) return; const u = getInvite(); if (!u) return; clearInvite(); if (u !== me.username.toLowerCase()) navigate(`/${u}`);
   }, [me?.id, me?.onboarded_at]);   // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (!me) return; refreshUnread(); const t = setInterval(refreshUnread, 30000); const off = social.onMessage(me.id, refreshUnread); return () => { clearInterval(t); off(); }; }, [me?.id]);
+  useEffect(() => { if (!me) return undefined; const soon = debounce(refreshUnread, 800); refreshUnread(); const stop = visiblePoll(refreshUnread, 300000); const off = social.onMessage(me.id, soon); return () => { stop(); soon.cancel(); off(); }; }, [me?.id]);
   useEffect(() => { if (me?.id) adminApi.role().then(setStaffRole).catch(() => setStaffRole(null)); else setStaffRole(null); }, [me?.id]);   // display only: the database re-checks every admin call
-  useEffect(() => { if (me?.id) media.sweepOrphans().catch(() => {}); }, [me?.id]);   // clears files nothing references any more
+  useEffect(() => {   // at most once a day: it lists three storage folders and reads every post of mine
+    if (!me?.id) return;
+    try { const k = `fy:sweep:${me.id}`; if (Date.now() - Number(localStorage.getItem(k) || 0) < 864e5) return; localStorage.setItem(k, String(Date.now())); } catch { /* storage blocked: sweep as before */ }
+    media.sweepOrphans().catch(() => {});
+  }, [me?.id]);   // clears files nothing references any more
   useEffect(() => { applyAppTheme(me?.theme); }, [me?.theme]);   // the whole UI is coloured from the signed-in person's theme (Mono when signed out)
   useEffect(() => {   // "/" opens search from anywhere (not while typing in a field)
     if (!me?.id) return undefined;

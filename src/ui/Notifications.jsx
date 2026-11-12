@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { visiblePoll } from '../lib/poll.js';
 import { Bell, ArrowRight, Heart, ChatCircle, UserPlus, UsersThree, ArrowBendUpLeft, At } from '@phosphor-icons/react';
 import { social } from '../index.js';
 import { Avatar, ago, useImages } from './shared.jsx';
@@ -41,9 +42,9 @@ export function useNotifCount(meId) {
   const refresh = useCallback(() => social.unreadNotifications().then((c) => setN(c || 0)).catch(() => {}), []);
   useEffect(() => {
     if (!meId) return undefined;
-    refresh(); const t = setInterval(refresh, 30000);
+    refresh(); const stop = visiblePoll(refresh, 300000);   // realtime does the real work; this is only a visible-tab safety net
     const off = social.onNotification(meId, () => { refresh(); setTick((x) => x + 1); });
-    return () => { clearInterval(t); off?.(); };
+    return () => { stop(); off?.(); };
   }, [meId, refresh]);
   return { n, setN, tick };
 }
