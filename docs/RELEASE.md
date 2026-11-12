@@ -56,6 +56,13 @@ The site is a static Vite build hosted on **Vercel**; data, auth and files live 
 - **Log:** every admin action is recorded.
 - Deleting accounts from the Supabase dashboard still works but leaves their files behind; use the Admin tab, or run the storage scan afterwards.
 
+## Updating the localities list (without losing anybody's place)
+People, posts, places and events point at a locality by its **id**, and those links are set to empty if a locality row is deleted. So never delete-and-reimport the table (and don't use the Table Editor's CSV import to replace it).
+1. Edit `supabase/data/localities.csv` (rows that already exist keep their `id`; new villages leave `id` empty).
+2. `node scripts/localities-csv-to-sql.mjs supabase/data/localities.csv > supabase/data/localities_refresh.sql`
+3. Paste `localities_refresh.sql` into the Supabase SQL editor and Run. It updates by `slug`, inserts the new ones, never deletes, never blanks a value, and rolls back by itself if the CSV is out of date or anybody would lose their locality. It is safe to run twice.
+4. Rows the data source could not match (blank `commune`/`county` in the CSV) keep their old coordinates: check those by eye.
+
 ## Updating later
 Change code, `git push`, wait for the green CI check and the Vercel deploy. Database changes: add a new numbered migration file (next free number, one file per number), add it to `supabase/tests/run.sh`, run it once in the SQL Editor.
 

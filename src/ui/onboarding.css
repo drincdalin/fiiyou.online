@@ -18,3 +18,9 @@
 .draftbar { position: sticky; top: calc(var(--nav-h, 56px) + 8px); z-index: 60; display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap;
   margin: 8px auto; max-width: min(720px, calc(100vw - 24px)); padding: .55rem .9rem; border-radius: 16px; background: var(--g1); border: 1px solid var(--accent); font-size: .9rem; font-weight: 600; }
 .draftbar .acts { display: flex; gap: 6px; }
+
+.obsearch { display: flex; align-items: center; gap: 8px; padding: 0 12px; background: var(--g1); border: 1px solid var(--g3); border-radius: 12px; transition: border-color .15s, box-shadow .15s; }
+.obsearch svg { flex: none; color: var(--muted); }
+.authcard .obsearch input, .authcard .obsearch input:hover, .authcard .obsearch input:focus { flex: 1; min-width: 0; background: none !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; outline: 0 !important; padding: .6rem 0; font-size: 1rem; }
+.obsearch:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--ring, color-mix(in srgb, var(--accent) 25%, transparent)); }
+.obsearch input::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }

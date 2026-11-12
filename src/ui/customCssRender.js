@@ -42,6 +42,39 @@ const CHAIN = {
 const TEXT_KEYS = ['color', 'font-family', 'font-size', 'font-weight', 'letter-spacing', 'text-transform', 'text-align'];
 const NONE = Object.freeze({});
 
+
+/* ---- Romanian letters in uploaded fonts ---------------------------------------------------------------------------
+   Many display / typewriter fonts have ă â î but not the comma-below letters ș ț (U+0219 U+021B), and the browser then
+   draws just those letters from another font, in the middle of a word ("Curățele"). Nearly every font that has Latin
+   Extended-A does have the cedilla forms ş ţ (U+015F U+0163), which look the same to a Romanian reader. So, per uploaded
+   font, we test which letters it really contains and swap ș ț Ș Ț for the cedilla forms when only those exist. */
+const SWAP = { 'ș': 'ş', 'ț': 'ţ', 'Ș': 'Ş', 'Ț': 'Ţ' };
+const swapCache = new Map();   // family -> { 'ș': 'ş', ... } (only the letters that need swapping)
+let probe = null;
+const hasGlyph = (family, ch) => {
+  if (!probe) probe = (typeof document !== 'undefined' ? document.createElement('canvas') : null)?.getContext('2d') || null;
+  if (!probe) return true;
+  // A letter the font lacks is drawn from the NEXT font in the list, so a serif and a monospace fallback give two different widths. If both agree, the font itself drew it.
+  probe.font = `100px "${family}", serif`; const a = probe.measureText(ch).width;
+  probe.font = `100px "${family}", monospace`; const b = probe.measureText(ch).width;
+  return Math.abs(a - b) < 0.5;
+};
+export function glyphSwaps(family) {
+  if (!family || !family.startsWith('uf-')) return NONE;   // only the person's own uploaded fonts; the built-in ones are complete
+  if (!swapCache.has(family)) {
+    const m = {};
+    try { for (const [from, to] of Object.entries(SWAP)) if (!hasGlyph(family, from) && hasGlyph(family, to)) m[from] = to; } catch { /* no canvas: leave the text alone */ }
+    swapCache.set(family, m);
+  }
+  return swapCache.get(family);
+}
+export const fixGlyphs = (text, font) => {
+  const fam = /"(uf-[^"]+)"/.exec(font || '');
+  if (!fam) return text;
+  const m = glyphSwaps(fam[1]);
+  return m === NONE || !Object.keys(m).length ? text : text.replace(/[țșȚȘ]/g, (c) => m[c] || c);
+};
+
 /** '#rrggbb' or '#rrggbbaa' -> { hex: '#rrggbb', a: 0..1 } */
 export const hexParts = (v) => ({ hex: v.slice(0, 7), a: v.length === 9 ? parseInt(v.slice(7, 9), 16) / 255 : 1 });
 
@@ -311,7 +344,7 @@ export function createTextStyler({ bodyStack, nameStack }) {
       });
     }
     const measure = ctx.measureText.bind(ctx), fill = ctx.fillText.bind(ctx);
-    const tf = (s) => (st && st.tt && st.tt !== 'none' && !isName ? xform(st.tt, s) : String(s));
+    const tf = (s) => fixGlyphs(st && st.tt && st.tt !== 'none' && !isName ? xform(st.tt, s) : String(s), ctx.font);
     ctx.measureText = (s, ...rest) => measure(tf(s), ...rest);
     ctx.fillText = (s, x, y, ...rest) => fill(tf(s), x, y, ...rest);
     ctx.__styled = true;
