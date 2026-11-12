@@ -3,6 +3,7 @@ import { CaretDown, ListBullets, MonitorPlay, Repeat, RepeatOnce, Shuffle, SkipB
 import { useMusicActions, useMusicClock, useMusicState } from './musicPlayer.jsx';
 import { CoverImg, Eq, PlayGlyph, Scrubber, VolumeIcon, cssUrl, useCover } from './playerParts.jsx';
 import { fmtTime, ytThumb } from '../lib/youtube.js';
+import { MUSIC_CONFIG as CFG } from '../lib/musicConfig.js';
 
 /** Swipe on an element: onDone fires for a mostly-vertical drag of 36px+ in `dir` ('up' | 'down'). `ignore` = selector of children that keep their own taps / drags. */
 function useSwipe(dir, onDone, ignore) {
@@ -33,21 +34,47 @@ const DockProgress = memo(function DockProgress() {
   return <i className="mp-dock-prog" style={{ transform: `scaleX(${duration > 0 ? Math.min(1, position / duration) : 0})` }} aria-hidden="true" />;
 });
 
+/** Progress ring around the corner disc. Own component so only it re-renders with the playhead. */
+const OrbRing = memo(function OrbRing() {
+  const { position, duration } = useMusicClock();
+  const f = duration > 0 ? Math.min(1, position / duration) : 0;
+  return <svg className="mp-orb-ring" viewBox="0 0 36 36" aria-hidden="true"><circle className="bg" cx="18" cy="18" r="16.8" /><circle className="fg" cx="18" cy="18" r="16.8" pathLength="100" strokeDasharray={`${(f * 100).toFixed(2)} 100`} /></svg>;
+});
+
+/** Wide dock while you are using it; after CFG.dockIdleMs of nothing it folds into a spinning disc in the corner (the song keeps playing).
+ *  Touching it, a new song, play / pause, or an error brings it back. Hovering with a mouse keeps it open. */
 function MiniPlayer() {
   const p = useMusicState(); const a = useMusicActions(); const t = p.current; const cover = useCover(t, true);
-  const swipe = useSwipe('up', () => a.setExpanded(true), '.mp-dock-ctl');
+  const [awake, setAwake] = useState(true); const [nudge, setNudge] = useState(0); const hover = useRef(false);
+  const folded = useRef(false);   // true while it is the corner disc
+  const wake = () => setNudge((n) => n + 1);
+  const keepOpen = () => { if (!folded.current) wake(); };   // touches / hover on the wide dock restart the countdown; on the disc only its own tap opens it (else the tap would land on a button that just appeared)
+  const hold = CFG.dockIdleMs <= 0 || p.status === 'error' || p.status === 'blocked' || p.status === 'loading';   // never fold away while it has something to say
+  useEffect(() => {
+    setAwake(true); if (hold || p.expanded) return undefined;
+    const id = setTimeout(() => { if (!hover.current) setAwake(false); }, CFG.dockIdleMs);
+    return () => clearTimeout(id);
+  }, [t.qid, p.playing, p.status, p.expanded, hold, nudge, CFG.dockIdleMs]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const collapsed = !awake && !hold && !p.expanded;
+  const swipe = useSwipe('up', () => a.setExpanded(true), '.mp-dock-ctl, .mp-dock-disc');
+  folded.current = collapsed;
+  const tab = p.expanded || collapsed ? -1 : 0;
   return (
-    <div className="mp-dock" data-playing={p.playing} data-hidden={p.expanded || undefined} style={{ '--mp-cover': cssUrl(cover && cover.url) }} role="region" aria-label="Music player" {...swipe}>
-      <button type="button" className="mp-dock-main" onClick={() => a.setExpanded(true)} aria-label={`Open player. ${t.title || 'Untitled'}${t.artist ? `, ${t.artist}` : ''}`} tabIndex={p.expanded ? -1 : 0}>
+    <div className="mp-dock" data-playing={p.playing} data-hidden={p.expanded || undefined} data-collapsed={collapsed || undefined} style={{ '--mp-cover': cssUrl(cover && cover.url) }} role="region" aria-label="Music player" {...swipe}
+      onPointerDown={(e) => { keepOpen(); swipe.onPointerDown(e); }} onPointerEnter={(e) => { if (e.pointerType === 'mouse') hover.current = true; }} onPointerLeave={() => { if (hover.current) { hover.current = false; keepOpen(); } }} onFocus={keepOpen}>
+      <button type="button" className="mp-dock-main" onClick={() => a.setExpanded(true)} aria-label={`Open player. ${t.title || 'Untitled'}${t.artist ? `, ${t.artist}` : ''}`} tabIndex={tab} aria-hidden={collapsed || undefined}>
         <span className="mp-dock-art"><CoverImg cover={cover} className="mp-cover" /></span>
         <span className="mp-dock-meta"><b>{t.title || (p.status === 'loading' ? 'Loading…' : 'Untitled')}</b><small>{p.status === 'error' ? 'Could not play' : p.status === 'blocked' ? 'Tap play to start' : t.artist}</small></span>
       </button>
-      <div className="mp-dock-ctl">
-        <button type="button" className="mp-ib mp-hide-sm" onClick={a.prev} aria-label="Previous" tabIndex={p.expanded ? -1 : 0}><SkipBack size="1.25em" weight="fill" /></button>
-        <button type="button" className="mp-ib mp-play-sm" onClick={a.toggle} aria-label={p.playing ? 'Pause' : 'Play'} tabIndex={p.expanded ? -1 : 0}><PlayGlyph playing={p.playing} busy={p.busy} size="1.4em" /></button>
-        <button type="button" className="mp-ib" onClick={a.next} aria-label="Next" tabIndex={p.expanded ? -1 : 0}><SkipForward size="1.25em" weight="fill" /></button>
+      <div className="mp-dock-ctl" aria-hidden={collapsed || undefined}>
+        <button type="button" className="mp-ib mp-hide-sm" onClick={a.prev} aria-label="Previous" tabIndex={tab}><SkipBack size="1.25em" weight="fill" /></button>
+        <button type="button" className="mp-ib mp-play-sm" onClick={a.toggle} aria-label={p.playing ? 'Pause' : 'Play'} tabIndex={tab}><PlayGlyph playing={p.playing} busy={p.busy} size="1.4em" /></button>
+        <button type="button" className="mp-ib" onClick={a.next} aria-label="Next" tabIndex={tab}><SkipForward size="1.25em" weight="fill" /></button>
       </div>
       <DockProgress />
+      <button type="button" className="mp-dock-disc" onClick={wake} aria-label={`Show player controls. ${p.playing ? 'Playing' : 'Paused'}: ${t.title || 'Untitled'}`} tabIndex={collapsed ? 0 : -1} aria-hidden={!collapsed || undefined}>
+        <span className="mp-disc" /><OrbRing />
+      </button>
     </div>
   );
 }

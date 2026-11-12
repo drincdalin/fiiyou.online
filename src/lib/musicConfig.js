@@ -20,6 +20,9 @@ export const MUSIC_CONFIG = {
   /** After a play request, a YouTube player that is still idle after this long (ms) is treated as "the browser blocked autoplay". */
   blockedMs: 3200,
 
+  /** The bottom dock shrinks into a small spinning disc in the corner after this many ms without a touch (it keeps playing). 0 = never shrink. */
+  dockIdleMs: 5000,
+
   /** How long (ms) loading the YouTube IFrame API may take before it counts as unreachable (ad blocker, offline). */
   apiTimeoutMs: 12000,
 };
