@@ -6,6 +6,7 @@ import { profileUrl } from './storyImage.js';
 import { supabase } from '../lib/client.js';
 import { signedUrls } from '../api/media.js';
 import './ShareSheet.css';
+import { friendlyError } from './errors.jsx';
 
 /**
  * Share sheet: pick a card style, see it, share or save it.
@@ -106,7 +107,7 @@ export default function ShareSheet({ data: incoming, onClose }) {
         setPreview({ url, ratio: canvas.width / canvas.height });
         setBusy(false);
       } catch (e) {
-        if (!stale) { setError(e?.message || 'Could not build this image.'); setBusy(false); }
+        if (!stale) { setError(friendlyError(e, 'Could not build this image.')); setBusy(false); }
       }
     })();
     return () => { stale = true; };

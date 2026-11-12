@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Bell } from '@phosphor-icons/react';
 import { social } from '../index.js';
 import { pushStatus, enablePush, disablePush } from './push.js';
+import { friendlyError } from './errors.jsx';
 
 /** Settings row: push notifications on this device. It never vanishes silently; when push cannot work it says why. */
 export default function PushToggle({ notify }) {
@@ -16,7 +17,7 @@ export default function PushToggle({ notify }) {
     } catch (e) {
       if (e?.message === 'denied') setSt('denied');
       else if (e?.message === 'dismissed') notify('Notifications were not allowed. Tap “Turn on” again and choose Allow.', 'err');   // closed the question: still "off", not "blocked"
-      else notify(`Could not turn notifications on: ${e?.message || 'unknown error'}`, 'err');
+      else notify(`Could not turn notifications on. ${friendlyError(e)}`, 'err');
     }
     setBusy(false);
   };

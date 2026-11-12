@@ -9,7 +9,7 @@ import { MessageMenu, MessageEditor, MessageSheet } from './MessageMenu.jsx';
 import { ask } from './dialog.jsx';
 import { DeletePlaceModal, useStaffRole } from './ModerationModals.jsx';
 import { ErrorState, friendlyError } from './errors.jsx';
-import { ArrowBendUpLeft, ArrowDown, CalendarBlank, ChatsCircle, Heart, MagnifyingGlass, PaperPlaneRight, PushPin, UsersThree, X } from '@phosphor-icons/react';
+import { ArrowBendUpLeft, ArrowDown, CalendarBlank, ChatsCircle, Heart, MagnifyingGlass, MapPin, PaperPlaneRight, Plus, PushPin, UsersThree, X } from '@phosphor-icons/react';
 import './more.css';
 import LocalityPicker from './LocalityPicker.jsx';
 
@@ -136,20 +136,29 @@ function PlaceSheet({ place, me, go, notify, onClose, onChanged }) {
 export function MapView({ me, go, notify }) {
   const box = useRef(), map = useRef(), group = useRef(), addRef = useRef(false), fitted = useRef(false);
   const [places, setPlaces] = useState([]); const [fr, setFr] = useState([]); const [locs, setLocs] = useState([]); const [show, setShow] = useState({ places: true, friends: true });
-  const [sel, setSel] = useState(null); const [q, setQ] = useState(''); const [res, setRes] = useState(null); const [cand, setCand] = useState(null); const [searching, setSearching] = useState(false); const candMk = useRef(); const [adding, setAdding] = useState(false); const [pin, setPin] = useState(null); const [form, setForm] = useState({ name: '', description: '', locality: '' });
+  const [ready, setReady] = useState(false); const [sel, setSel] = useState(null); const [q, setQ] = useState(''); const [res, setRes] = useState(null); const [cand, setCand] = useState(null); const [searching, setSearching] = useState(false); const candMk = useRef(); const [adding, setAdding] = useState(false); const [pin, setPin] = useState(null); const [form, setForm] = useState({ name: '', description: '', locality: '' });
   const img = useImages(fr.map((f) => f.avatar_path));
   const refresh = () => social.listPlaces().then((r) => { setPlaces(r); setSel((s) => s && r.find((x) => x.id === s.id)); }).catch((e) => notify(e.message, 'err'));
   useEffect(() => {
-    const m = L.map(box.current).setView([45.9, 24.9], 7);
+    const m = L.map(box.current, { zoomControl: false, worldCopyJump: false }).setView([46.2, 22.6], 8);   // Bihor / Alba / Arad until we know better
+    L.control.zoom({ position: 'bottomright' }).addTo(m);   // bottom right: the top left belongs to the search bar
     L.tileLayer(TILE, { maxZoom: 19, attribution: '© OpenStreetMap contributors' }).addTo(m);
     group.current = L.layerGroup().addTo(m); map.current = m;
     m.on('click', (e) => { if (addRef.current) setPin(e.latlng); });
-    refresh(); discover.friendsMap().then(setFr).catch(() => {}); discover.listLocalities().then(setLocs);
+    Promise.allSettled([refresh(), discover.friendsMap().then(setFr), discover.listLocalities().then(setLocs)]).then(() => setReady(true));   // frame the first view once everything is in, not after the first answer
     return () => m.remove();
   }, []);
   useEffect(() => { addRef.current = adding; box.current.classList.toggle('adding', adding); }, [adding]);
-  useEffect(() => { if (fitted.current) return; const pts = [...places.map((p) => [p.lat, p.lng]), ...locs.filter((l) => l.lat != null).map((l) => [l.lat, l.lng])];
-    if (pts.length) { map.current.fitBounds(pts, { padding: [40, 40], maxZoom: 15 }); fitted.current = true; } }, [places, locs]);
+  // First view: your own locality (zoomed in), else wherever places and friends are. Never "every locality in the table": with ~1500 of them that is three whole counties.
+  const home = locs.find((l) => me?.locality_id && l.id === me.locality_id && l.lat != null);
+  const frame = useCallback((animate) => {
+    const m = map.current; if (!m) return;
+    const pts = [...places.map((p) => [p.lat, p.lng]), ...fr.filter((f) => f.lat != null).map((f) => [f.lat, f.lng])];
+    if (home && pts.length <= 1) m.setView([home.lat, home.lng], 12, { animate });
+    else if (pts.length) m.fitBounds(pts, { padding: [60, 60], maxZoom: 14, animate });
+    else if (home) m.setView([home.lat, home.lng], 12, { animate });
+  }, [places, fr, home]);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!ready || fitted.current || !map.current) return; fitted.current = true; frame(false); }, [ready, frame]);
   useEffect(() => { if (sel) map.current.panTo([sel.lat, sel.lng]); }, [sel?.id]);
   useEffect(() => {
     const g = group.current; g.clearLayers();
@@ -170,14 +179,20 @@ export function MapView({ me, go, notify }) {
     try { const p = await social.createPlace({ name: form.name, description: form.description, lat: pin.lat, lng: pin.lng, localityId: form.locality ? +form.locality : null });
       setPin(null); setAdding(false); setForm({ name: '', description: '', locality: '' }); await refresh(); setSel({ ...p, post_count: 0, friends_there: 0 }); notify('Place added'); } catch (er) { notify(er.message || 'Could not add place', 'err'); } };
   return (<div className={`mapview view${sel ? ' open' : ''}`}>
-    <div className="mapbar"><form className="msearch" onSubmit={search}><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a real place (café, school, park…)" aria-label="Search places" /><button className="primary sm" disabled={searching || q.trim().length < 3}>{searching ? '…' : 'Search'}</button></form>
-      {res && <div className="sresults">{!res.length && <p className="muted">Nothing found. Try another name.</p>}{res.map((r) => <button key={r.ref} onClick={() => pick(r)}><b>{r.name}</b><small>{r.label}</small></button>)}<button className="ghost sm" onClick={() => setRes(null)}>Close</button></div>}
-      <button className={show.places ? 'on' : ''} onClick={() => setShow({ ...show, places: !show.places })}>Places</button>
-      <button className={show.friends ? 'on' : ''} onClick={() => setShow({ ...show, friends: !show.friends })}>Friends</button>
-      <button className={adding ? 'primary sm' : 'ghost sm'} onClick={() => { setAdding(!adding); setPin(null); }}>{adding ? 'Tap the map to place it' : 'Add a place'}</button></div>
+    <div className="mapbar"><form className="msearch" onSubmit={search} role="search"><MagnifyingGlass size={18} weight="bold" aria-hidden="true" />
+        <input value={q} onChange={(e) => { setQ(e.target.value); if (res) setRes(null); }} onKeyDown={(e) => { if (e.key === 'Escape') { setRes(null); setQ(''); } }} placeholder="Search a café, school, park…" aria-label="Search for a real place" autoComplete="off" enterKeyHint="search" maxLength={80} />
+        {q && <button type="button" className="mclear" aria-label="Clear search" onClick={() => { setQ(''); setRes(null); }}><X size={14} weight="bold" aria-hidden="true" /></button>}
+        <button className="primary sm" disabled={searching || q.trim().length < 3} title={q.trim().length < 3 ? 'Type at least 3 letters' : undefined}>{searching ? 'Searching…' : 'Search'}</button></form>
+      {res && <div className="sresults" role="region" aria-label="Search results">{!res.length && <p className="muted">Nothing found near this part of the map. Zoom out or try another name.</p>}{res.map((r) => <button key={r.ref} onClick={() => pick(r)}><b>{r.name}</b><small>{r.label}</small></button>)}<button className="ghost sm" onClick={() => setRes(null)}>Close</button></div>}
+      <div className="mtogs" role="group" aria-label="What to show on the map">
+        <button type="button" className={`mtog${show.places ? ' on' : ''}`} aria-pressed={show.places} onClick={() => setShow({ ...show, places: !show.places })}><MapPin size={16} weight="bold" aria-hidden="true" />Places<span className="mcount">{places.length}</span></button>
+        <button type="button" className={`mtog${show.friends ? ' on' : ''}`} aria-pressed={show.friends} onClick={() => setShow({ ...show, friends: !show.friends })}><UsersThree size={16} weight="bold" aria-hidden="true" />Friends<span className="mcount">{fr.length}</span></button></div>
+      <button type="button" className={`madd${adding ? ' on' : ''}`} aria-pressed={adding} onClick={() => { setAdding(!adding); setPin(null); setCand(null); }}>{adding ? <><X size={16} weight="bold" aria-hidden="true" />Cancel</> : <><Plus size={16} weight="bold" aria-hidden="true" />Add a place</>}</button></div>
     <div className="mapwrap"><div ref={box} className="leaflet-box" />
+      <button type="button" className="mrecenter" onClick={() => frame(true)} aria-label="Recenter the map" title="Recenter"><MapPin size={18} weight="bold" aria-hidden="true" /></button>
+      {adding && !pin && <p className="maphint" role="status">Tap the map where the place is.</p>}
       {cand && <div className="cand"><div><b>{cand.name}</b><small>{cand.label}</small></div><div className="acts"><button className="primary sm" onClick={openCand}>Post from here</button><button className="ghost sm" onClick={() => setCand(null)}>Dismiss</button></div></div>}
-      {!places.length && !adding && !cand && <p className="maphint">No places yet. Use "Add a place", then tap the map.</p>}</div>
+      {!places.length && !fr.length && !adding && !cand && !res && <p className="maphint">Nothing here yet. Search a real place above, or use “Add a place” and tap the map.</p>}</div>
     {sel && <PlaceSheet key={sel.id} place={sel} me={me} go={go} notify={notify} onClose={() => setSel(null)} onChanged={refresh} />}
     {pin && <div className="modal" onClick={() => setPin(null)}><form className="panel mform" onClick={(e) => e.stopPropagation()} onSubmit={savePlace}><h3>New place</h3>
       <input autoFocus required minLength={2} maxLength={80} placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />

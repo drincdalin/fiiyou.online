@@ -1,14 +1,14 @@
+import { plainError } from '../lib/plainError.js';
 import { Component, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import './errors.css';
 
 /** Turns raw errors into something a person can act on. Network failures get a plain sentence; everything else keeps its own message. */
-export function friendlyError(e, fallback = 'Something went wrong. Please try again.') {
-  const msg = String(e?.message ?? e ?? '').trim();
+export function friendlyError(e, fallback) {
   const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
   if (offline) return 'You are offline. Check your connection and try again.';
-  if (!msg) return fallback;
-  if (/failed to fetch|networkerror|network request failed|load failed|fetch failed|err_internet|timed? ?out/i.test(msg)) return 'Could not reach the server. Check your connection and try again.';
-  return msg;
+  const msg = String(e?.message ?? e ?? '').trim();
+  if (/failed to fetch|networkerror|network request failed|load failed|fetch failed|err_internet/i.test(msg)) return 'Could not reach the server. Check your connection and try again.';
+  return plainError(e, fallback);
 }
 
 /* ---------- online / offline ---------- */

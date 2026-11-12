@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { profiles, cards as cardsApi } from '../index.js';
 import { parseThemeFile } from './themeFile.js';
+import { friendlyError } from './errors.jsx';
 
 /** Import a theme (or a full data export) from a file and apply it to MY profile. Images are not transferable between accounts. */
 export default function ImportModal({ onClose, onDone, notify }) {
@@ -15,7 +16,7 @@ export default function ImportModal({ onClose, onDone, notify }) {
       if (Object.keys(patch).length) await profiles.updateMyProfile(patch);
       if (o.cards && parsed.cards.length) { for (const c of (await cardsApi.listMine()).filter((x) => x.type !== 'sticker' && x.type !== 'music')) await cardsApi.deleteCard(c);
         for (const [i, c] of parsed.cards.entries()) await cardsApi.createCard({ ...c, y: i * 10 }); }
-      notify('Theme imported'); onDone(); } catch (er) { setErr(er.message || 'Import failed'); setBusy(false); } };
+      notify('Theme imported'); onDone(); } catch (er) { setErr(friendlyError(er, 'Import failed.')); setBusy(false); } };
   const row = (k, label, n) => <label className="row" key={k}><input type="checkbox" disabled={!n} checked={o[k] && !!n} onChange={(e) => setO({ ...o, [k]: e.target.checked })} />{label} <small>({n || 'none in file'})</small></label>;
   return (<div className="modal" onClick={busy ? undefined : onClose}><div className="panel mform" onClick={(e) => e.stopPropagation()}>
     <h3>Import theme</h3><p className="muted">Pick a theme file or a full data export from any fiiyou account. Photos, stickers, avatar and background images are not transferred (they belong to the other account), so they stay as they are on yours.</p>

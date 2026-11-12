@@ -10,7 +10,16 @@ export const role = async () => {
 export const stats = () => rpc('admin_stats');
 export const reports = (status = 'open') => rpc('admin_reports', { p_status: status });
 export const setReport = (id, status) => rpc('admin_set_report', { p_id: id, p_status: status });
-export const deleteComment = (type, id) => rpc('admin_delete_comment', { p_type: type, p_id: id });
+/** Reasons for removing a post or comment (same codes as the database). 'custom' needs a written reason (5+ characters). The author is emailed the reason. */
+export const CONTENT_REASONS = [
+  ['guidelines', 'Violates Community Guidelines'],
+  ['spam', 'Spam / Commercial Abuse'],
+  ['explicit', 'Explicit or Inappropriate Content'],
+  ['abuse', 'Abuse / Harassment'],
+  ['custom', 'Custom Reason'],
+];
+/** type = 'post_comment' | 'wall_comment'. A reason is required; the author gets an email with it. Returns { notified }. */
+export const deleteComment = (type, id, reasonCode, reasonText) => rpc('admin_delete_comment', { p_type: type, p_id: id, p_reason_code: reasonCode, p_reason_text: reasonText || null });
 export const setVerified = (id, on) => rpc('admin_set_verified', { p_profile: id, p_on: on });
 export const searchUsers = (q) => rpc('admin_search_users', { p_q: q || '' });
 export const log = () => rpc('admin_log', { p_limit: 50 });
@@ -29,15 +38,22 @@ export const deletePlace = (id, reasonCode, reasonText) => rpc('admin_delete_pla
 export const deletionLog = () => rpc('admin_deletion_log', { p_limit: 50 });
 
 async function removeFiles(bucket, paths) { for (let i = 0; i < paths.length; i += 100) unwrap(await supabase.storage.from(bucket).remove(paths.slice(i, i + 100))); }
-/** Deletes the post, then its image file (SQL can't delete files; the Storage API can, and admins are allowed to). */
-export async function deletePost(id) { const path = await rpc('admin_delete_post', { p_id: id }); if (path) await removeFiles('media', [path]); }
+/** Deletes the post (a reason is required, the author is emailed it), then ALL its photo files: first photo and extra photos.
+ *  SQL can't delete files; the Storage API can, and staff are allowed to. Returns { notified }. */
+export async function deletePost(id, reasonCode, reasonText) {
+  const r = await rpc('admin_delete_post', { p_id: id, p_reason_code: reasonCode, p_reason_text: reasonText || null });
+  if (r?.paths?.length) await removeFiles('media', r.paths);
+  return r;
+}
 
-/** Removes every file the person owns in both buckets (shared by deleteUser and banUser). */
+/** Removes every file the person owns in all three buckets (media, audio, fonts) (shared by deleteUser and banUser). */
 async function removeUserFiles(id) {
-  for (const b of ['media', 'audio']) {
-    const files = unwrap(await supabase.storage.from(b).list(id, { limit: 1000 }));
-    const paths = files.filter((f) => f.name !== '.emptyFolderPlaceholder').map((f) => `${id}/${f.name}`);
-    if (paths.length) await removeFiles(b, paths);
+  for (const b of ['media', 'audio', 'fonts']) {
+    try {
+      const files = unwrap(await supabase.storage.from(b).list(id, { limit: 1000 }));
+      const paths = files.filter((f) => f.name !== '.emptyFolderPlaceholder').map((f) => `${id}/${f.name}`);
+      if (paths.length) await removeFiles(b, paths);
+    } catch (e) { if (b !== 'fonts') throw e; }   // fonts: best effort (staff may have no delete right on that bucket); it must never block a ban
   }
 }
 /** Removes every file the person owns first, then the account (everything else cascades). */
@@ -48,8 +64,13 @@ export async function deleteUser(id) {
 /** Same as deleteUser, but the database also remembers the (hashed) email so it can never sign up again. */
 export async function banUser(id, reason, userMessage) {
   await removeUserFiles(id);
-  await rpc('admin_ban_user', { p_user: id, p_reason: reason || null, p_user_message: userMessage || null });   // p_reason is internal; p_user_message is emailed to the person
+  return rpc('admin_ban_user', { p_user: id, p_reason: reason || null, p_user_message: userMessage || null });   // p_reason is internal; p_user_message is emailed to the person
 }
+
+/** Emails queued for members (ban notices, removed posts...). Admin only. Rows: { id, kind, username, status, attempts, last_error, created_at, sent_at }. Needs migration 0036. */
+export const outbox = () => rpc('admin_outbox', { p_limit: 50 });
+/** Puts a failed or stuck email back in the queue; it goes out the next time the Edge Function is called with {"retry":true}. */
+export const requeueEmail = (id) => rpc('admin_requeue_email', { p_id: id });
 /** Undo a ban by email (not used in the UI yet). */
 export const unbanEmail = (email) => rpc('admin_unban_email', { p_email: email });
 

@@ -90,7 +90,9 @@ Deno.serve(async (req) => {
     if (setupError) { console.error('refusing to send:', setupError); return json({ error: setupError }, 500); }
     if (body.type === 'TEST') {
       const uid = body.user_id; if (!uid) return json({ error: 'user_id is required' }, 400);
-      return json(await deliver(uid, { title: 'fiiyou', body: 'Test notification: push works on this device', path: '', tag: 'test' }));
+      const { data: who } = await admin.from('profiles').select('display_name, avatar_path').eq('id', uid).maybeSingle();   // the test shows that person's own picture, like a real one
+      const icon = await photoUrl(who?.avatar_path);
+      return json(await deliver(uid, { title: who?.display_name || 'fiiyou', body: 'Test notification: push works on this device', path: '', tag: 'test', ...(icon ? { icon } : {}) }));
     }
     const n = body.record;
     if (body.type !== 'INSERT') return json({ ok: 'ignored' });

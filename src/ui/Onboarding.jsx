@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { MagnifyingGlass } from '@phosphor-icons/react';
 import { profiles, cards as cardsApi, friends, discover } from '../index.js';
 import { Avatar, useImages } from './shared.jsx';
 import { friendlyError } from './errors.jsx';
@@ -18,6 +19,7 @@ export default function Onboarding({ me, inviter: rawInviter, onDone, notify }) 
   const [name, setName] = useState(me.display_name || me.username); const [loc, setLoc] = useState(me.locality_id ? String(me.locality_id) : ''); const [mood, setMood] = useState(me.headline || '');
   const [avatar, setAvatar] = useState(me.avatar_path || null); const [preview, setPreview] = useState(null);
   const [about, setAbout] = useState(''); const aboutCard = useRef(null);
+  const [q, setQ] = useState(''); const [hits, setHits] = useState(null); const seq = useRef(0);
   const [people, setPeople] = useState(null); const [sent, setSent] = useState({}); const [inv, setInv] = useState(false);
   const head = useRef();
   useEffect(() => { discover.listLocalities().then(setLocs).catch(() => {}); }, []);
@@ -33,11 +35,20 @@ export default function Onboarding({ me, inviter: rawInviter, onDone, notify }) 
       if (l && list.length < 3) { const more = await discover.discover({ localityId: null, mode: 'new', limit: 12 }); list = [...list, ...more.filter((p) => !list.some((x) => x.id === p.id))].slice(0, 12); }
       if (inviter && !list.some((p) => p.username === inviter)) { const hit = (await discover.searchProfiles(inviter, 5)).find((p) => p.username === inviter && p.id !== me.id); if (hit) list = [hit, ...list]; }
       else if (inviter) list = [list.find((p) => p.username === inviter), ...list.filter((p) => p.username !== inviter)];
-      setPeople(list);
+      setPeople(list.filter(Boolean));
     } catch (e) { setErr(friendlyError(e)); setPeople([]); }
   };
   useEffect(() => { if (step === 3) loadPeople(); }, [step]);   // eslint-disable-line react-hooks/exhaustive-deps
-  const img = useImages((people || []).map((p) => p.avatar_path));
+  // search box on step 4: type 2+ letters to look people up by name or @username (debounced; stale answers are dropped)
+  const term = q.trim(); const searching = term.length >= 2;
+  useEffect(() => {
+    if (!searching) { seq.current++; setHits(null); return undefined; }
+    const my = ++seq.current; setHits(null);
+    const t = setTimeout(() => { discover.searchProfiles(term.replace(/^@/, ''), 12).then((r) => { if (my === seq.current) setHits(r.filter((p) => p.id !== me.id)); }).catch(() => { if (my === seq.current) setHits([]); }); }, 250);
+    return () => clearTimeout(t);
+  }, [term, searching, me.id]);
+  const shown = searching ? hits : people;
+  const img = useImages((shown || []).map((p) => p.avatar_path));
   const lname = (id) => locs.find((l) => l.id === id)?.name;
 
   const run = async (fn) => { setBusy(true); setErr(''); try { await fn(); return true; } catch (e) { setErr(friendlyError(e)); return false; } finally { setBusy(false); } };
@@ -81,9 +92,10 @@ export default function Onboarding({ me, inviter: rawInviter, onDone, notify }) 
 
     {step === 3 && <>
       {inviter && <p className="obnote">@{inviter} invited you. Add them first.</p>}
-      {people === null && <p className="muted" role="status">Looking for people…</p>}
-      {people?.length === 0 && !err && <p className="muted">You&apos;re one of the first here. Invite a friend and you&apos;ll find each other.</p>}
-      <div className="oblist">{(people || []).map((p) => (<div className="row" key={p.id}><Avatar src={img[p.avatar_path]} size={44} /><span className="obwho"><b>{p.display_name}</b><small>{[p.headline, lname(p.locality_id)].filter(Boolean).join(' · ') || `@${p.username}`}</small></span>
+      <div className="obsearch"><MagnifyingGlass size={16} weight="bold" aria-hidden="true" /><input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search people by name or @username" aria-label="Search people" autoComplete="off" autoCapitalize="off" spellCheck={false} maxLength={50} /></div>
+      {shown === null && <p className="muted" role="status">{searching ? 'Searching…' : 'Looking for people…'}</p>}
+      {shown?.length === 0 && !err && (searching ? <p className="muted" role="status">Nobody found for “{term}”. Check the spelling, or invite them with the button below.</p> : <p className="muted">You&apos;re one of the first here. Invite a friend and you&apos;ll find each other.</p>)}
+      <div className="oblist">{(shown || []).filter(Boolean).map((p) => (<div className="row" key={p.id}><Avatar src={img[p.avatar_path]} size={44} /><span className="obwho"><b>{p.display_name}</b><small>{[p.headline, lname(p.locality_id)].filter(Boolean).join(' · ') || `@${p.username}`}</small></span>
         {sent[p.id] ? <small>Request sent</small> : <button type="button" className="primary sm" onClick={() => add(p)}>Add</button>}</div>))}</div>
       <button type="button" className="ghost wide" onClick={() => setInv(true)}>Invite friends (link and QR code)</button></>}
 

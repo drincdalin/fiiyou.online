@@ -4,6 +4,7 @@ import { social } from '../index.js';
 import { ask } from './dialog.jsx';
 import { useBackToClose, useSheetDrag } from './shared.jsx';
 import './MessageMenu.css';
+import { friendlyError } from './errors.jsx';
 
 /** "..." button + small menu (Edit / Delete) for MY chat messages.
  *  Props: m (message row), canEdit (false hides Edit, e.g. shared-post messages), onEdit() (parent switches the bubble to <MessageEditor/>), onDeleted(m) (parent updates its list), notify(text, 'err'?).
@@ -27,7 +28,7 @@ export function MessageMenu({ m, me, onEdit, onDeleted, notify, align = 'right',
     setOpen(false); setPos(null);
     if (!(await ask({ title: 'Delete this message?', message: 'It will show as deleted for both of you.', confirmLabel: 'Delete', danger: true }))) return;
     try { await social.deleteMessage(m.id); onDeleted?.({ ...m, body: social.DELETED_BODY, edited_at: null }); }
-    catch (e) { notify?.(e?.message || 'Could not delete the message', 'err'); }
+    catch (e) { notify?.(friendlyError(e, 'Could not delete the message.'), 'err'); }
   };
 
   return (<span className="msgmenuwrap">
@@ -87,7 +88,7 @@ export function MessageEditor({ m, onSaved, onCancel, notify }) {
     if (body === m.body) { onCancel(); return; }
     setBusy(true);
     try { const r = await social.editMessage(m.id, body); onSaved({ ...m, body: r.body, edited_at: r.edited_at }); }
-    catch (e) { notify?.(e?.message || 'Could not edit the message', 'err'); setBusy(false); }
+    catch (e) { notify?.(friendlyError(e, 'Could not edit the message.'), 'err'); setBusy(false); }
   };
   const key = (e) => { if (e.key === 'Escape') onCancel(); else if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); save(); } };
 

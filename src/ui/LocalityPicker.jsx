@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { MapPin, CaretDown, MagnifyingGlass, Check } from '@phosphor-icons/react';
+import { MapPin, CaretDown, MagnifyingGlass, Check, X } from '@phosphor-icons/react';
 
 // A searchable replacement for the long <select> of localities.
 //   <LocalityPicker locs={locs} value={loc} onChange={(id) => setLoc(id)} emptyLabel="All localities" ariaLabel="Place" />
@@ -58,7 +58,8 @@ export default function LocalityPicker({ locs, value, onChange, emptyLabel = 'An
       <div ref={pop} className="lppop" style={{ left: pos.left, width: pos.width, top: pos.top, bottom: pos.bottom }} onKeyDown={onKey}>
         <div className="lpsearch"><MagnifyingGlass size={15} weight="bold" aria-hidden="true" />
           <input ref={inp} type="search" role="combobox" aria-expanded="true" aria-controls={listId} aria-activedescendant={pickable[active] ? `${uid}-o${pickable[active][1]}` : undefined} aria-label={`Search ${locs.length} places`}
-            placeholder={`Search ${locs.length.toLocaleString('en')} places…`} value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" autoCapitalize="off" spellCheck={false} /></div>
+            placeholder={`Search ${locs.length.toLocaleString('en')} places…`} value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" autoCapitalize="off" spellCheck={false} enterKeyHint="go" />
+          {q && <button type="button" className="lpclear" aria-label="Clear search" onMouseDown={(e) => e.preventDefault()} onClick={() => { setQ(''); inp.current?.focus(); }}><X size={12} weight="bold" aria-hidden="true" /></button>}</div>
         <ul id={listId} role="listbox" className="lplist" style={{ maxHeight: pos.maxList }}>
           {res.rows.map((r, i) => r.kind === 'group' ? <li key={`g${i}`} role="presentation" className="lpgroup">{r.label}</li> : (
             <li key={r.kind === 'empty' ? 'empty' : r.l.id} id={`${uid}-o${i}`} role="option" aria-selected={r.kind === 'empty' ? !current : String(r.l.id) === String(value)}
