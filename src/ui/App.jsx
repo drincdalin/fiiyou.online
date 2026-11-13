@@ -30,7 +30,7 @@ import { PasswordMeter } from './PasswordMeter.jsx';
 import Captcha, { CAPTCHA_ON } from './Captcha.jsx';
 import { registerSW, forgetDevice, syncPush, listenForOpen, clearDeliveredNotifications } from './push.js';
 import GithubActivity from './GithubActivity.jsx';
-import { Bell, Eye, EyeSlash, Check, GearSix, Heart, MagnifyingGlass, PencilSimple, ShareNetwork, SignOut, Trash, UserPlus } from '@phosphor-icons/react';
+import { Bell, CaretRight, Eye, EyeSlash, Check, GearSix, Heart, MagnifyingGlass, PencilSimple, ShareNetwork, SignOut, Trash, UserPlus } from '@phosphor-icons/react';
 
 const BASE = import.meta.env.BASE_URL;
 function Auth() {
@@ -342,9 +342,14 @@ export default function App() {
     const key = (e) => { const t = e.target; if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey || t?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t?.tagName || '')) return; e.preventDefault(); navigate('/search'); };
     addEventListener('keydown', key); return () => removeEventListener('keydown', key);
   }, [me?.id]);
-  const menuRef = useRef();
-  useEffect(() => { if (!menu) return; const out = (e) => { if (!menuRef.current?.contains(e.target)) setMenu(false); }; const esc = (e) => { if (e.key === 'Escape') setMenu(false); };
-    addEventListener('pointerdown', out); addEventListener('keydown', esc); return () => { removeEventListener('pointerdown', out); removeEventListener('keydown', esc); }; }, [menu]);
+  const menuRef = useRef(); const avRef = useRef(null); const panelRef = useRef(null);
+  useEffect(() => { if (!menu) return undefined;   // account panel: a tap outside closes it (the dim layer closes it on click, so the tap never reaches the page behind), Escape closes it and hands focus back
+    const out = (e) => { const t = e.target; if (!menuRef.current?.contains(t) && !t?.closest?.('.menuscrim')) setMenu(false); };
+    const esc = (e) => { if (e.key === 'Escape') { setMenu(false); avRef.current?.focus(); } };
+    addEventListener('pointerdown', out); addEventListener('keydown', esc);
+    panelRef.current?.focus({ preventScroll: true });   // screen readers and keyboards land inside the panel
+    return () => { removeEventListener('pointerdown', out); removeEventListener('keydown', esc); }; }, [menu]);
+  useEffect(() => { setMenu(false); }, [route.v, route.username, route.peer, route.id]);   // moving to another page always closes the panel (back button, a link in a notification, a deep link)
   useEffect(() => { if (!toast || paused) return undefined; const t = setTimeout(() => setToast(null), toast.type === 'err' ? 6000 : 3200); return () => clearTimeout(t); }, [toast, paused]);   // errors stay longer; hovering a toast keeps it
   useEffect(() => {   // every time you are looking at the app, its notifications leave the phone's notification shade
     if (!me) return undefined;
@@ -384,19 +389,33 @@ export default function App() {
   const PAGE = { home: 'Home', profile: 'Profile', map: 'Map', messages: 'Messages', people: 'People', search: 'Search', settings: 'Settings', notifications: 'Notifications', post: 'Post', admin: 'Admin' };
   return (<div className="app">
     <button type="button" className="skip" onClick={() => { const m = document.getElementById('main'); m?.focus(); m?.scrollIntoView?.(); }}>Skip to content</button>
+    {menu && <div className="menuscrim" onClick={() => setMenu(false)} aria-hidden="true" />}
     <nav className="nav" aria-label="Main"><button className="logo" onClick={() => top('home')}>fiiyou</button>
       <div className="navlinks">{NAV.map(([v, l]) => <button key={v} className={`nv-${v}${active(v) ? ' on' : ''}`} aria-label={l} title={l} aria-current={active(v) ? 'page' : undefined} onClick={() => top(v)}><span className="navicw"><NavIcon name={v} active={active(v)} />{v === 'messages' && unread > 0 && <em className="dotb">{unread > 99 ? '99+' : unread}</em>}</span><span className="navlbl" aria-hidden="true">{l}</span></button>)}</div>
       <div className="navmusic" id="nav-music" />
-      <div className="more" ref={menuRef}><button className={`avbtn${active('profile') ? ' on' : ''}`} onClick={() => setMenu(!menu)} aria-label={nCount > 0 ? `Account menu (${nCount} new notifications)` : 'Account menu'} aria-expanded={menu}><Avatar src={myImg[me.avatar_path]} size={34} name={me.display_name || me.username} /></button>{nCount > 0 && <em className="avdot" aria-hidden="true">{nCount > 9 ? '9+' : nCount}</em>}{menu && <div className="menu" role="menu">
-        <button className="mhead" role="menuitem" onClick={() => go('profile')}><Avatar src={myImg[me.avatar_path]} size={44} name={me.display_name || me.username} /><span><b>{me.display_name || me.username}</b><small>@{me.username}</small></span></button>
-        <hr className="msep" />
-        <NotificationList go={go} notify={notify} tick={nTick} onRead={setNCount} limit={5} />
-        <hr className="msep" />
-        <button role="menuitem" onClick={() => { setMenu(false); setInviteOpen(true); }}><UserPlus size={18} weight="bold" aria-hidden="true" />Invite friends</button>
-        <button role="menuitem" onClick={() => go('settings')}><GearSix size={18} weight="bold" aria-hidden="true" />Settings</button>
-        <hr className="msep" />
-        <button role="menuitem" onClick={async () => { setMenu(false); await forgetDevice(); auth.signOut(); }}><SignOut size={18} weight="bold" aria-hidden="true" />Sign out</button>
-      </div>}</div></nav>
+      <div className="more" ref={menuRef}>
+        <button ref={avRef} type="button" className={`avbtn${active('profile') || menu ? ' on' : ''}`} onClick={() => setMenu(!menu)} aria-haspopup="dialog" aria-expanded={menu} title="You, notifications and settings"
+          aria-label={nCount > 0 ? `Account and notifications (${nCount} new)` : 'Account and notifications'}>
+          <span className="navicw"><Avatar src={myImg[me.avatar_path]} size={34} name={me.display_name || me.username} />{nCount > 0 && <em className="avdot" aria-hidden="true">{nCount > 9 ? '9+' : nCount}</em>}</span>
+          <span className="navlbl" aria-hidden="true">Me</span>
+        </button>
+        {menu && <div className="menu" role="dialog" aria-label="Notifications and account" tabIndex={-1} ref={panelRef}>
+          <section className="mcard mnotif" aria-labelledby="mn-h">
+            <header className="mcardhead"><h2 id="mn-h">Notifications</h2></header>
+            <NotificationList go={go} notify={notify} tick={nTick} onRead={setNCount} limit={4} />
+          </section>
+          <button type="button" className="mcard mprof" onClick={() => go('profile')}>
+            <Avatar src={myImg[me.avatar_path]} size={44} name={me.display_name || me.username} />
+            <span className="mprofn"><b>{me.display_name || me.username}</b><small>@{me.username}</small></span>
+            <CaretRight size={16} weight="bold" aria-hidden="true" />
+          </button>
+          <div className="mcard mact">
+            <button type="button" onClick={() => { setMenu(false); setInviteOpen(true); }}><UserPlus size={20} weight="bold" aria-hidden="true" />Invite friends</button>
+            <button type="button" onClick={() => go('settings')}><GearSix size={20} weight="bold" aria-hidden="true" />Settings</button>
+          </div>
+          <button type="button" className="mcard mout danger" onClick={async () => { setMenu(false); await forgetDevice(); auth.signOut(); }}><SignOut size={20} weight="bold" aria-hidden="true" />Sign out</button>
+        </div>}
+      </div></nav>
     <main id="main" className="appmain" tabIndex={-1} ref={mainRef}>
     <h1 className="sronly pagetitle" ref={h1Ref}>{PAGE[route.v] || 'fiiyou'}</h1>
     {route.v === 'home' && <HomeView me={me} go={go} notify={notify} unread={unread} />}

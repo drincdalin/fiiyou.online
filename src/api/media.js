@@ -56,16 +56,31 @@ export async function deleteImage(path) {
   unwrap(await supabase.storage.from(BUCKET).remove([path]));
 }
 
-// ---- signed URL cache (buckets are private; URLs live 1h, refreshed at 50 min) ----
-// A path that is already being signed is not asked for twice (the nav bar, the home card and the feed all want the same avatar at the same
-// moment), a failed request is retried once quietly, and a failure is never cached. A path that could not be signed comes back as null.
-const TTL = 3600, cache = new Map(), flying = new Map();
+// ---- signed URL cache (buckets are private) ----
+// EGRESS: the browser only reuses a downloaded picture when the URL is IDENTICAL, token included. This cache used to live in memory with 1 h links, so every
+// reload (and every hour) signed brand-new URLs and every avatar, photo, font and song was downloaded again, although uploads are sent with a 1 year
+// cache header. Now the links are kept in localStorage and reused until they expire (24 h), so a picture is downloaded once per device per day instead of
+// once per visit. They are wiped on sign-out. A path that is already being signed is not asked for twice, a failed request is retried once quietly,
+// a failure is never cached, and a path that could not be signed comes back as null.
+const TTL = 86400, SAFETY = 900, STORE = 'fiiyou.signed.v1', MAX_KEPT = 600, cache = new Map(), flying = new Map();
+try {   // load what an earlier visit already signed (links that are about to expire are left out)
+  const saved = JSON.parse(localStorage.getItem(STORE) || '{}'); const now = Date.now();
+  for (const [k, v] of Object.entries(saved)) if (v && typeof v.url === 'string' && v.exp > now) cache.set(k, v);
+} catch { /* private mode or storage blocked: the cache just lives in memory */ }
+let saveT = 0;
+const persist = () => { clearTimeout(saveT); saveT = setTimeout(() => { try {
+  const now = Date.now(); const rows = [...cache.entries()].filter(([, v]) => v.exp > now).sort((x, y) => y[1].exp - x[1].exp).slice(0, MAX_KEPT);
+  localStorage.setItem(STORE, JSON.stringify(Object.fromEntries(rows)));
+} catch { /* storage full or blocked */ } }, 400); };
+export function clearSignedCache() { cache.clear(); clearTimeout(saveT); try { localStorage.removeItem(STORE); } catch { /* ignore */ } }
+try { supabase.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT') clearSignedCache(); }); } catch { /* auth not ready: nothing to wipe */ }
 
 async function sign(bucket, paths) {
   const call = async () => unwrap(await supabase.storage.from(bucket).createSignedUrls(paths, TTL));
   let rows; try { rows = await call(); } catch { await new Promise((r) => setTimeout(r, 700)); rows = await call(); }
-  const exp = Date.now() + (TTL - 600) * 1000;
+  const exp = Date.now() + (TTL - SAFETY) * 1000;
   for (const r of rows) if (r.signedUrl && r.path) cache.set(`${bucket}/${r.path}`, { url: r.signedUrl, exp });
+  persist();
 }
 
 export async function signedUrls(paths, bucket = BUCKET) {

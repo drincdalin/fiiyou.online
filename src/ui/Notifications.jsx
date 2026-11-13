@@ -58,12 +58,15 @@ export function NotificationList({ go, notify, tick, onRead, limit, grouped = tr
   const fresh = useRef(new Set());   // ids that were unread when they arrived here: they stay highlighted while this list is open
   const load = useCallback(() => social.listNotifications(fetchRef.current).then((r) => {
     const list = r || [];
-    const unseen = list.filter((x) => !x.read).map((x) => x.id);
+    // Seeing a list marks what it SHOWS as read, nothing more: the account panel shows the latest few lines, so the older unread ones stay unread
+    // (they used to be marked read unseen, and the badge dropped to 0 although there was more to look at).
+    const shownGroups = (grouped ? groupNotifications(list) : ungroupNotifications(list)); const seen = new Set((limit ? shownGroups.slice(0, limit) : shownGroups).flatMap((g) => g.ids));
+    const unseen = list.filter((x) => !x.read && seen.has(x.id)).map((x) => x.id);
     unseen.forEach((id) => fresh.current.add(id));
     setRows(list.map((x) => ({ ...x, read: !fresh.current.has(x.id) })));   // "read" here only drives the highlight
-    if (unseen.length) {   // seen by opening the list: tell the database and the badge (only these ids, never ones that arrive a moment later)
-      onRead(0);
-      social.markNotificationsReadIds(unseen).catch(() => onRead(unseen.length));
+    if (unseen.length) {   // only these ids, never ones that arrive a moment later
+      if (list.length < fetchRef.current && unseen.length >= list.filter((x) => !x.read).length) onRead(0);   // everything unread was on screen: the badge clears at once
+      Promise.resolve(social.markNotificationsReadIds(unseen)).catch(() => {}).then(() => social.unreadNotifications()).then((c) => onRead(c || 0)).catch(() => {});   // then the real number, whatever happened
     }
   }).catch(() => { setRows((x) => x || []); notify('Could not load notifications', 'err'); }), []);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [tick, fetchN]);   // eslint-disable-line react-hooks/exhaustive-deps
@@ -81,7 +84,7 @@ export function NotificationList({ go, notify, tick, onRead, limit, grouped = tr
   };
 
   return (<section className="nsec npage" aria-label="Notifications">
-    {!rows ? <div className="boot">…</div> : !groups.length ? <p className="muted nempty">Nothing yet. Likes, replies and mentions will show up here.</p>
+    {!rows ? <p className="muted nempty" role="status">Loading…</p> : !groups.length ? <p className="muted nempty">Nothing yet. Likes, replies and mentions will show up here.</p>
       : <ul className="nlist">{shown.map((g) => { const [Icon, single] = KINDS[g.type] || [Bell, 'did something']; const text = g.targetCount > 1 && PLURAL[g.type] ? PLURAL[g.type] : single; const r = g.latest; const count = g.rows.length; return (
         <li key={g.key} className="nitem">
           <button type="button" className={`nrow${g.unread ? ' new' : ''}`} onClick={() => visit(g)}>

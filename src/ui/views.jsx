@@ -10,7 +10,7 @@ import { MessageMenu, MessageEditor, MessageSheet } from './MessageMenu.jsx';
 import { ask } from './dialog.jsx';
 import { DeletePlaceModal, useStaffRole } from './ModerationModals.jsx';
 import { ErrorState, friendlyError } from './errors.jsx';
-import { ArrowBendUpLeft, ArrowDown, CalendarBlank, ChatsCircle, Heart, MagnifyingGlass, MapPin, PaperPlaneRight, Plus, PushPin, UsersThree, X } from '@phosphor-icons/react';
+import { ArrowBendUpLeft, ArrowDown, CalendarBlank, ChatsCircle, Crosshair, Heart, MagnifyingGlass, MapPin, PaperPlaneRight, Plus, PushPin, UsersThree, X } from '@phosphor-icons/react';
 import './more.css';
 import LocalityPicker from './LocalityPicker.jsx';
 
@@ -141,9 +141,10 @@ export function MapView({ me, go, notify }) {
   const img = useImages(fr.map((f) => f.avatar_path));
   const refresh = () => social.listPlaces().then((r) => { setPlaces(r); setSel((s) => s && r.find((x) => x.id === s.id)); }).catch((e) => notify(e.message, 'err'));
   useEffect(() => {
-    const m = L.map(box.current, { zoomControl: false, worldCopyJump: false }).setView([46.2, 22.6], 8);   // Bihor / Alba / Arad until we know better
+    const m = L.map(box.current, { zoomControl: false, worldCopyJump: false, attributionControl: false }).setView([46.2, 22.6], 8);   // Bihor / Alba / Arad until we know better
     L.control.zoom({ position: 'bottomright' }).addTo(m);   // bottom right: the top left belongs to the search bar
-    L.tileLayer(TILE, { maxZoom: 19, attribution: '© OpenStreetMap contributors' }).addTo(m);
+    L.control.attribution({ position: 'bottomright', prefix: false }).addTo(m);   // OpenStreetMap credit stays (required); the extra "Leaflet" + flag prefix is gone, so the strip is short and never wraps on a phone
+    L.tileLayer(TILE, { maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>' }).addTo(m);
     group.current = L.layerGroup().addTo(m); map.current = m;
     m.on('click', (e) => { if (addRef.current) setPin(e.latlng); });
     Promise.allSettled([refresh(), discover.friendsMap().then(setFr), discover.listLocalities().then(setLocs)]).then(() => setReady(true));   // frame the first view once everything is in, not after the first answer
@@ -192,11 +193,11 @@ export function MapView({ me, go, notify }) {
         {q.trim() && <button className="primary sm" disabled={searching || q.trim().length < 3} title={q.trim().length < 3 ? 'Type at least 3 letters' : undefined}>{searching ? 'Searching…' : 'Search'}</button>}</form>
       {res && <div className="sresults" role="region" aria-label="Search results">{!res.length && <p className="muted">Nothing found near this part of the map. Zoom out or try another name.</p>}{res.map((r) => <button key={r.ref} onClick={() => pick(r)}><b>{r.name}</b><small>{r.label}</small></button>)}<button className="ghost sm" onClick={() => setRes(null)}>Close</button></div>}
       <div className="mtogs" role="group" aria-label="What to show on the map">
-        <button type="button" className={`mtog${show.places ? ' on' : ''}`} aria-pressed={show.places} onClick={() => setShow({ ...show, places: !show.places })}><MapPin size={16} weight="bold" aria-hidden="true" />Places<span className="mcount">{places.length}</span></button>
-        <button type="button" className={`mtog${show.friends ? ' on' : ''}`} aria-pressed={show.friends} onClick={() => setShow({ ...show, friends: !show.friends })}><UsersThree size={16} weight="bold" aria-hidden="true" />Friends<span className="mcount">{fr.length}</span></button></div>
-      <button type="button" className={`madd${adding ? ' on' : ''}`} aria-pressed={adding} onClick={() => { setAdding(!adding); setPin(null); setCand(null); }}>{adding ? <><X size={16} weight="bold" aria-hidden="true" />Cancel</> : <><Plus size={16} weight="bold" aria-hidden="true" />Add a place</>}</button></div>
+        <button type="button" className={`mtog${show.places ? ' on' : ''}`} aria-pressed={show.places} onClick={() => setShow({ ...show, places: !show.places })}><MapPin size={16} weight="bold" aria-hidden="true" /><span className="mlbl">Places</span><span className="mcount">{places.length}</span></button>
+        <button type="button" className={`mtog${show.friends ? ' on' : ''}`} aria-pressed={show.friends} onClick={() => setShow({ ...show, friends: !show.friends })}><UsersThree size={16} weight="bold" aria-hidden="true" /><span className="mlbl">Friends</span><span className="mcount">{fr.length}</span></button></div>
+      <button type="button" className={`madd${adding ? ' on' : ''}`} aria-pressed={adding} onClick={() => { setAdding(!adding); setPin(null); setCand(null); }}>{adding ? <><X size={16} weight="bold" aria-hidden="true" /><span className="mlbl">Cancel</span></> : <><Plus size={16} weight="bold" aria-hidden="true" /><span className="mlbl">Add a place</span></>}</button></div>
     <div className="mapwrap"><div ref={box} className="leaflet-box" />
-      <button type="button" className="mrecenter" onClick={() => frame(true)} aria-label="Recenter the map" title="Recenter"><MapPin size={18} weight="bold" aria-hidden="true" /></button>
+      <button type="button" className="mrecenter" onClick={() => frame(true)} aria-label="Recenter the map" title="Recenter"><Crosshair size={20} weight="bold" aria-hidden="true" /></button>
       {adding && !pin && <p className="maphint" role="status">Tap the map where the place is.</p>}
       {cand && <div className="cand"><div><b>{cand.name}</b><small>{cand.label}</small></div><div className="acts"><button className="primary sm" onClick={openCand}>Post from here</button><button className="ghost sm" onClick={() => setCand(null)}>Dismiss</button></div></div>}
       {!places.length && !fr.length && !adding && !cand && !res && <p className="maphint">Nothing here yet. Search a real place above, or use “Add a place” and tap the map.</p>}</div>
