@@ -1,9 +1,11 @@
 import { memo, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { CaretDown, ListBullets, MonitorPlay, Repeat, RepeatOnce, Shuffle, SkipBack, SkipForward, VinylRecord, WarningCircle, X } from '@phosphor-icons/react';
 import { useMusicActions, useMusicClock, useMusicState } from './musicPlayer.jsx';
 import { CoverImg, Eq, PlayGlyph, Scrubber, VolumeIcon, cssUrl, useCover } from './playerParts.jsx';
 import { fmtTime, ytThumb } from '../lib/youtube.js';
 import { MUSIC_CONFIG as CFG } from '../lib/musicConfig.js';
+import { useBackToClose } from './shared.jsx';
 
 /** Swipe on an element: onDone fires for a mostly-vertical drag of 36px+ in `dir` ('up' | 'down'). `ignore` = selector of children that keep their own taps / drags. */
 function useSwipe(dir, onDone, ignore) {
@@ -34,12 +36,31 @@ const DockProgress = memo(function DockProgress() {
   return <i className="mp-dock-prog" style={{ transform: `scaleX(${duration > 0 ? Math.min(1, position / duration) : 0})` }} aria-hidden="true" />;
 });
 
+/** True while the media query matches (updates live). */
+function useMedia(q) {
+  const get = () => typeof matchMedia === 'function' && matchMedia(q).matches;
+  const [m, setM] = useState(get);
+  useEffect(() => { if (typeof matchMedia !== 'function') return undefined; const mq = matchMedia(q); const h = () => setM(mq.matches); h(); mq.addEventListener?.('change', h); return () => mq.removeEventListener?.('change', h); }, [q]);
+  return m;
+}
+
 /** Progress ring around the corner disc. Own component so only it re-renders with the playhead. */
 const OrbRing = memo(function OrbRing() {
   const { position, duration } = useMusicClock();
   const f = duration > 0 ? Math.min(1, position / duration) : 0;
   return <svg className="mp-orb-ring" viewBox="0 0 36 36" aria-hidden="true"><circle className="bg" cx="18" cy="18" r="16.8" /><circle className="fg" cx="18" cy="18" r="16.8" pathLength="100" strokeDasharray={`${(f * 100).toFixed(2)} 100`} /></svg>;
 });
+
+/** Phone: no floating bar at all. The music is one small disc inside the nav island (spins while playing, ring = progress); tapping it opens the full player. */
+function NavDisc({ slot }) {
+  const p = useMusicState(); const a = useMusicActions(); const t = p.current; const cover = useCover(t, true);
+  const bad = p.status === 'error' || p.status === 'blocked';
+  return createPortal(
+    <button type="button" className="mp-dock-disc" data-playing={p.playing} data-alert={bad || undefined} style={{ '--mp-cover': cssUrl(cover && cover.url) }} onClick={() => a.setExpanded(true)}
+      aria-label={`Open player. ${p.playing ? 'Playing' : 'Paused'}: ${t.title || 'Untitled'}${t.artist ? `, ${t.artist}` : ''}`}>
+      <span className="mp-disc" /><OrbRing />
+    </button>, slot);
+}
 
 /** Wide dock while you are using it; after CFG.dockIdleMs of nothing it folds into a spinning disc in the corner (the song keeps playing).
  *  Touching it, a new song, play / pause, or an error brings it back. Hovering with a mouse keeps it open. */
@@ -59,6 +80,11 @@ function MiniPlayer() {
   const swipe = useSwipe('up', () => a.setExpanded(true), '.mp-dock-ctl, .mp-dock-disc');
   folded.current = collapsed;
   const tab = p.expanded || collapsed ? -1 : 0;
+  const disc = (
+    <button type="button" className="mp-dock-disc" data-playing={p.playing} style={{ '--mp-cover': cssUrl(cover && cover.url) }} onClick={wake} aria-label={`Show player controls. ${p.playing ? 'Playing' : 'Paused'}: ${t.title || 'Untitled'}`} tabIndex={collapsed ? 0 : -1} aria-hidden={!collapsed || undefined}>
+      <span className="mp-disc" /><OrbRing />
+    </button>
+  );
   return (
     <div className="mp-dock" data-playing={p.playing} data-hidden={p.expanded || undefined} data-collapsed={collapsed || undefined} style={{ '--mp-cover': cssUrl(cover && cover.url) }} role="region" aria-label="Music player" {...swipe}
       onPointerDown={(e) => { keepOpen(); swipe.onPointerDown(e); }} onPointerEnter={(e) => { if (e.pointerType === 'mouse') hover.current = true; }} onPointerLeave={() => { if (hover.current) { hover.current = false; keepOpen(); } }} onFocus={keepOpen}>
@@ -72,9 +98,7 @@ function MiniPlayer() {
         <button type="button" className="mp-ib" onClick={a.next} aria-label="Next" tabIndex={tab}><SkipForward size="1.25em" weight="fill" /></button>
       </div>
       <DockProgress />
-      <button type="button" className="mp-dock-disc" onClick={wake} aria-label={`Show player controls. ${p.playing ? 'Playing' : 'Paused'}: ${t.title || 'Untitled'}`} tabIndex={collapsed ? 0 : -1} aria-hidden={!collapsed || undefined}>
-        <span className="mp-disc" /><OrbRing />
-      </button>
+      {disc}
     </div>
   );
 }
@@ -113,6 +137,7 @@ function Sheet({ closing }) {
   const root = useRef(null);
   const swipe = useSwipe('down', () => a.setExpanded(false), 'button');
   const isYt = t.kind === 'yt'; const video = p.videoOpen && isYt;
+  useBackToClose(() => a.setExpanded(false));   // phone Back button / swipe-back minimises the player instead of leaving the page
 
   useEffect(() => {   // focus moves into the player when it opens and goes back to where it was when it closes
     const before = document.activeElement; if (root.current) root.current.focus();
@@ -223,6 +248,10 @@ function NowPlaying() {
 /** Render once, inside <MusicPlayerProvider>. Shows nothing until something is queued or playing. */
 export default function MusicDock() {
   const p = useMusicState();
+  const phone = useMedia('(max-width: 700px)');
+  const [slot, setSlot] = useState(null);   // #nav-music: the empty spot inside the phone nav island
+  useEffect(() => { const el = document.getElementById('nav-music'); if (el !== slot) setSlot(el); });
   if (!p.hasTrack) return null;
+  if (phone && slot) return <><NavDisc slot={slot} /><NowPlaying /></>;
   return <><MiniPlayer /><NowPlaying /></>;
 }

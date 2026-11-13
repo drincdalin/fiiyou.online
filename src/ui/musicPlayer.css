@@ -57,7 +57,7 @@
   transition: left .45s var(--mp-ease), width .45s var(--mp-ease), height .45s var(--mp-ease), padding .45s var(--mp-ease), border-radius .45s var(--mp-ease), transform .38s var(--mp-ease), opacity .25s, bottom .3s; }
 .mp-dock::before { content: ""; position: absolute; inset: -30px; z-index: -1; background: var(--mp-cover) center / cover; filter: blur(30px) saturate(1.8); opacity: .24; transform: scale(1.2); transition: opacity .5s; }
 .mp-dock[data-playing="false"]::before { opacity: .16; }
-.mp-dock[data-hidden] { transform: translateY(140%); opacity: 0; pointer-events: none; }
+.mp-dock[data-hidden], .mp-dock[data-docked] { transform: translateY(140%); opacity: 0; pointer-events: none; }   /* docked = the disc moved into the phone nav island */
 @keyframes mp-dock-in { from { transform: translateY(40px) scale(.94); opacity: 0; } }
 .mp-dock-main, .mp-dock-ctl, .mp-dock-prog { transition: opacity .18s; }
 .mp-dock-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; border-radius: var(--rad-m, 12px); -webkit-tap-highlight-color: transparent; }
@@ -74,7 +74,7 @@
 .mp-dock-disc { position: absolute; inset: 0; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: none; color: inherit; cursor: pointer; opacity: 0; pointer-events: none; transition: opacity .25s .12s; -webkit-tap-highlight-color: transparent; }
 .mp-dock-disc:focus-visible { outline: 2px solid var(--mp-acc-fg); outline-offset: -4px; }
 .mp-disc { position: absolute; inset: 6px; border-radius: 50%; background: var(--mp-cover) center / cover, color-mix(in srgb, var(--mp-acc) 40%, var(--g2)); box-shadow: 0 0 0 1px rgba(0, 0, 0, .45); animation: mp-rot 7s linear infinite paused; }
-.mp-dock[data-playing="true"] .mp-disc { animation-play-state: running; }
+.mp-dock[data-playing="true"] .mp-disc, .mp-dock-disc[data-playing="true"] .mp-disc { animation-play-state: running; }
 .mp-disc::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: repeating-radial-gradient(circle, rgba(0, 0, 0, .3) 0 1px, transparent 1px 3px), conic-gradient(transparent 0 20%, rgba(255, 255, 255, .22) 25%, transparent 30% 70%, rgba(255, 255, 255, .16) 75%, transparent 80%); }
 .mp-disc::after { content: ""; position: absolute; left: 50%; top: 50%; width: 22%; height: 22%; transform: translate(-50%, -50%); border-radius: 50%; background: var(--g1); box-shadow: 0 0 0 2px rgba(0, 0, 0, .4); }
 .mp-orb-ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); pointer-events: none; fill: none; stroke-width: 1.8; }
@@ -86,23 +86,23 @@
 .mp-dock[data-collapsed]::before { opacity: 0; }
 
 /* ---------- full-screen sheet: the app's own near-black page, tinted by the cover ---------- */
-.mp-sheet { position: fixed; inset: 0; z-index: 700; display: flex; flex-direction: column; color: var(--ink); font-weight: 600; overflow: hidden; outline: none;
+.mp-sheet { position: fixed; inset: 0; height: 100vh; height: 100dvh; touch-action: none; overscroll-behavior: none; z-index: 700; display: flex; flex-direction: column; color: var(--ink); font-weight: 600; overflow: hidden; outline: none;
   padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); background: var(--g0);
   animation: mp-sheet-in .46s var(--mp-ease) backwards; }
 .mp-sheet[data-closing] { animation: mp-sheet-out .3s var(--mp-ease) forwards; }
 @keyframes mp-sheet-in { from { transform: translateY(100%); } } @keyframes mp-sheet-out { to { transform: translateY(100%); } }
-html.mp-lock { overflow: hidden; }
+html.mp-lock, html.mp-lock body { overflow: hidden; overscroll-behavior: none; }   /* the page behind never scrolls while the player is open */
 .mp-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
 .mp-bg img { position: absolute; left: -25%; top: -25%; width: 150%; height: 150%; object-fit: cover; filter: blur(70px) saturate(1.6); opacity: .3; animation: mp-fade .8s both; }
 .mp-bg i { position: absolute; inset: 0; background: linear-gradient(color-mix(in srgb, var(--g0) 35%, transparent), var(--g0) 92%); }
 .mp-top { position: relative; z-index: 2; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; touch-action: none; }
 .mp-grab { position: absolute; left: 50%; top: 14px; width: 42px; height: 5px; margin-left: -21px; border-radius: 9px; background: var(--g4); pointer-events: none; }
 .mp-body { position: relative; z-index: 1; flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); }
-.mp-main { display: flex; flex-direction: column; justify-content: center; gap: 14px; width: 100%; max-width: 560px; margin: 0 auto; padding: 0 24px 18px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.mp-main { display: flex; flex-direction: column; justify-content: center; gap: 14px; width: 100%; max-width: 560px; margin: 0 auto; padding: 0 24px 18px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
 
-.mp-art { position: relative; width: min(100%, 40vh, 380px); aspect-ratio: 1; margin: 0 auto 6px; flex: none; transition: transform .65s var(--mp-spring); }
+.mp-art { position: relative; width: min(100%, 34dvh, 380px); aspect-ratio: 1; margin: 0 auto 6px; flex: none; transition: transform .65s var(--mp-spring); }
 .mp-art[data-playing="false"] { transform: scale(.9); }
-.mp-art[data-video] { width: min(100%, 560px, calc(36vh * 16 / 9)); aspect-ratio: 16 / 9; transform: none; }   /* video view: a true 16:9 window instead of a cropped square */
+.mp-art[data-video] { width: min(100%, 560px, calc(30dvh * 16 / 9)); aspect-ratio: 16 / 9; transform: none; }   /* video view: a true 16:9 window instead of a cropped square */
 .mp-art[data-video] .mp-art-glow, .mp-art[data-video] .mp-art-img { border-radius: var(--rad-xl, 18px); }
 .mp-art-glow { position: absolute; inset: 9% 4% -7%; background: center / cover; filter: blur(38px) saturate(1.5); opacity: .5; border-radius: 30%; transition: opacity .5s, border-radius .6s; }
 .mp-art[data-playing="false"] .mp-art-glow { opacity: .2; }
@@ -136,7 +136,7 @@ html.mp-lock { overflow: hidden; }
 .mp-queue-head { display: flex; align-items: baseline; justify-content: space-between; padding: 0 10px 8px; }
 .mp-queue-head h3 { margin: 0; font-size: 1.05rem; font-weight: 800; } .mp-queue-head small { color: var(--mp-dim); font-weight: 600; margin-left: 4px; }
 .mp-queue-head button { background: none; border: 0; color: var(--mp-dim); font-weight: 800; font-size: .85rem; cursor: pointer; padding: 6px 8px; border-radius: var(--rad-s, 10px); } .mp-queue-head button:hover { color: var(--ink); background: var(--g2); }
-.mp-qlist { list-style: none; margin: 0; padding: 0; overflow-y: auto; overscroll-behavior: contain; display: grid; gap: 4px; }
+.mp-qlist { list-style: none; margin: 0; padding: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; display: grid; gap: 4px; }
 .mp-qrow { display: flex; align-items: center; border: 2px solid transparent; border-radius: var(--rad-l, 14px); transition: background .15s, border-color .15s; } .mp-qrow:hover { background: var(--g2); } .mp-qrow.cur { background: var(--g2); border-color: var(--mp-acc-fg); } .mp-qrow.done { opacity: .55; }
 .mp-qmain { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 5px 8px; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; border-radius: var(--rad-l, 14px); }
 .mp-qthumb { position: relative; flex: none; width: 40px; height: 40px; border-radius: var(--rad-s, 10px); overflow: hidden; background: var(--g2); } .mp-qthumb img, .mp-qthumb .ph { display: block; width: 100%; height: 100%; object-fit: cover; }
@@ -155,10 +155,10 @@ html.mp-lock { overflow: hidden; }
   .mp-body { grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr); gap: clamp(24px, 4vw, 64px); padding: 0 clamp(24px, 5vw, 72px) 28px; align-items: center; }
   .mp-main, .mp-sheet[data-panel="queue"] .mp-main { display: flex; max-width: 520px; padding: 0; overflow: visible; }
   .mp-queue, .mp-sheet[data-panel="queue"] .mp-queue { display: flex; margin: 0; max-height: min(72vh, 680px); padding: 16px 10px 12px; }
-  .mp-only-sm { display: none; } .mp-art { width: min(100%, 44vh, 420px); } .mp-art[data-video] { width: min(100%, 560px, calc(36vh * 16 / 9)); }
+  .mp-only-sm { display: none; } .mp-art { width: min(100%, 44dvh, 420px); } .mp-art[data-video] { width: min(100%, 560px, calc(30dvh * 16 / 9)); }
 }
 @media (max-width: 700px), (hover: none) and (pointer: coarse) { .mp-vol { display: none; } .mp-toggles { margin-left: 0; width: 100%; justify-content: center; } }
-@media (max-height: 640px) and (max-width: 899px) { .mp-art { width: min(100%, 34vh); } .mp-title { font-size: 1.25rem; } }
+@media (max-height: 700px) and (max-width: 899px) { .mp-main { gap: 10px; } .mp-art { width: min(100%, 28dvh); margin-bottom: 0; } .mp-title { font-size: 1.2rem; } .mp-playbig { width: 56px; height: 56px; } }
 
 /* ---------- the real YouTube player: one box, never moved in the DOM (moving an iframe reloads it) ---------- */
 .mp-stage { position: fixed; z-index: 720; overflow: hidden; background: #000; }
@@ -172,10 +172,11 @@ html.mp-lock { overflow: hidden; }
 html.mp-on body::after { content: ""; display: block; height: 80px; }
 html.mp-on .toast { bottom: 90px; }
 @media (max-width: 700px) {
-  .mp-dock { --mp-w: calc(100vw - 16px); --mp-gap: 10px; --mp-orb: 56px; bottom: calc(var(--nav-h, 60px) + env(safe-area-inset-bottom, 0px) + 8px); height: 66px; }
+  .mp-dock { --mp-w: calc(100vw - 16px); --mp-gap: 10px; --mp-orb: 56px; bottom: calc(var(--nav-h, 72px) - 4px); height: 66px; }
   .mp-dock[data-collapsed] { height: var(--mp-orb); }
-  .mp-hide-sm { display: none; } .mp-stage[data-mode="dock"] { bottom: calc(var(--nav-h, 60px) + env(safe-area-inset-bottom, 0px) + 82px); right: 8px; width: 180px; height: 180px; }
-  html.mp-on .toast { bottom: calc(var(--nav-h, 60px) + 84px); }
+  .mp-hide-sm { display: none; } .mp-stage[data-mode="dock"] { bottom: calc(var(--nav-h, 72px) + 76px); right: 8px; width: 180px; height: 180px; }
+  html.mp-on body::after { display: none; }   /* phone: the music is the disc inside the nav island, nothing floats above it, so no extra room is needed */
+  html.mp-on .toast { bottom: calc(var(--nav-h, 72px) + 6px); }
   .mp-main { padding: 0 20px 14px; }
 }
 html.kb .mp-dock { bottom: 8px; }

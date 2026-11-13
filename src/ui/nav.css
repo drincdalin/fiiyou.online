@@ -1,0 +1,87 @@
+/* ============================================================================================================================
+   Navigation redesign. Loaded last in main.jsx; every rule is prefixed .nav so it wins over the older nav rules in styles.css, design.css,
+   ui-theme.css, more.css and polish.css without touching them. Theme tokens only (--g0..g4, --ink, --muted, --accent, --on-accent, --lift).
+
+   PHONE: a floating island, detached from the screen edges (the page shows around and under it), with the account avatar built into it
+   behind a thin divider. Only the page you are on shows its name: that tab grows into an accent plate with icon + label, the others
+   stay icons. The growth is a plain flex-grow transition, so it slides between tabs without any script.
+   DESKTOP: a roomy top bar: wordmark on the left, a centred rounded plate of labelled tabs (the open one is a lifted
+   accent plate), the avatar on the right. Between 701px and 960px the labels fold away like on the phone, so nothing is ever crammed.
+   ============================================================================================================================ */
+
+.nav .navlbl { display: block; max-width: 0; opacity: 0; overflow: hidden; white-space: nowrap; font-weight: 800; font-size: .86rem; letter-spacing: -.005em; transition: max-width .32s var(--ease), opacity .2s, margin .32s var(--ease); }
+
+.nav .navlinks { display: flex; align-items: center; min-width: 0; }
+.nav .navlinks > button { position: relative; display: flex; align-items: center; justify-content: center; min-width: 0; margin: 0; color: var(--muted); background: none; border: 0; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: flex-grow .32s var(--ease), background .2s, color .2s, transform .15s var(--ease), box-shadow .2s; }
+.nav .navlinks > button:hover { background: var(--g2); color: var(--ink); }
+.nav .navlinks > button:active { transform: scale(.94); }
+.nav .navlinks > button:focus-visible, .nav .logo:focus-visible, .nav .more > .avbtn:focus-visible { outline: 2px solid var(--accent-fg, var(--accent)); outline-offset: 2px; }
+.nav .navlinks > button.on { background: var(--accent); color: var(--on-accent); box-shadow: var(--lift); }
+.nav .navlinks > button.on:hover { background: var(--accent); filter: brightness(1.08); }
+.nav .navlinks > button.on .navlbl { max-width: 90px; opacity: 1; margin-left: 7px; }
+.nav .navlinks .navicw { flex: none; }
+.nav .navlinks .navicw .dotb { top: -7px; right: -10px; box-shadow: 0 0 0 2px var(--g1); }
+.nav .navlinks > button.on .navicw .dotb { right: auto; left: -11px; box-shadow: 0 0 0 2px var(--accent); }   /* open tab: the badge goes left of the icon so it never covers the label */
+
+.nav .more > .avbtn { display: grid; place-items: center; padding: 3px; background: none; border: 2px solid var(--g3); border-radius: 50%; cursor: pointer; transition: border-color .2s, transform .15s var(--ease); }
+.nav .more > .avbtn:hover { border-color: var(--accent-fg, var(--accent)); background: none; transform: none; }
+.nav .more > .avbtn:active { transform: scale(.94); }
+.nav .more > .avbtn[aria-expanded="true"] { border-color: var(--accent-fg, var(--accent)); }
+
+/* ---------- desktop / tablet: top bar ---------- */
+@media (min-width: 701px) {
+  :root { --nav-h: 64px; }
+  .nav { height: var(--nav-h); display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; padding: 0 24px;
+    background: color-mix(in srgb, var(--g0) 80%, transparent); -webkit-backdrop-filter: blur(18px) saturate(1.5); backdrop-filter: blur(18px) saturate(1.5); border-bottom: 2px solid var(--g3); }
+  .nav > .logo { justify-self: start; padding: .3rem .2rem; font-size: 1.4rem; font-weight: 850; letter-spacing: -.035em; border-radius: var(--rad-s, 10px); }
+  .nav .navlinks { gap: 4px; padding: 4px; background: var(--g1); border: 2px solid var(--g3); border-radius: 18px; }
+  .nav .navlinks > button { height: 40px; padding: 0 16px 0 13px; border-radius: 13px; font-size: 1rem; }
+  .nav .navlinks > button .navlbl { max-width: 90px; opacity: 1; margin-left: 8px; font-size: .9rem; }
+  .nav .more { justify-self: end; position: relative; }
+}
+
+/* ---------- fold the labels of the tabs you are not on (phones, small tablets) ---------- */
+@media (max-width: 960px) {
+  .nav .navlinks > button { padding: 0 12px 0 11px; }
+  .nav .navlinks > button .navlbl { max-width: 0; opacity: 0; margin-left: 0; }
+  .nav .navlinks > button.on .navlbl { max-width: 90px; opacity: 1; margin-left: 7px; }
+}
+
+/* ---------- phone: floating island ---------- */
+@media (max-width: 700px) {
+  :root { --nav-h: calc(72px + env(safe-area-inset-bottom, 0px)); }   /* the island + the gap around it: pages, the map, the chat and the music dock all reserve this much */
+  html.kb { --nav-h: 0px; }
+  .nav { position: fixed; top: auto; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); height: 56px; z-index: 40; display: flex; align-items: center; gap: 2px; padding: 5px; box-sizing: border-box;
+    border: 2px solid color-mix(in srgb, var(--g3) 70%, transparent); border-radius: 24px; background: color-mix(in srgb, var(--g1) 95%, transparent); -webkit-backdrop-filter: blur(20px) saturate(1.6); backdrop-filter: blur(20px) saturate(1.6);
+    box-shadow: 0 12px 30px -14px color-mix(in srgb, var(--shade) 90%, transparent); }
+  .nav > .logo { display: none; }
+  .nav .navlinks { flex: 1; gap: 2px; padding: 0; background: none; border: 0; border-radius: 0; }
+  .nav .navlinks > .nv-profile { display: none; }   /* the avatar is the way to your profile and account: one thing, not two */
+  .nav .navlinks > button { flex: 1 1 0; height: 46px; padding: 0; border-radius: 19px; font-size: .95rem; }
+  .nav .navlinks > button.on { flex-grow: 2.4; }
+  .nav .more { flex: none; position: relative; align-self: stretch; display: flex; align-items: center; margin-left: 2px; }
+  .nav .more > .avbtn { padding: 2px; border-width: 2px; }
+  .nav .more > .avbtn.on { border-color: var(--accent-fg, var(--accent)); }
+  .nav .more .menu { bottom: calc(100% + 16px); }
+  .avdot { top: 0; right: -2px; }
+  /* the music dock / toasts float just above the island */
+  .toast { bottom: calc(var(--nav-h) + 6px); }
+}
+/* the idle music disc, parked inside the island (MusicDock portals it here; with no music this stays empty and takes no room) */
+.nav .navmusic { --mp-acc: var(--accent); --mp-acc-fg: var(--accent-fg, var(--accent)); display: none; flex: none; }
+.nav .navmusic:not(:empty) { display: grid; place-items: center; width: 42px; height: 42px; margin-left: 2px; animation: mp-fade .35s both; }
+.nav .navmusic .mp-dock-disc[data-alert] .mp-orb-ring .fg, .nav .navmusic .mp-dock-disc[data-alert] .mp-orb-ring .bg { stroke: var(--red-fg, #ff6b72); }
+.nav .navmusic .mp-dock-disc { position: relative; inset: auto; width: 42px; height: 42px; opacity: 1; pointer-events: auto; transition: none; }
+.nav .navmusic .mp-disc { inset: 5px; }
+@media (min-width: 701px) { .nav .navmusic { display: none !important; } }
+/* phone: keep the music disc and the avatar clearly apart: real space plus a thin divider, only when music is showing */
+@media (max-width: 700px) {
+  .nav .navmusic:not(:empty) { margin-left: 4px; margin-right: 8px; }
+  .nav .navmusic:not(:empty) + .more { margin-left: 8px; }
+  .nav .navmusic:not(:empty) + .more::before { content: ""; position: absolute; left: -9px; top: 14px; bottom: 14px; width: 2px; border-radius: 2px; background: var(--g3); }
+}
+
+@media (max-width: 380px) { .nav { left: 6px; right: 6px; padding: 5px; } .nav .navlinks > button.on .navlbl { margin-left: 5px; font-size: .8rem; } }
+
+@media (prefers-reduced-motion: reduce) { .nav .navlbl, .nav .navlinks > button { transition: none; } }

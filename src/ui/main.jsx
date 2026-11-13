@@ -14,6 +14,7 @@ import './ui-theme.css';
 import './social-ui.css';   // hashtags, comment layout, chat message menu
 import './polish.css';      // release polish
 import './musicPlayer.css'; // global music player: mini dock, Now Playing sheet, queue (loads last: only .mp-* plus a few .player.mpcard lines)
+import './nav.css';         // navigation redesign: floating island on phones, roomy top bar on desktop (every rule is .nav-scoped, so it wins without touching the old nav rules)
 
 bootRouter();       // old /#/... links become real paths
 captureInvite({ base: import.meta.env.BASE_URL.replace(/\/$/, '') });   // /invite/<username>: remember who invited you, then show the normal page
