@@ -146,8 +146,8 @@
   .nav .navlinks > .nv-profile { display: none; }   /* the last slot is you: your picture opens your profile, notifications and settings */
   .nav .navlinks > button, .nav .more > .avbtn { flex: 1 1 0; justify-content: center; height: 100%; padding: 0; border-radius: 20px; font-size: .95rem; }
   .nav .navlinks > button.on, .nav .navlinks > button.on:hover { background: none; box-shadow: none; color: var(--ink); }
-  /* icon 24px inside a 56 x 34 pill: about 5px of air on every side, so the glyph sits inside its highlight instead of filling it */
-  .nav .navlinks .navicw { --nav-ic: 24px; width: 56px; height: 34px; border-radius: 17px; transition: background .22s var(--ease), color .22s, transform .2s var(--ease), box-shadow .22s; }
+  /* icon box 30px (the glyph itself is about 80% of that, ~24px) inside a 60 x 40 pill: clearly readable, still with air around it inside the highlight */
+  .nav .navlinks .navicw { --nav-ic: 30px; width: 60px; height: 40px; border-radius: 20px; transition: background .22s var(--ease), color .22s, transform .2s var(--ease), box-shadow .22s; }
   .nav .navlinks > button.on .navicw { background: var(--accent); color: var(--on-accent);
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent), 0 6px 16px -6px color-mix(in srgb, var(--accent) 70%, transparent); }   /* solid fill + thin ring + soft glow: readable at a glance */
   .nav .navlinks > button:not(.on):hover .navicw { background: var(--g2); color: var(--ink); }
@@ -156,7 +156,7 @@
 
   .nav .more { position: static; flex: 1 1 0; align-self: stretch; display: flex; min-width: 0; margin: 0; }   /* static: the panel lines up with the whole dock, not with one slot */
   .nav .more > .avbtn { width: auto; border: 0; box-sizing: border-box; overflow: visible; }
-  .nav .more > .avbtn .navicw { width: 34px; height: 34px; box-shadow: 0 0 0 2px var(--g3); transition: box-shadow .2s, transform .2s var(--ease); }
+  .nav .more > .avbtn .navicw { width: 36px; height: 36px; box-shadow: 0 0 0 2px var(--g3); transition: box-shadow .2s, transform .2s var(--ease); }
   .nav .more > .avbtn.on { color: var(--ink); background: none; }
   .nav .more > .avbtn.on .navicw { box-shadow: 0 0 0 2px var(--accent); }
   .nav .more > .avbtn .avdot { top: -6px; right: -9px; }
@@ -187,7 +187,7 @@
 /* very small phones */
 @media (max-width: 380px) {
   .nav { left: 6px; right: 6px; padding: 0 4px; }
-  .nav .navlinks .navicw { width: 46px; --nav-ic: 22px; }
+  .nav .navlinks .navicw { width: 52px; --nav-ic: 28px; }
   .nav .navmusic:not(:empty) { width: 40px; height: 40px; margin: 0 6px 0 2px; }
   .nav .navmusic .mp-dock-disc { width: 38px; height: 38px; }
 }
@@ -196,7 +196,7 @@
 @media (max-width: 900px) and (max-height: 480px) and (orientation: landscape) {
   :root { --nav-h: calc(62px + env(safe-area-inset-bottom, 0px)); }
   .nav { height: 52px; border-radius: 22px; }
-  .nav .navlinks .navicw { height: 34px; }
+  .nav .navlinks .navicw { height: 34px; --nav-ic: 25px; }
   .nav .more .menu { max-height: calc(100dvh - var(--nav-h) - 16px); }
 }
 
