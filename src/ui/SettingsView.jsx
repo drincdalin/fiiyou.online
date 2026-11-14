@@ -7,6 +7,7 @@ import { ErrorState, friendlyError } from './errors.jsx';
 import PushToggle from './PushToggle.jsx';
 import { useInstallState, promptInstall } from './install.js';
 import { ChangePasswordModal } from './PasswordMeter.jsx';
+import { RowsSkeleton } from './states.jsx';
 
 /** People you blocked. Unblocking does not bring a friendship back (blocking removed it). */
 function Blocked({ notify, go }) {
@@ -22,11 +23,11 @@ function Blocked({ notify, go }) {
     setBusy(null);
   };
   if (err) return <ErrorState error={err} onRetry={load} title="Could not load your blocked list" />;
-  if (rows === null) return <p className="empty" role="status">Loading…</p>;
+  if (rows === null) return <RowsSkeleton n={2} label="Loading blocked people" />;
   if (!rows.length) return <div className="empty"><p>You have not blocked anyone.</p><small>People you block can no longer see or contact you. Block someone from their profile.</small></div>;
   return (<>{rows.map(({ user: u }) => (<div className="row" key={u.id}><Avatar src={img[u.avatar_path]} size={44} />
     <span className="link" style={{ textAlign: 'left' }}>{u.display_name}<small>@{u.username}</small></span>
-    <button type="button" className="ghost sm" disabled={busy === u.id} onClick={() => unblock(u)}>{busy === u.id ? '…' : 'Unblock'}</button></div>))}</>);
+    <button type="button" className="ghost sm" aria-busy={busy === u.id || undefined} onClick={() => busy !== u.id && unblock(u)}>Unblock</button></div>))}</>);
 }
 
 /** Install fiiyou as an app. Browsers that allow it (Chrome, Edge, Brave, Opera, Vivaldi, Samsung Internet) install with one click.
@@ -48,7 +49,7 @@ function InstallRow({ notify }) {
   };
   const text = st === 'installed' ? 'You are using fiiyou as an installed app.' : 'Give fiiyou its own window and an icon on your home screen or desktop. It opens faster and feels like any other app.';
   return (<div className="srow"><span className="sico"><DeviceMobile size={20} weight="bold" aria-hidden="true" /></span><div><b>Install the app</b><small>{text}</small></div>
-    {st !== 'installed' && <button type="button" className="primary sm" disabled={busy} onClick={install}><DownloadSimple size={16} weight="bold" aria-hidden="true" />{busy ? '…' : 'Install'}</button>}</div>);
+    {st !== 'installed' && <button type="button" className="primary sm" aria-busy={busy || undefined} onClick={() => !busy && install()}><DownloadSimple size={16} weight="bold" aria-hidden="true" />Install</button>}</div>);
 }
 
 /** /settings: this device and this account, split into the same pill tabs the rest of the app uses. */

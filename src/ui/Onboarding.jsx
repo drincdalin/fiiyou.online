@@ -51,7 +51,7 @@ export default function Onboarding({ me, inviter: rawInviter, onDone, notify }) 
   const img = useImages((shown || []).map((p) => p.avatar_path));
   const lname = (id) => locs.find((l) => l.id === id)?.name;
 
-  const run = async (fn) => { setBusy(true); setErr(''); try { await fn(); return true; } catch (e) { setErr(friendlyError(e)); return false; } finally { setBusy(false); } };
+  const run = async (fn) => { if (busy) return false; setBusy(true); setErr(''); try { await fn(); return true; } catch (e) { setErr(friendlyError(e)); return false; } finally { setBusy(false); } };
   const finish = () => run(async () => { await profiles.updateMyProfile({ onboarded_at: new Date().toISOString() }); clearInvite(); await onDone(); });
 
   const next = async () => {
@@ -102,8 +102,8 @@ export default function Onboarding({ me, inviter: rawInviter, onDone, notify }) 
     {err && <p className="err" role="alert">{err}{step === 3 && <> <button type="button" className="link" onClick={loadPeople}>Try again</button></>}</p>}
     <div className="obnav">
       {step > 0 ? <button type="button" className="ghost" onClick={() => { setErr(''); setStep(step - 1); }} disabled={busy}>Back</button> : <span />}
-      {step < STEPS.length - 1 ? <button type="button" className="primary" onClick={next} disabled={busy || (step === 0 && !name.trim())}>{busy ? 'One moment…' : step === 1 && !avatar ? 'Skip' : step === 2 && !about.trim() ? 'Skip' : 'Next'}</button>
-        : <button type="button" className="primary" onClick={finish} disabled={busy}>{busy ? 'One moment…' : 'Go to fiiyou'}</button>}
+      {step < STEPS.length - 1 ? <button type="button" className="primary" onClick={next} disabled={step === 0 && !name.trim()} aria-busy={busy || undefined}>{step === 1 && !avatar ? 'Skip' : step === 2 && !about.trim() ? 'Skip' : 'Next'}</button>
+        : <button type="button" className="primary" onClick={finish} aria-busy={busy || undefined}>Go to fiiyou</button>}
     </div>
     <button type="button" className="link muted obskip" onClick={finish} disabled={busy}>Skip setup for now</button>
     {inv && <Suspense fallback={null}><InviteModal me={me} onClose={() => setInv(false)} notify={notify} /></Suspense>}

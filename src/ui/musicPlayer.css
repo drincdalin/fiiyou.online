@@ -63,8 +63,8 @@
 .mp-dock-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; border-radius: var(--rad-m, 12px); -webkit-tap-highlight-color: transparent; }
 .mp-dock-art { position: relative; flex: none; width: 44px; height: 44px; border-radius: var(--rad-m, 12px); overflow: hidden; background: var(--g2); box-shadow: 0 4px 14px color-mix(in srgb, var(--shade) 55%, transparent); transition: transform .5s var(--mp-spring); }
 .mp-dock[data-playing="false"] .mp-dock-art { transform: scale(.93); }
-.mp-dock-meta { display: grid; min-width: 0; line-height: 1.25; } .mp-dock-meta b { font-weight: 800; font-size: .92rem; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mp-dock-meta small { color: var(--mp-dim); font-size: .78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mp-dock-meta { display: grid; min-width: 0; line-height: 1.25; } .mp-dock-meta b { font-weight: 800; font-size: 0.9375rem; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mp-dock-meta small { color: var(--mp-dim); font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mp-dock-ctl { display: flex; align-items: center; flex: none; }
 .mp-dock-prog { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--mp-acc-fg); transform-origin: 0 50%; transform: scaleX(0); pointer-events: none; }
 .mp-dock .mp-ib { width: 40px; height: 40px; }
@@ -115,18 +115,18 @@ html.mp-lock, html.mp-lock body { overflow: hidden; overscroll-behavior: none; }
 .mp-art[data-vinyl][data-playing="true"] .mp-art-img { animation-play-state: running; }
 .mp-art[data-vinyl] .mp-art-glow { border-radius: 50%; } .mp-art[data-vinyl] .mp-vinyl-fx { display: block; }
 
-.mp-info { min-width: 0; } .mp-title { margin: 0; font-size: 1.35rem; line-height: 1.2; font-weight: 850; letter-spacing: -.02em; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
-.mp-artist { margin: 2px 0 0; color: var(--mp-dim); font-size: .95rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mp-note { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: var(--rad-m, 12px); background: var(--g2); border: 2px solid var(--g3); font-size: .9rem; font-weight: 650; line-height: 1.35; }
+.mp-info { min-width: 0; } .mp-title { margin: 0; font-size: 1.25rem; line-height: 1.2; font-weight: 850; letter-spacing: -.02em; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+.mp-artist { margin: 2px 0 0; color: var(--mp-dim); font-size: 0.9375rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mp-note { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: var(--rad-m, 12px); background: var(--g2); border: 2px solid var(--g3); font-size: 0.875rem; font-weight: 650; line-height: 1.35; }
 .mp-note.err { background: var(--red); border-color: var(--edge); color: var(--on-red); } .mp-note span { flex: 1; min-width: 0; }
 .mp-note button { flex: none; background: none; border: 0; color: inherit; font-weight: 800; text-decoration: underline; cursor: pointer; padding: 4px; border-radius: 6px; }
-.mp-times { display: flex; justify-content: space-between; margin-top: 1px; font-size: .75rem; font-weight: 650; color: var(--mp-dim); font-variant-numeric: tabular-nums; }
+.mp-times { display: flex; justify-content: space-between; margin-top: 1px; font-size: 0.75rem; font-weight: 650; color: var(--mp-dim); font-variant-numeric: tabular-nums; }
 .mp-transport { display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 420px; margin: 0 auto; }
 .mp-playbig { width: 64px; height: 64px; border-radius: var(--rad-xl, 18px); }
 .mp-extras { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .mp-vol { display: flex; align-items: center; gap: 4px; flex: 1; max-width: 230px; } .mp-toggles { display: flex; gap: 8px; margin-left: auto; }
 /* chips = the app's .tabs buttons: 2px border, 12px radius, heavy label, filled + lifted when on */
-.mp-chip { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 12px; border-radius: var(--rad-m, 12px); border: 2px solid var(--g3); background: var(--g1); color: var(--ink); font-weight: 800; font-size: .85rem; cursor: pointer; transition: background .15s, border-color .15s, transform .15s var(--mp-spring); }
+.mp-chip { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 12px; border-radius: var(--rad-m, 12px); border: 2px solid var(--g3); background: var(--g1); color: var(--ink); font-weight: 800; font-size: 0.875rem; cursor: pointer; transition: background .15s, border-color .15s, transform .15s var(--mp-spring); }
 .mp-chip:hover { border-color: var(--muted); background: var(--g2); } .mp-chip:active { transform: scale(.95); }
 .mp-chip[aria-pressed="true"] { background: var(--mp-acc); color: var(--mp-on); border-color: var(--edge); box-shadow: var(--lift); } .mp-chip:disabled { opacity: .4; cursor: default; }
 
@@ -134,21 +134,21 @@ html.mp-lock, html.mp-lock body { overflow: hidden; overscroll-behavior: none; }
 .mp-queue { display: none; flex-direction: column; min-height: 0; margin: 0 12px 12px; padding: 14px 8px 10px; border-radius: var(--rad-xl, 18px); background: var(--g1); border: 2px solid var(--g3); }
 .mp-sheet[data-panel="queue"] .mp-queue { display: flex; } .mp-sheet[data-panel="queue"] .mp-main { display: none; }
 .mp-queue-head { display: flex; align-items: baseline; justify-content: space-between; padding: 0 10px 8px; }
-.mp-queue-head h3 { margin: 0; font-size: 1.05rem; font-weight: 800; } .mp-queue-head small { color: var(--mp-dim); font-weight: 600; margin-left: 4px; }
-.mp-queue-head button { background: none; border: 0; color: var(--mp-dim); font-weight: 800; font-size: .85rem; cursor: pointer; padding: 6px 8px; border-radius: var(--rad-s, 10px); } .mp-queue-head button:hover { color: var(--ink); background: var(--g2); }
+.mp-queue-head h3 { margin: 0; font-size: 1rem; font-weight: 800; } .mp-queue-head small { color: var(--mp-dim); font-weight: 600; margin-left: 4px; }
+.mp-queue-head button { background: none; border: 0; color: var(--mp-dim); font-weight: 800; font-size: 0.875rem; cursor: pointer; padding: 6px 8px; border-radius: var(--rad-s, 10px); } .mp-queue-head button:hover { color: var(--ink); background: var(--g2); }
 .mp-qlist { list-style: none; margin: 0; padding: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; display: grid; gap: 4px; }
 .mp-qrow { display: flex; align-items: center; border: 2px solid transparent; border-radius: var(--rad-l, 14px); transition: background .15s, border-color .15s; } .mp-qrow:hover { background: var(--g2); } .mp-qrow.cur { background: var(--g2); border-color: var(--mp-acc-fg); } .mp-qrow.done { opacity: .55; }
 .mp-qmain { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 5px 8px; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; border-radius: var(--rad-l, 14px); }
 .mp-qthumb { position: relative; flex: none; width: 40px; height: 40px; border-radius: var(--rad-s, 10px); overflow: hidden; background: var(--g2); } .mp-qthumb img, .mp-qthumb .ph { display: block; width: 100%; height: 100%; object-fit: cover; }
 .mp-qeq { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0, 0, 0, .55); color: #fff; }   /* over a picture: fixed colours on purpose */
-.mp-qmeta { display: grid; min-width: 0; line-height: 1.3; } .mp-qmeta b { font-weight: 800; font-size: .92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .mp-qmeta small { color: var(--mp-dim); font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mp-qmeta { display: grid; min-width: 0; line-height: 1.3; } .mp-qmeta b { font-weight: 800; font-size: 0.9375rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .mp-qmeta small { color: var(--mp-dim); font-size: 0.8125rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mp-qdel { flex: none; width: 36px; height: 36px; margin-right: 4px; display: grid; place-items: center; border: 0; border-radius: var(--rad-s, 10px); background: none; color: var(--mp-dim); cursor: pointer; opacity: 0; transition: opacity .15s, background .15s; }
 .mp-qrow:hover .mp-qdel, .mp-qdel:focus-visible { opacity: 1; } .mp-qdel:hover { background: var(--hover); color: var(--ink); }
 @media (hover: none) { .mp-qdel { opacity: .8; } }
-.mp-qnote { margin: 6px 10px 0; color: var(--mp-dim); font-size: .8rem; }
-.mp-eq { display: inline-flex; align-items: flex-end; gap: 2px; width: 16px; height: 14px; } .mp-eq i { flex: 1; height: 28%; background: currentColor; border-radius: 1px; }
+.mp-qnote { margin: 6px 10px 0; color: var(--mp-dim); font-size: 0.8125rem; }
+.mp-eq { display: inline-flex; align-items: flex-end; gap: 2px; width: 16px; height: 14px; } .mp-eq i { flex: 1; height: 100%; background: currentColor; border-radius: 1px; transform: scaleY(.28); transform-origin: 50% 100%; }
 .mp-eq.on i { animation: mp-eq 1s ease-in-out infinite; } .mp-eq.on i:nth-child(2) { animation-duration: .8s; animation-delay: -.4s; } .mp-eq.on i:nth-child(3) { animation-duration: 1.2s; animation-delay: -.2s; }
-@keyframes mp-eq { 0%, 100% { height: 25%; } 50% { height: 100%; } }
+@keyframes mp-eq { 0%, 100% { transform: scaleY(.25); } 50% { transform: scaleY(1); } }
 
 /* desktop: art + controls on the left, queue always visible on the right */
 @media (min-width: 900px) {
@@ -158,7 +158,7 @@ html.mp-lock, html.mp-lock body { overflow: hidden; overscroll-behavior: none; }
   .mp-only-sm { display: none; } .mp-art { width: min(100%, 44dvh, 420px); } .mp-art[data-video] { width: min(100%, 560px, calc(30dvh * 16 / 9)); }
 }
 @media (max-width: 700px), (hover: none) and (pointer: coarse) { .mp-vol { display: none; } .mp-toggles { margin-left: 0; width: 100%; justify-content: center; } }
-@media (max-height: 700px) and (max-width: 899px) { .mp-main { gap: 10px; } .mp-art { width: min(100%, 34dvh); margin-bottom: 0; } .mp-title { font-size: 1.2rem; } .mp-playbig { width: 56px; height: 56px; } }
+@media (max-height: 700px) and (max-width: 899px) { .mp-main { gap: 10px; } .mp-art { width: min(100%, 34dvh); margin-bottom: 0; } .mp-title { font-size: 1.25rem; } .mp-playbig { width: 56px; height: 56px; } }
 
 /* ---------- the real YouTube player: one box, never moved in the DOM (moving an iframe reloads it) ---------- */
 .mp-stage { position: fixed; z-index: 720; overflow: hidden; background: #000; }
@@ -188,7 +188,7 @@ html.kb .mp-dock { bottom: 8px; }
 .player.mpcard[data-playing] .pbadge { opacity: 0; } .player.mpcard[data-playing] .pplay:hover .pbadge, .player.mpcard[data-playing] .pplay:focus-visible .pbadge { opacity: 1; }
 .player.mpcard .pplay { overflow: hidden; } .player.mpcard .pplay:focus-visible { outline: 2px solid var(--accent-fg, var(--accent)); outline-offset: -3px; }
 .mp-cardeq { position: absolute; left: 10px; bottom: 10px; color: #fff; filter: drop-shadow(0 1px 3px #000a); }
-.player .mp-cardnote { grid-column: 1 / -1; text-align: center; opacity: .85; font-size: .8em; }
+.player .mp-cardnote { grid-column: 1 / -1; text-align: center; opacity: .85; font-size: 0.85em; }
 .player .mp-scrub { --mp-fill: var(--accent, #fff); --mp-track: color-mix(in srgb, var(--text, #fff) 22%, transparent); --mp-ring: var(--card, #111); }
 .player .mp-scrub-buf { background: color-mix(in srgb, var(--text, #fff) 22%, transparent); }
 .player .mp-scrub:focus-visible { outline-color: var(--accent-fg, var(--accent)); }
@@ -207,5 +207,5 @@ html.kb .mp-dock { bottom: 8px; }
 
 @media (prefers-reduced-motion: reduce) {
   .mp-dock, .mp-sheet, .mp-art, .mp-art-img, .mp-art-glow, .mp-dock-art, .mp-disc, .mp-bg img, .mp-cover, .mp-art-pic { animation: none !important; transition: none !important; }
-  .mp-art[data-vinyl] .mp-art-img { animation: none !important; } .mp-eq.on i { animation: none; height: 60%; } .mp-art[data-playing="false"] { transform: none; }
+  .mp-art[data-vinyl] .mp-art-img { animation: none !important; } .mp-eq.on i { animation: none; transform: scaleY(.6); } .mp-art[data-playing="false"] { transform: none; }
 }

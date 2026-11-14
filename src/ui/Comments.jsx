@@ -5,6 +5,7 @@ import { Avatar, Rich, ago, useImages } from './shared.jsx';
 import { ask } from './dialog.jsx';
 import MentionInput from './MentionInput.jsx';
 import { ErrorState } from './errors.jsx';
+import { RowsSkeleton } from './states.jsx';
 
 /** Comment thread of one post: likes, replies (one level deep) and @mentions. Used inside PostCard.
  *  Props: postId, postAuthorId (the post author may delete any comment), me, go(view, arg), notify, fail(err) (error toast),
@@ -81,7 +82,7 @@ export default function Comments({ postId, postAuthorId, me, go, notify, fail, o
 
   return (<div className="comments">
     <div className="cmtop"><b>Comments</b><span className="cmcount">{rows ? rows.length : '…'}</span></div>
-    {rows === null ? <div className="boot cmload">…</div> : err && !rows.length ? <ErrorState error={err} onRetry={load} title="Could not load comments" /> : !rows.length ? <p className="cmempty">No comments yet. Start the conversation.</p>
+    {rows === null ? <RowsSkeleton n={2} label="Loading comments" /> : err && !rows.length ? <ErrorState error={err} onRetry={load} title="Could not load comments" /> : !rows.length ? <p className="cmempty">No comments yet. Start the conversation.</p>
       : <ul className="cmlist">{roots.map((c) => item(c, false))}</ul>}
     {reply && <div className="cmreplying"><span>Replying to @{reply.username}</span>
       <button type="button" aria-label="Cancel reply" onClick={() => setReply(null)}><X size={14} weight="bold" aria-hidden="true" /></button></div>}

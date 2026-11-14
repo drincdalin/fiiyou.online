@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { media } from '../index.js';
+import { PageLoading } from './states.jsx';
 
 const RETRY = [800, 2500];   // a link that could not be made is tried again after these many ms before the image is called missing
 /** paths -> { path: url | null }. undefined = still loading (or being retried), null = could not be made after the retries (file gone or no access). */
@@ -21,7 +22,10 @@ export function useImages(paths) {
   }, [k]);   // eslint-disable-line react-hooks/exhaustive-deps
   return m;
 }
-export const Boot = () => <div className="boot">…</div>;
+export const Boot = () => <PageLoading />;
+
+/** 999 -> "999", 1234 -> "1.2k", 12500 -> "12k", 2300000 -> "2.3M". The exact number stays in the button's aria-label. */
+export const fmtCount = (n) => { const v = Number(n) || 0; if (v < 1000) return String(v); const f = (x) => (x >= 10 ? Math.round(x) : Math.round(x * 10) / 10); return v < 1e6 ? `${f(v / 1e3)}k` : `${f(v / 1e6)}M`; };
 /** Round picture. When there is no picture (or it fails to load) the first letter of `name` is shown instead of an empty grey circle. */
 export function Avatar({ src, size = 40, name = '' }) {
   const [bad, setBad] = useState(false); useEffect(() => { setBad(false); }, [src]);

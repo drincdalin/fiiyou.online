@@ -3,11 +3,12 @@ import { House, User, MapPin, ChatCircle, ShieldCheck, Heart, X, CaretLeft, Care
 import PostShareModal from './PostShare.jsx';
 import { posts, safety } from '../index.js';
 import { friendlyError } from './errors.jsx';
-import { Avatar, ago, Rich, useImages, FadeImg, fullDate, reducedMotion, useBackToClose, useDialog, useTouchScreen } from './shared.jsx';
+import { Avatar, ago, Rich, useImages, FadeImg, fullDate, reducedMotion, useBackToClose, useDialog, useTouchScreen, fmtCount } from './shared.jsx';
 import { ask } from './dialog.jsx';
 import Comments from './Comments.jsx';
 import MentionInput from './MentionInput.jsx';
 import { loadPostDraft, savePostDraft, clearPostDraft } from '../lib/postDraft.js';
+import { RowsSkeleton } from './states.jsx';
 
 /** Friendly text for the database's spam-guard errors (see spam_and_bans.sql). Returns null for any other error. */
 export const spamMessage = (er) => {
@@ -87,7 +88,7 @@ export function Lightbox({ items, index, onClose, onIndex, onLike, onLikers }) {
         {n > 1 && <button className="arrow r" onClick={() => step(1)} aria-label="Next photo"><CaretRight size={22} weight="bold" aria-hidden="true" /></button>}</div>
       {n > 1 && n <= 12 && <div className="lbthumbs" ref={strip} role="group" aria-label="All photos">{items.map((x, k) => <button key={x.id} type="button" className={k === index ? 'on' : ''} aria-label={`Photo ${k + 1} of ${n}`} aria-current={k === index ? 'true' : undefined} onClick={() => jump(k)}>{x.src ? <img src={x.src} alt="" draggable="false" /> : <i className={x.src === null ? 'bad' : ''} />}</button>)}</div>}
       <div className="lbfoot">{cap && <p className={`lbcap${long && !more ? ' clamp' : ''}`}>{cap}</p>}{cap && long && <button type="button" className="lbmore" onClick={() => setMore(!more)} aria-expanded={more}>{more ? 'Show less' : 'Show more'}</button>}
-        <div className="lbbar">{onLike && <button className={`like${it.liked ? ' on' : ''}`} onClick={() => onLike(it)} aria-pressed={!!it.liked} aria-label={`${it.likes} ${it.likes === 1 ? 'like' : 'likes'}`}><Heart size={16} weight={it.liked ? 'fill' : 'bold'} aria-hidden="true" />{it.likes}</button>}{!onLike && onLikers && it.likes > 0 && <button className="like" onClick={() => onLikers(it)} aria-label={`See who liked (${it.likes})`}><Heart size={16} weight="fill" aria-hidden="true" />{it.likes}</button>}<small>{index + 1} / {n}</small></div></div>
+        <div className="lbbar">{onLike && <button className={`like${it.liked ? ' on' : ''}`} onClick={() => onLike(it)} aria-pressed={!!it.liked} aria-label={`${it.likes} ${it.likes === 1 ? 'like' : 'likes'}`}><Heart size={16} weight={it.liked ? 'fill' : 'bold'} aria-hidden="true" /><span className="cnt">{fmtCount(it.likes)}</span></button>}{!onLike && onLikers && it.likes > 0 && <button className="like" onClick={() => onLikers(it)} aria-label={`See who liked (${it.likes})`}><Heart size={16} weight="fill" aria-hidden="true" />{it.likes}</button>}<small>{index + 1} / {n}</small></div></div>
       <span className="sronly" aria-live="polite">{n > 1 ? `Photo ${index + 1} of ${n}` : ''}</span>
     </div></div>);
 }
@@ -197,8 +198,8 @@ export function PostCard({ p, me, img, go, onChange, onDelete, notify, expanded 
             {longText && <button type="button" className="pmorebtn" onClick={() => setFull(!full)} aria-expanded={full}>{full ? 'Show less' : 'Show more'}</button>}</>}
       </div>
     </div>
-    <footer><button className={`like${p.liked ? ' on' : ''}${pop ? ' pop' : ''}`} onClick={like} aria-pressed={!!p.liked} aria-label={`${p.like_count} ${p.like_count === 1 ? 'like' : 'likes'}`}><Heart size={16} weight={p.liked ? 'fill' : 'bold'} aria-hidden="true" />{p.like_count}</button>
-      <button className="ghost sm" onClick={() => setOpen(!open)} aria-expanded={open} aria-label={`${p.comment_count} ${p.comment_count === 1 ? 'comment' : 'comments'}`}><ChatCircle size={16} weight="bold" aria-hidden="true" /><span className="lbl">Comments </span>{p.comment_count}</button>
+    <footer><button className={`like${p.liked ? ' on' : ''}${pop ? ' pop' : ''}`} onClick={like} aria-pressed={!!p.liked} aria-label={`${p.like_count} ${p.like_count === 1 ? 'like' : 'likes'}`}><Heart size={16} weight={p.liked ? 'fill' : 'bold'} aria-hidden="true" /><span className="cnt">{fmtCount(p.like_count)}</span></button>
+      <button className="ghost sm" onClick={() => setOpen(!open)} aria-expanded={open} aria-label={`${p.comment_count} ${p.comment_count === 1 ? 'comment' : 'comments'}`}><ChatCircle size={16} weight="bold" aria-hidden="true" /><span className="lbl">Comments</span><span className="cnt">{fmtCount(p.comment_count)}</span></button>
       {p.visibility !== 'friends' && <button className="ghost sm pshare" onClick={() => setShr(true)} aria-label="Share"><ShareNetwork size={16} weight="bold" aria-hidden="true" /><span className="lbl">Share</span></button>}</footer>
     {open && <Comments postId={p.id} postAuthorId={p.author_id} me={me} go={go} notify={notify} fail={fail} onTag={(t) => go('tag', t)}
       onDelta={(d) => onChange({ ...p, comment_count: Math.max(0, p.comment_count + d) })} />}
@@ -227,7 +228,7 @@ export function LikersModal({ load, go, onClose }) {
     <div className="likehead" onTouchStart={down} onTouchMove={move} onTouchEnd={up}><i className="grab" aria-hidden="true" />
       <h3>Likes{rows && rows.length > 0 && <small>{rows.length}</small>}</h3>
       <button className="ghost likex" onClick={onClose} aria-label="Close"><X size={18} weight="bold" aria-hidden="true" /></button></div>
-    {err ? <p className="err likemsg">{err}</p> : !rows ? <div className="boot">…</div> : !rows.length ? <p className="muted likemsg">No likes yet.</p>
+    {err ? <p className="err likemsg">{err}</p> : !rows ? <RowsSkeleton n={3} label="Loading likes" /> : !rows.length ? <p className="muted likemsg">No likes yet.</p>
       : <ul className="likelist">{rows.map((r) => (<li key={r.id}><button className="likerow" onClick={() => { onClose(); go('profile', r.username); }}><Avatar src={img[r.avatar_path]} size={44} />
         <span><b>{r.display_name}{r.is_official && <Verified />}</b><small>@{r.username}</small></span></button></li>))}</ul>}
   </div></div>);

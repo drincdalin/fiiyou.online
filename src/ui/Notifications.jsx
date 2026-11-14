@@ -5,6 +5,7 @@ import { social } from '../index.js';
 import { Avatar, ago, useImages } from './shared.jsx';
 import { Verified } from './parts.jsx';
 import { groupNotifications, ungroupNotifications, actorsLabel } from '../lib/notifGroups.js';
+import { NoticeSkeleton } from './states.jsx';
 
 // ---------------------------------------------------------------------------------------------
 // The only calls this file makes to your backend (see api/social.js, 0020_notifications.sql and 0025_wall_notifications.sql):
@@ -84,7 +85,7 @@ export function NotificationList({ go, notify, tick, onRead, limit, grouped = tr
   };
 
   return (<section className="nsec npage" aria-label="Notifications">
-    {!rows ? <p className="muted nempty" role="status">Loading…</p> : !groups.length ? <p className="muted nempty">Nothing yet. Likes, replies and mentions will show up here.</p>
+    {!rows ? <NoticeSkeleton /> : !groups.length ? <p className="muted nempty">Nothing yet. Likes, replies and mentions will show up here.</p>
       : <ul className="nlist">{shown.map((g) => { const [Icon, single] = KINDS[g.type] || [Bell, 'did something']; const text = g.targetCount > 1 && PLURAL[g.type] ? PLURAL[g.type] : single; const r = g.latest; const count = g.rows.length; return (
         <li key={g.key} className="nitem">
           <button type="button" className={`nrow${g.unread ? ' new' : ''}`} onClick={() => visit(g)}>

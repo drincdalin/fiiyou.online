@@ -1,0 +1,255 @@
+/* ======================================================================
+   system.css: the design-system layer. Loaded LAST (main.jsx), after every other sheet.
+
+   It does four jobs and nothing else:
+   1. Tokens: one spacing scale (4px grid), one type scale, one motion speed, one elevation ramp.
+   2. Interactive states: hover / active / focus / disabled / loading look the same on every control.
+   3. Shared pieces: spinner, skeleton rows, empty states, badges, form fields.
+   4. Calm motion: nothing moves the layout. Only transform and opacity animate.
+
+   Every colour still comes from the person's theme (appTheme.js publishes the --t-*, --muted, --ink2, --field-border
+   and *-fg values, and those are checked for WCAG AA contrast on every surface they sit on).
+   ====================================================================== */
+
+:root {
+  /* spacing: 4px grid */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-10: 40px; --s-12: 48px;
+
+  /* type scale (rem). Body is 15px. Nothing in the app sets a size outside this list. */
+  --fs-2xs: .6875rem;   /* 11  badges, counters */
+  --fs-xs: .75rem;      /* 12  captions, timestamps */
+  --fs-sm: .8125rem;    /* 13  helper text, chips */
+  --fs-md: .875rem;     /* 14  secondary body, buttons */
+  --fs-base: .9375rem;  /* 15  body */
+  --fs-lg: 1rem;        /* 16  inputs (stops iOS zoom), row titles */
+  --fs-xl: 1.125rem;    /* 18  section titles */
+  --fs-2xl: 1.25rem;    /* 20  page titles */
+  --fs-3xl: 1.5rem;     /* 24  */
+  --fs-4xl: 2rem;       /* 32  */
+  --lh-tight: 1.2; --lh-snug: 1.35; --lh-body: 1.5;
+
+  /* motion: one speed, one curve. Fast enough to feel instant, slow enough to read as a change. */
+  --dur-1: 150ms; --dur-2: 200ms; --dur-3: 250ms;
+  --ease-out: cubic-bezier(.2, .7, .2, 1);
+
+  /* elevation: soft, layered, tinted by the theme's own shadow colour (never pure black on a light theme) */
+  --elev-1: 0 1px 2px color-mix(in srgb, var(--shade) 28%, transparent), inset 0 1px 0 color-mix(in srgb, var(--ink) 4%, transparent);
+  --elev-2: 0 6px 16px -6px color-mix(in srgb, var(--shade) 55%, transparent), 0 1px 3px color-mix(in srgb, var(--shade) 30%, transparent);
+  --elev-3: 0 22px 48px -16px color-mix(in srgb, var(--shade) 75%, transparent), 0 4px 10px -2px color-mix(in srgb, var(--shade) 30%, transparent), 0 0 0 1px color-mix(in srgb, var(--g3) 70%, transparent);
+
+  --field-border: color-mix(in srgb, var(--t-border) 40%, var(--t-text));   /* fallback before appTheme.js runs (3:1 on the Mono theme) */
+  --focus-ring: 0 0 0 2px var(--g0), 0 0 0 4px var(--accent-fg);
+  --target: 40px;       /* comfortable minimum for a button or field */
+}
+@media (pointer: coarse) { :root { --target: 44px; } }
+
+/* ---------- typography ---------- */
+body { font-size: var(--fs-base); line-height: var(--lh-body); text-rendering: optimizeLegibility; font-synthesis: none; }
+h1, h2, h3, h4 { text-wrap: balance; line-height: var(--lh-tight); overflow-wrap: anywhere; }
+h1 { font-size: var(--fs-3xl); font-weight: 800; letter-spacing: -.02em; }
+h2 { font-size: var(--fs-2xl); font-weight: 750; letter-spacing: -.015em; }
+h3 { font-size: var(--fs-xl); font-weight: 700; letter-spacing: -.01em; }
+h4 { font-size: var(--fs-lg); font-weight: 650; }
+p, li, .muted, .hint, .empty small { text-wrap: pretty; }
+.muted, .hint, small { line-height: var(--lh-snug); }
+.ptitle { font-size: var(--fs-2xl); line-height: var(--lh-tight); letter-spacing: -.015em; }
+.brand { letter-spacing: -.03em; line-height: 1; }
+/* small caps-style labels keep a little air; everything else keeps default tracking */
+.customizer h4, .shead, .lpgroup, .snap h4, .nav .more .menu .mcardhead h2 { letter-spacing: .06em; }
+/* numbers in counters and times never change width when a digit changes */
+.badge, .dotb, .count, .mcount, .mheart, .cmcount, .times, .nrow small, .bub small, time { font-variant-numeric: tabular-nums; }
+::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); color: inherit; }
+
+/* ---------- focus: one ring, everywhere, on every control ---------- */
+:where(a, button, input, select, textarea, summary, [role=button], [role=tab], [role=option], [tabindex]):focus { outline: none; }
+:where(a, button, summary, [role=button], [role=tab], [role=option], [tabindex]):focus-visible { outline: 2px solid var(--accent-fg); outline-offset: 2px; }
+:where(input, select, textarea):focus-visible { outline: none; border-color: var(--accent-fg); box-shadow: 0 0 0 3px var(--ring); }
+input[type=checkbox]:focus-visible, input[type=radio]:focus-visible, input[type=range]:focus-visible { outline: 2px solid var(--accent-fg); outline-offset: 2px; box-shadow: none; }
+
+/* ---------- buttons: one set of states ---------- */
+.primary, .ghost, .like, .filebtn, .tabs button, .seg button, .chip { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.primary, .ghost { display: inline-flex; align-items: center; justify-content: center; gap: var(--s-2); min-height: var(--target); line-height: 1.2; font-size: var(--fs-md); text-align: center; }
+.primary.sm, .ghost.sm, button.sm { min-height: 32px; padding-top: 0; padding-bottom: 0; font-size: var(--fs-sm); }
+@media (pointer: coarse) { .primary.sm, .ghost.sm, button.sm { min-height: 36px; } }
+.primary svg, .ghost svg, .like svg, .tabs button svg { flex: none; width: 1.15em; height: 1.15em; }
+.primary:hover:not(:disabled):not([aria-busy=true]) { filter: brightness(.9); transform: none; }
+.ghost:hover:not(:disabled) { background: var(--hover); }
+.primary:active:not(:disabled), .ghost:active:not(:disabled) { transform: scale(.98); }
+.primary, .ghost, .tabs button, .seg button, .like, .chip, .filebtn {
+  transition: background-color var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out), opacity var(--dur-1) var(--ease-out), transform var(--dur-1) var(--ease-out), filter var(--dur-1) var(--ease-out);
+}
+/* disabled: flat, clearly off, still readable (4.5:1 text is not required on disabled controls, but we keep it legible anyway) */
+.primary:disabled, .ghost:disabled { cursor: not-allowed; }
+
+/* loading: the label stays exactly where it is (so the button never changes width), a spinner sits on top of it */
+button[aria-busy=true], .primary[aria-busy=true], .ghost[aria-busy=true] { position: relative; color: transparent !important; cursor: progress; pointer-events: none; }
+button[aria-busy=true] > * { visibility: hidden; }
+button[aria-busy=true]::after {
+  content: ""; position: absolute; top: 50%; left: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; box-sizing: border-box;
+  border-radius: 50%; border: 2px solid var(--spin-track, color-mix(in srgb, var(--ink) 25%, transparent)); border-top-color: var(--spin-ink, var(--ink));
+  animation: spin .7s linear infinite;
+}
+.primary[aria-busy=true] { --spin-track: color-mix(in srgb, var(--on-accent) 30%, transparent); --spin-ink: var(--on-accent); background: var(--accent); border-color: var(--accent); }
+.primary.danger[aria-busy=true] { --spin-track: color-mix(in srgb, var(--on-red) 30%, transparent); --spin-ink: var(--on-red); background: var(--red); }
+button.sm[aria-busy=true]::after { width: 14px; height: 14px; margin: -7px 0 0 -7px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* a spinner on its own (page loading, inline) */
+.spin { display: inline-block; flex: none; width: var(--spin, 16px); height: var(--spin, 16px); box-sizing: border-box; border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--ink) 22%, transparent); border-top-color: var(--accent-fg); animation: spin .7s linear infinite; }
+.boot { display: grid; place-items: center; min-height: 40vh; padding: var(--s-10) var(--s-4); }
+
+/* ---------- form fields ---------- */
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]), select, textarea {
+  min-height: var(--target); border-color: var(--field-border); border-radius: var(--rad-m, 10px); font-size: var(--fs-lg); line-height: 1.3;
+  transition: border-color var(--dur-1) var(--ease-out), box-shadow var(--dur-1) var(--ease-out), background-color var(--dur-1) var(--ease-out);
+}
+textarea { min-height: calc(var(--target) * 2); padding-top: .6rem; padding-bottom: .6rem; resize: vertical; line-height: var(--lh-body); }
+input:hover:not(:disabled):not(:focus), select:hover:not(:disabled):not(:focus), textarea:hover:not(:disabled):not(:focus) { border-color: var(--accent-fg); }
+input:disabled, select:disabled, textarea:disabled { opacity: 1; background: var(--g2); color: var(--muted); border-color: var(--g3); cursor: not-allowed; }
+input[readonly] { background: var(--g2); }
+input[aria-invalid=true], select[aria-invalid=true], textarea[aria-invalid=true] { border-color: var(--red-fg); }
+input[aria-invalid=true]:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--red) 35%, transparent); border-color: var(--red-fg); }
+/* the in-field search boxes draw their own border and ring on the wrapper (see polish.css), so the global field rules must not add a second one */
+.lpsearch input, .mapbar .msearch input { min-height: 0; }
+
+/* select: a real custom arrow in the theme's own colour instead of the browser's */
+select { -webkit-appearance: none; appearance: none; padding-right: 2.25rem; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 52%, calc(100% - 13px) 52%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; }
+select:focus-visible { background-image: linear-gradient(45deg, transparent 50%, var(--accent-fg) 50%), linear-gradient(135deg, var(--accent-fg) 50%, transparent 50%); }
+/* checkbox and radio in the theme's accent, one size, easy to hit */
+input[type=checkbox], input[type=radio] { width: 20px; height: 20px; flex: none; margin: 0; accent-color: var(--accent); cursor: pointer; vertical-align: middle; }
+input[type=checkbox]:disabled, input[type=radio]:disabled { opacity: .5; cursor: not-allowed; }
+.agree { display: flex; align-items: flex-start; gap: var(--s-3); font-size: var(--fs-md); line-height: var(--lh-snug); color: var(--ink2); }
+.agree input { margin-top: 1px; }
+.agree a { text-underline-offset: 2px; }
+.field > span { font-size: var(--fs-sm); line-height: 1.2; }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
+@media (max-width: 700px) { input, select, textarea { font-size: 16px; } }   /* iOS zooms the page when a field under 16px is focused */
+
+/* ---------- surfaces: depth from layering, not from harsh lines ---------- */
+.panel, .post, .plain .row { box-shadow: var(--elev-1); }
+.menu, .sresults, .cand, .pctx, .lppop, .toast, .netbar, .dlgcard { box-shadow: var(--elev-3); }
+.toast { color: var(--on-green); }
+.toast.err { color: var(--on-red); }
+.netbar { box-shadow: var(--elev-2); }
+.mapbar .msearch, .mapbar .mtog, .mapbar .madd, .mrecenter { box-shadow: var(--elev-2); }
+.mheart svg { color: var(--accent-fg); }
+/* hover moves nothing: rows and the wordmark used to slide or tilt under the pointer, which made the hit area flicker at the edges */
+.plain .row:hover { transform: none; }
+.nav .logo:hover { transform: none; }
+.nav .logo { transition: opacity var(--dur-1) var(--ease-out); } .nav .logo:hover { opacity: .8; }
+
+/* ---------- badges and counters: fixed shape, so a count changing never pushes its neighbours ---------- */
+.badge, .count, .mcount, .dotb { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; line-height: 1; }
+.dotb { min-width: 18px; height: 18px; padding: 0 5px; font-size: var(--fs-2xs); font-weight: 750; }
+.count { min-width: 20px; height: 20px; padding: 0 6px; font-size: var(--fs-xs); font-weight: 700; }
+.mcount { min-width: 20px; height: 20px; font-size: var(--fs-xs); line-height: 1; }
+.badge { height: 20px; padding: 0 8px; font-size: var(--fs-2xs); }
+/* the "new" dot in a notification row always takes its 8px, so marking a row as read does not re-wrap its text */
+.nav .more .menu .mnotif .nrow::after, .npage .nrow::after { content: ""; flex: none; width: 8px; height: 8px; margin-left: 2px; border-radius: 50%; background: var(--accent); opacity: 0; transition: opacity var(--dur-2) var(--ease-out); }
+.nav .more .menu .mnotif .nrow.new::after, .npage .nrow.new::after { opacity: 1; }
+
+/* ---------- loading skeletons ---------- */
+.rowsk { display: grid; gap: var(--s-2); }
+.rowsk-flush { gap: 0; padding: var(--s-1) var(--s-2) var(--s-3); }
+.rowsk-row { display: flex; align-items: center; gap: var(--s-3); }
+.rowsk-row.row { transform: none; }
+.rowsk-row .skav { width: 44px; height: 44px; }
+.rowsk-notice { min-height: 58px; padding: 0 var(--s-3); }
+.rowsk-notice .skav { width: 36px; height: 36px; }
+.rowsk-lines { display: grid; flex: 1 1 auto; gap: 10px; min-width: 0; }
+.skln.w90 { width: 90%; } .skln.w70 { width: 70%; } .skln.w50 { width: 50%; } .skln.w30 { width: 30%; }
+.skln, .skav, .skimg { background: var(--g2); }
+
+/* ---------- empty states ---------- */
+.emptystate { display: grid; justify-items: center; gap: var(--s-2); padding: var(--s-10) var(--s-4); text-align: center; color: var(--muted); }
+.emptystate .emptyic { display: grid; place-items: center; width: 48px; height: 48px; margin-bottom: var(--s-1); border-radius: 50%; background: var(--g2); border: 1px solid var(--g3); color: var(--ink2); }
+.emptystate .emptyic svg { width: 22px; height: 22px; flex: none; }
+.emptystate .emptyt { margin: 0; color: var(--ink); font-size: var(--fs-lg); font-weight: 650; line-height: var(--lh-snug); }
+.emptystate .emptyh { max-width: 32ch; color: var(--muted); font-size: var(--fs-md); line-height: var(--lh-snug); }
+.emptystate .primary, .emptystate .ghost { margin-top: var(--s-3); }
+.empty { line-height: var(--lh-snug); }
+.errstate { padding: var(--s-10) var(--s-4); }
+.errstate h3 { font-size: var(--fs-xl); }
+.errstate p { font-size: var(--fs-md); line-height: var(--lh-snug); }
+.errstate .primary { margin-top: var(--s-2); }
+
+/* ---------- sign-in card ---------- */
+.authcard { gap: var(--s-4); }
+.authhead .brand { font-size: var(--fs-4xl); }
+.authlead { font-size: var(--fs-base); color: var(--muted); }
+.authgo { min-height: 48px; font-size: var(--fs-lg); }
+.authforgot { min-height: 32px; font-size: var(--fs-md); }
+.authcard .err, .authcard .okmsg { font-size: var(--fs-md); line-height: var(--lh-snug); border-radius: var(--rad-m, 10px); padding: .55rem .8rem; }
+.legal { font-size: var(--fs-sm); text-align: center; color: var(--muted); }
+.legal a { color: var(--ink2); text-underline-offset: 2px; }
+.legal a:hover { color: var(--ink); }
+.pweye { width: 40px; height: 40px; }
+.pweye svg { flex: none; }
+.pwbox input { padding-right: 3.25rem; }
+
+/* ---------- icons: always a box of known size, centred, never squeezed by a flex row ---------- */
+.nav svg, .menu svg, .sheet svg, .modal svg, .tabs svg, .acts svg, .row svg, .ctrl svg, .like svg { flex: none; }
+
+/* ---------- reduced motion: the loading spinner still turns (slowly), everything else holds still ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .spin, button[aria-busy=true]::after { animation: spin 1.6s linear infinite !important; }
+  .skln::after, .skav::after, .skimg::after, .pimgph::after { animation: none !important; }
+  .nav .more .menu .mnotif .nrow::after, .npage .nrow::after { transition: none; }
+}
+
+/* ---------- forced colours (Windows high contrast): keep edges and focus visible ---------- */
+@media (forced-colors: active) {
+  .primary, .ghost, .tabs button, .like, input, select, textarea, .panel, .post { border: 1px solid CanvasText; }
+  .primary[aria-busy=true]::after, .spin { border-color: CanvasText; border-top-color: Highlight; }
+  :where(a, button, summary, [role=button], [role=tab]):focus-visible { outline: 2px solid Highlight; }
+}
+
+/* ======================================================================
+   POST ACTIONS: like, comment, share
+   One height, one radius, one gap. The heart and the number sit on one line, the number never changes the button's height,
+   and pressing only scales (transform), so nothing around it moves.
+   ====================================================================== */
+.post footer { display: flex; align-items: center; gap: var(--s-2); }
+.post footer button.like, .post footer button.ghost, .lbbar .like {
+  box-sizing: border-box; display: inline-flex; flex-direction: row; align-items: center; justify-content: center; gap: var(--s-2);
+  height: 40px; min-height: 0; padding: 0 var(--s-4); border-radius: var(--rad-m, 10px); font-size: var(--fs-md); font-weight: 650; line-height: 1; white-space: nowrap;
+}
+@media (pointer: coarse) { .post footer button.like, .post footer button.ghost, .lbbar .like { height: 44px; } }
+.post footer button.like, .lbbar .like { min-width: 68px; }
+.like { flex-direction: row; background: var(--g2); border: 1px solid var(--g3); color: var(--ink2); }
+.like svg, .post footer button.ghost svg { display: block; flex: none; width: 18px; height: 18px; transform-origin: 50% 50%; }
+.like .cnt, .ghost .cnt { display: inline-block; min-width: 1ch; line-height: 1; font-variant-numeric: tabular-nums; text-align: left; }
+.like:hover:not(.on):not(:disabled) { background: var(--hover); border-color: var(--g4); color: var(--ink); }
+.like:hover:not(.on) svg { color: var(--accent-fg); }
+.like.on { background: var(--pink); border-color: var(--pink); color: var(--on-pink); box-shadow: none; }
+.like.on:hover { filter: brightness(1.08); }
+.like:active:not(:disabled) { transform: scale(.96); box-shadow: none; }
+.like.pop svg { animation: likepop .4s cubic-bezier(.3, 1.6, .5, 1); }
+
+/* ======================================================================
+   CHAT: the heart under a message and the "Seen" line
+   The heart is absolutely positioned and hangs 20px under its bubble. The old fix reserved that room OUTSIDE the row, so the "Seen"
+   line (which sits inside the message column, right under the bubble) was drawn under the heart. The room is now reserved by the
+   bubble itself, so everything that follows it (the Seen line, the next message) starts below the heart.
+   ====================================================================== */
+.brow:has(.mheart) { margin-bottom: 0; }
+.bcol .bub:has(> .mheart) { margin-bottom: 26px; }
+.brow.mine .mheart { left: auto; right: 10px; }
+.mheart { transition: background-color var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out), transform var(--dur-1) var(--ease-out); box-shadow: var(--elev-1); }
+.mheart:hover { background: var(--g4); }
+.mheart:active { transform: scale(.94); }
+.mheart svg { flex: none; width: 14px; height: 14px; transform-origin: 50% 50%; }
+.bcol .seen { align-self: flex-end; margin: 0; padding: 2px 4px 0; line-height: 1.3; font-size: var(--fs-xs); color: var(--muted); }
+.brow:not(.mine) .bcol .seen { align-self: flex-start; }
+
+/* ======================================================================
+   ACCOUNT PANEL: action rows (Invite friends / Settings / Sign out)
+   Icon and label always sit on one line, icon in a fixed 20px box.
+   ====================================================================== */
+.nav .more .menu .mact > button, .nav .more .menu > .mout { flex-direction: row; align-items: center; text-align: left; gap: var(--s-3); }
+.nav .more .menu .mact > button svg, .nav .more .menu > .mout svg { display: block; flex: none; width: 20px; height: 20px; }
+.nav .more .menu .mnotif .nrow, .nav .more .menu > .mprof { transition: background-color var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out); }
+.nav .more .menu .mnotif .nseeall svg { flex: none; }

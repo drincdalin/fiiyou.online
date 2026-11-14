@@ -33,7 +33,7 @@ export function ErrorState({ error, onRetry, title = 'Could not load this' }) {
   useEffect(() => { const h = () => retryRef.current?.(); addEventListener('online', h); return () => removeEventListener('online', h); }, []);
   const again = () => { setBusy(true); Promise.resolve(onRetry?.()).finally(() => setBusy(false)); };
   return (<div className="errstate" role="alert"><h3>{title}</h3><p>{friendlyError(error)}</p>
-    {onRetry && <button type="button" className="primary" onClick={again} disabled={busy}>{busy ? 'Trying…' : 'Try again'}</button>}</div>);
+    {onRetry && <button type="button" className="primary" onClick={() => !busy && again()} aria-busy={busy || undefined}>Try again</button>}</div>);
 }
 
 /** Last line of defence for a crash while rendering. "Try again" re-renders without losing the page; "Reload" starts over. */

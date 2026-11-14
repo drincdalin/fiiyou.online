@@ -60,7 +60,7 @@ function Sentinel({ onHit, busy }) {
   const el = useRef(null); const hit = useRef(onHit); hit.current = onHit;
   useEffect(() => { const n = el.current; if (!n || typeof IntersectionObserver === 'undefined') return undefined;
     const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) hit.current(); }, { rootMargin: '700px 0px' }); io.observe(n); return () => io.disconnect(); }, [busy]);
-  return <button ref={el} type="button" className="ghost wide moreposts" disabled={busy} onClick={onHit}>{busy ? 'Loading…' : 'Load more'}</button>;
+  return <button ref={el} type="button" className="ghost wide moreposts" aria-busy={busy || undefined} onClick={() => !busy && onHit()}>Load more</button>;
 }
 
 const List = ({ f, me, go, notify, empty, Icon = ChatsCircle }) => !f.rows ? <Skeleton /> : f.err && !f.rows.length ? <ErrorState error={f.err} onRetry={() => f.load(false)} title="Could not load posts" /> : (<>

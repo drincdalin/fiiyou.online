@@ -22,11 +22,11 @@
   background: var(--g1); color: var(--ink); border: 1px solid var(--g3); border-radius: var(--rad-m); font-weight: 500; }
 .bub.hasshare .sp:hover { border-color: var(--accent-fg); }
 .bub.hasshare .sp > * { min-width: 0; }
-.bub.hasshare .sp small { display: block; margin: 0; text-align: left; opacity: 1; color: var(--muted); font-size: .74rem; }
+.bub.hasshare .sp small { display: block; margin: 0; text-align: left; opacity: 1; color: var(--muted); font-size: 0.75rem; }
 .bub.hasshare .sphead { display: flex; align-items: center; gap: 8px; }
 .bub.hasshare .spname { display: grid; line-height: 1.2; overflow: hidden; }
 .bub.hasshare .spname > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bub.hasshare .sptitle { font-weight: 700; overflow-wrap: anywhere; }
-.bub.hasshare .spbody { display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; white-space: pre-wrap; font-size: .92rem; line-height: 1.4; }
+.bub.hasshare .spbody { display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; white-space: pre-wrap; font-size: 0.9375rem; line-height: 1.4; }
 .bub.hasshare .spimg { display: block; width: 100%; max-height: 220px; object-fit: cover; border-radius: var(--rad-s); }
 .bub.hasshare .spcta { color: var(--accent-fg); font-weight: 600; }
