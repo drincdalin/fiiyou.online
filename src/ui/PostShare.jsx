@@ -4,6 +4,7 @@ import { friends, social } from '../index.js';
 import { Avatar, useImages } from './shared.jsx';
 import './PostShare.css';
 import { friendlyError } from './errors.jsx';
+import { RowsSkeleton } from './states.jsx';
 
 // ---------------------------------------------------------------------------------------------
 // The only two calls this file makes to your backend (adjust the names here if yours differ):
@@ -225,7 +226,7 @@ export default function PostShareModal({ p, img, onClose, notify }) {
       <input value={note} maxLength={200} placeholder="Add a message (optional)" onChange={(e) => setNote(e.target.value)} aria-label="Message" />
       <input value={q} placeholder="Search friends…" onChange={(e) => setQ(e.target.value)} aria-label="Search friends" />
       <div className="pslist">
-        {!list ? <p className="empty">Loading…</p> : !shown.length ? <p className="empty">{list.length ? 'No match.' : 'Add some friends to send posts to.'}</p>
+        {!list ? <RowsSkeleton n={3} label="Loading friends" /> : !shown.length ? <p className="empty">{list.length ? 'No match.' : 'Add some friends to send posts to.'}</p>
           : shown.map((f) => (<div className="row" key={f.id}><Avatar src={av[f.avatar_path]} size={40} />
             <span className="link"><b>{f.display_name || f.username}</b><small>@{f.username}</small></span>
             <button className={sent[f.id] ? 'ghost sm' : 'primary sm'} disabled={busy === f.id || sent[f.id]} onClick={() => send(f)}>

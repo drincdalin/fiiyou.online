@@ -28,7 +28,7 @@ input[type=checkbox], input[type=radio], input[type=range] { accent-color: var(-
 
 /* ---------- navigation ---------- */
 .nav { background: var(--g1); backdrop-filter: none; border-bottom: 2px solid var(--g3); }
-.nav .logo { font-weight: 850; font-size: 1.3rem; letter-spacing: normal; }
+.nav .logo { font-weight: 850; font-size: 1.25rem; letter-spacing: normal; }
 .nav .logo:hover { transform: none; }
 .navlinks { background: var(--g0); border: 2px solid var(--g3); border-radius: var(--rad-l); padding: 4px; gap: 4px; }
 .navlinks button { border-radius: var(--rad-s); }
@@ -167,7 +167,7 @@ input[type=file]::file-selector-button { border-radius: var(--rad-s); }
 .dlgcard { width: min(420px, 100%); display: grid; gap: 14px; padding: 20px; box-shadow: var(--lift-lg); animation: d-pop .18s ease backwards; }
 @keyframes d-pop { from { opacity: 0; transform: translateY(8px) scale(.98); } }
 .dlghead { display: flex; align-items: center; gap: 10px; }
-.dlghead h3 { margin: 0; font-size: 1.05rem; font-weight: 850; letter-spacing: -.01em; }
+.dlghead h3 { margin: 0; font-size: 1rem; font-weight: 850; letter-spacing: -.01em; }
 .dlgic { flex: none; width: 34px; height: 34px; display: grid; place-items: center; border-radius: var(--rad-m); background: var(--g2); border: 2px solid var(--g3); color: var(--accent-fg, var(--accent)); }
 .dlgcard.danger .dlgic { color: var(--red); border-color: color-mix(in srgb, var(--red) 45%, var(--g3)); background: color-mix(in srgb, var(--red) 14%, var(--g1)); }
 .dlgmsg { margin: 0; color: var(--ink); font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; white-space: pre-wrap; }
@@ -184,18 +184,18 @@ input[type=file]::file-selector-button { border-radius: var(--rad-s); }
 
 /* ---------- chat: conversation design ---------- */
 .msgs { gap: 2px; padding: 18px 20px; }
-.dsep { margin: 14px 0 8px; font-size: .74rem; letter-spacing: .02em; }
+.dsep { margin: 14px 0 8px; font-size: 0.75rem; letter-spacing: .02em; }
 .brow { gap: 8px; max-width: 78%; }
 .brow.first { margin-top: 10px; }
 .dsep + .brow.first { margin-top: 0; }
 .avsp { width: 26px; flex: none; }
 
 /* bubbles: soft corners, only the last one of a run gets the pointed corner */
-.brow .bub { border-radius: 18px; padding: .5rem .8rem .35rem; font-size: .97rem; line-height: 1.4; min-width: 0; }
+.brow .bub { border-radius: 18px; padding: .5rem .8rem .35rem; font-size: 1rem; line-height: 1.4; min-width: 0; }
 .bub:not(.mine) { background: var(--g2); }
 .brow.tail:not(.mine) .bub { border-bottom-left-radius: 6px; }
 .brow.tail.mine .bub { border-bottom-right-radius: 6px; }
-.bub small { margin-top: 3px; font-size: .68rem; opacity: .8; }   /* was .6: message times were hard to read */
+.bub small { margin-top: 3px; font-size: 0.6875rem; opacity: .8; }   /* was .6: message times were hard to read */
 
 /* reply button next to a bubble */
 .replybtn { flex: none; align-self: center; width: 30px; height: 30px; padding: 0; display: grid; place-items: center; background: var(--g2); border: 2px solid var(--g3); border-radius: var(--rad-m); color: var(--muted); opacity: 0; transition: opacity .15s, color .15s, border-color .15s; }
@@ -208,8 +208,8 @@ input[type=file]::file-selector-button { border-radius: var(--rad-s); }
 .brow.mine .bcol { align-items: flex-end; }
 .bcol .bub { position: relative; z-index: 1; max-width: 100%; }
 .rq { display: flex; flex-direction: column; align-items: inherit; gap: 4px; max-width: 100%; padding: 0; margin: 4px 0 0; background: none; border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }
-.rqlab { display: inline-flex; align-items: center; gap: 5px; padding: 0 .35rem; font-size: .74rem; font-weight: 750; color: var(--muted); }
-.rqtxt { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; max-width: 100%; padding: .5rem .85rem 1.15rem; margin-bottom: -.85rem; background: var(--g1); border: 2px solid var(--g3); border-radius: 18px; color: var(--muted); font-size: .88rem; font-weight: 550; line-height: 1.35; transition: border-color .15s, color .15s; }
+.rqlab { display: inline-flex; align-items: center; gap: 5px; padding: 0 .35rem; font-size: 0.75rem; font-weight: 750; color: var(--muted); }
+.rqtxt { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; max-width: 100%; padding: .5rem .85rem 1.15rem; margin-bottom: -.85rem; background: var(--g1); border: 2px solid var(--g3); border-radius: 18px; color: var(--muted); font-size: 0.875rem; font-weight: 550; line-height: 1.35; transition: border-color .15s, color .15s; }
 .rq:hover .rqtxt { border-color: var(--g4); color: var(--ink); }
 .rq:hover .rqlab { color: var(--ink); }
 .brow.flash .bub { animation: d-flash 1.2s ease; }
@@ -219,8 +219,8 @@ input[type=file]::file-selector-button { border-radius: var(--rad-s); }
 .replybar { display: flex; align-items: center; gap: 10px; margin: 10px 12px 0; padding: .5rem .5rem .5rem .8rem; background: var(--g2); border: 2px solid var(--g3); border-radius: var(--rad-l); }
 .replybar .ric { flex: none; color: var(--accent-fg, var(--accent)); }
 .replybar > div { flex: 1; min-width: 0; display: grid; gap: 1px; }
-.replybar b { font-size: .8rem; font-weight: 800; color: var(--accent-fg, var(--accent)); }
-.replybar span { font-size: .88rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.replybar b { font-size: 0.8125rem; font-weight: 800; color: var(--accent-fg, var(--accent)); }
+.replybar span { font-size: 0.875rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .replybar button { flex: none; width: 30px; height: 30px; padding: 0; display: grid; place-items: center; background: none; border: 0; border-radius: var(--rad-s); color: var(--muted); }
 .replybar button:hover { background: var(--hover); color: var(--ink); }
 .replybar + .inline { border-top: 0; padding-top: 8px; }
@@ -234,20 +234,20 @@ input[type=file]::file-selector-button { border-radius: var(--rad-s); }
 /* Notifications: a badge on the avatar + the list lives inside the account menu */
 .nav .more { position: relative; }
 .nav .more > .avbtn { position: relative; }
-.avdot { position: absolute; top: -4px; right: -4px; z-index: 2; pointer-events: none; display: grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; box-sizing: border-box; border: 2px solid var(--g1); border-radius: 10px; font-size: .68rem; font-style: normal; font-weight: 850; line-height: 1; background: var(--accent); color: var(--on-accent); }
+.avdot { position: absolute; top: -4px; right: -4px; z-index: 2; pointer-events: none; display: grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; box-sizing: border-box; border: 2px solid var(--g1); border-radius: 10px; font-size: 0.6875rem; font-style: normal; font-weight: 850; line-height: 1; background: var(--accent); color: var(--on-accent); }
 .menu { width: min(340px, calc(100vw - 24px)); }
 .nsec { display: flex; flex-direction: column; }
-.nhead { display: flex; align-items: center; gap: 8px; margin: 0; padding: 6px 10px 6px; font-size: .8rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.nhead { display: flex; align-items: center; gap: 8px; margin: 0; padding: 6px 10px 6px; font-size: 0.8125rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
 .nlist { list-style: none; margin: 0; padding: 0; max-height: min(320px, 42vh); overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 2px; }
 .menu .nrow { align-items: center; gap: 10px; width: 100%; min-height: 56px; padding: 7px 10px; font-weight: 600; text-align: left; }
 .menu .nrow.new { background: color-mix(in srgb, var(--accent) 14%, transparent); }
 .menu .nrow.new:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
 .nav2 { position: relative; flex: none; }
 .nic { position: absolute; right: -4px; bottom: -4px; width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%; background: var(--accent); color: var(--on-accent); border: 2px solid var(--g1); }
-.ntxt { display: flex; flex-direction: column; gap: 2px; min-width: 0; line-height: 1.3; overflow-wrap: anywhere; font-size: .92rem; }
+.ntxt { display: flex; flex-direction: column; gap: 2px; min-width: 0; line-height: 1.3; overflow-wrap: anywhere; font-size: 0.9375rem; }
 .ntxt small { color: var(--muted); }
-.pushhint { margin: 0; padding: 8px 12px; font-size: .82rem; line-height: 1.4; }
-.nempty { text-align: center; padding: 14px 12px 18px; margin: 0; font-size: .9rem; }
+.pushhint { margin: 0; padding: 8px 12px; font-size: 0.8125rem; line-height: 1.4; }
+.nempty { text-align: center; padding: 14px 12px 18px; margin: 0; font-size: 0.875rem; }
 @media (max-width: 700px) { .menu { max-height: calc(100dvh - var(--nav-h) - 24px); overflow-y: auto; } .nlist { max-height: 38vh; } }
 
 /* Likes list: bottom sheet on phones, small card on desktop */
@@ -295,5 +295,5 @@ input[type=file]::file-selector-button { border-radius: var(--rad-s); }
 .post footer .lbl { display: none; }
 /* one footer for desktop and phone: same height for all three buttons, share pinned to the right */
 .post footer { display: flex; align-items: center; gap: 8px; }
-.post footer button.like, .post footer button.ghost { box-sizing: border-box; height: 44px; min-height: 0; padding: 0 16px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: .95rem; line-height: 1; }
+.post footer button.like, .post footer button.ghost { box-sizing: border-box; height: 44px; min-height: 0; padding: 0 16px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.9375rem; line-height: 1; }
 .post footer button.pshare { margin-left: auto; padding: 0 18px; }

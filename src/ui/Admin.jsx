@@ -3,6 +3,7 @@ import { admin } from '../index.js';
 import { useImages, Avatar, ago } from './shared.jsx';
 import { DeletePlaceModal, DeleteContentModal } from './ModerationModals.jsx';
 import { Flag, UsersThree, HardDrives, ClipboardText, EnvelopeSimple } from '@phosphor-icons/react';
+import { PageLoading } from './states.jsx';
 
 const TAB_ICONS = { reports: Flag, users: UsersThree, emails: EnvelopeSimple, storage: HardDrives, log: ClipboardText };
 
@@ -21,7 +22,7 @@ function Reports({ go, notify, refresh, role }) {
   };
   return (<>
     <div className="tabs">{['open', 'reviewed', 'dismissed'].map((s) => <button key={s} className={status === s ? 'on' : ''} onClick={() => setStatus(s)}>{s === 'open' ? 'pending' : s === 'reviewed' ? 'resolved' : s}</button>)}</div>
-    {!rows ? <div className="boot">Loading…</div> : !rows.length ? <p className="empty">Nothing here.</p> : rows.map((r) => { const p = r.preview; return (
+    {!rows ? <PageLoading /> : !rows.length ? <p className="empty">Nothing here.</p> : rows.map((r) => { const p = r.preview; return (
       <article className="panel arep" key={r.id}>
         <header><span className="badge">{r.target_type.replace('_', ' ')}</span>{r.category && <span className="badge">{r.category.replace('_', ' ')}</span>}<small>reported by @{r.reporter_username || '?'} · {ago(r.created_at)}</small></header>
         <p className="reason">“{r.details || r.reason}”</p>
@@ -71,7 +72,7 @@ function Emails({ notify }) {
   return (<div className="panel"><h3>Emails to members</h3>
     <p className="muted">Notices sent when content is removed or an account is banned. “failed” or “stuck” means the person did not get the mail; check the error, fix it, put the mail back in the queue, then call the send-moderation-email function with {'{"retry":true}'}.</p>
     <div className="acts"><button className="ghost sm" onClick={() => { setRows(null); load(); }}>Refresh</button></div>
-    {!rows ? <div className="boot">Loading…</div> : !rows.length ? <p className="empty">No emails yet.</p> : <div className="alog">{rows.map((r) => (
+    {!rows ? <PageLoading /> : !rows.length ? <p className="empty">No emails yet.</p> : <div className="alog">{rows.map((r) => (
       <p key={r.id}><small>{ago(r.created_at)}</small> <span className={`badge${r.status === 'sent' ? '' : ' vb'}`}>{MAIL_STATUS[r.status] || r.status}</span> <b>{MAIL_KINDS[r.kind] || r.kind}</b>{r.username ? <span className="muted"> · @{r.username}</span> : null}{r.attempts > 0 ? <span className="muted"> · {r.attempts} attempt{r.attempts > 1 ? 's' : ''}</span> : null}
         {r.last_error && r.status !== 'sent' ? <span className="muted"> · {r.last_error}</span> : null}
         {(r.status === 'failed' || r.status === 'sending') && <> <button className="ghost sm" onClick={() => requeue(r.id)}>Queue again</button></>}</p>))}</div>}</div>);
@@ -89,7 +90,7 @@ function Storage({ notify }) {
 
 function Log() {
   const [rows, setRows] = useState(null); useEffect(() => { admin.log().then(setRows).catch(() => setRows([])); }, []);
-  return !rows ? <div className="boot">Loading…</div> : !rows.length ? <p className="empty">No admin actions yet.</p> : (<div className="panel alog">{rows.map((r, i) => <p key={i}><small>{new Date(r.created_at).toLocaleString('ro-RO')}</small> <b>{r.action.replace(/_/g, ' ')}</b> <span className="muted">{r.details?.place ? `“${r.details.place}”${r.details.reason_code ? ` · ${r.details.reason_code}` : ''}` : r.details?.username ? `@${r.details.username}` : r.target}</span></p>)}</div>);
+  return !rows ? <PageLoading /> : !rows.length ? <p className="empty">No admin actions yet.</p> : (<div className="panel alog">{rows.map((r, i) => <p key={i}><small>{new Date(r.created_at).toLocaleString('ro-RO')}</small> <b>{r.action.replace(/_/g, ' ')}</b> <span className="muted">{r.details?.place ? `“${r.details.place}”${r.details.reason_code ? ` · ${r.details.reason_code}` : ''}` : r.details?.username ? `@${r.details.username}` : r.target}</span></p>)}</div>);
 }
 
 export default function AdminView({ go, notify, role }) {

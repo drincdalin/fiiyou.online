@@ -46,7 +46,7 @@
 /* notifications card */
 .nav .more .menu > .mnotif { padding: 0; }
 .nav .more .menu .mcardhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 16px 6px; }
-.nav .more .menu .mcardhead h2 { margin: 0; font-size: .74rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+.nav .more .menu .mcardhead h2 { margin: 0; font-size: 0.75rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
 .nav .more .menu .mnotif .nsec { display: block; min-width: 0; }
 .nav .more .menu .mnotif .nlist { display: flex; flex-direction: column; gap: 0; max-height: none; overflow: visible; margin: 0; padding: 0; list-style: none; }   /* no list inside a list: every line is shown whole, the panel itself scrolls on a short screen */
 .nav .more .menu .mnotif .nitem { position: relative; min-width: 0; width: 100%; }
@@ -58,12 +58,12 @@
 .nav .more .menu .mnotif .nrow.new::after { content: ""; flex: none; width: 8px; height: 8px; margin-left: 2px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }   /* a small warm dot says "new" without shouting */
 .nav .more .menu .mnotif .nav2 { flex: none; }
 .nav .more .menu .mnotif .nic { border-color: var(--g1); }
-.nav .more .menu .mnotif .ntxt { flex: 1 1 0; min-width: 0; gap: 3px; font-size: .92rem; line-height: 1.28; overflow: hidden; }
+.nav .more .menu .mnotif .ntxt { flex: 1 1 0; min-width: 0; gap: 3px; font-size: 0.9375rem; line-height: 1.28; overflow: hidden; }
 .nav .more .menu .mnotif .ntxt > span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; word-break: normal; }
 .nav .more .menu .mnotif .ntxt b { font-weight: 800; color: var(--ink); }
-.nav .more .menu .mnotif .ntxt small { font-size: .78rem; color: var(--muted); }
-.nav .more .menu .mnotif .nempty { margin: 0; padding: 10px 20px 22px; text-align: center; font-size: .9rem; line-height: 1.45; text-wrap: balance; }
-.nav .more .menu .mnotif .nseeall { display: flex; align-items: center; justify-content: center; gap: 6px; width: calc(100% - 12px); min-height: 42px; box-sizing: border-box; margin: 2px 6px 6px; padding: 9px 16px; border: 0; border-radius: 12px; background: none; color: var(--accent-fg, var(--accent)); font-size: .88rem; font-weight: 800; filter: none; cursor: pointer; transition: background .15s; }
+.nav .more .menu .mnotif .ntxt small { font-size: 0.75rem; color: var(--muted); }
+.nav .more .menu .mnotif .nempty { margin: 0; padding: 10px 20px 22px; text-align: center; font-size: 0.875rem; line-height: 1.45; text-wrap: balance; }
+.nav .more .menu .mnotif .nseeall { display: flex; align-items: center; justify-content: center; gap: 6px; width: calc(100% - 12px); min-height: 42px; box-sizing: border-box; margin: 2px 6px 6px; padding: 9px 16px; border: 0; border-radius: 12px; background: none; color: var(--accent-fg, var(--accent)); font-size: 0.875rem; font-weight: 800; filter: none; cursor: pointer; transition: background .15s; }
 .nav .more .menu .mnotif .nseeall:hover { background: var(--hover); filter: none; }
 .nav .more .menu .mnotif .nseeall svg { transition: transform .18s var(--ease); }
 .nav .more .menu .mnotif .nseeall:hover svg { transform: translateX(3px); }
@@ -73,11 +73,11 @@
 .nav .more .menu > .mprof:hover { background: var(--hover); border-color: var(--g4); }
 .nav .more .menu > .mprof .mprofn { display: grid; flex: 1 1 0; min-width: 0; gap: 2px; line-height: 1.25; }
 .nav .more .menu > .mprof .mprofn b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1rem; font-weight: 800; }
-.nav .more .menu > .mprof .mprofn small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: .85rem; }
+.nav .more .menu > .mprof .mprofn small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 0.875rem; }
 .nav .more .menu > .mprof > svg { flex: none; color: var(--muted); }
 
 /* actions + sign out */
-.nav .more .menu .mact > button, .nav .more .menu > .mout { flex-direction: row; display: flex; align-items: center; justify-content: flex-start; gap: 14px; width: 100%; min-height: 52px; box-sizing: border-box; margin: 0; padding: 13px 16px; border: 0; border-radius: 0; background: none; color: var(--ink2); font: inherit; font-size: .98rem; font-weight: 700; white-space: nowrap; text-align: left; cursor: pointer; transition: background .15s, color .15s; }
+.nav .more .menu .mact > button, .nav .more .menu > .mout { flex-direction: row; display: flex; align-items: center; justify-content: flex-start; gap: 14px; width: 100%; min-height: 52px; box-sizing: border-box; margin: 0; padding: 13px 16px; border: 0; border-radius: 0; background: none; color: var(--ink2); font: inherit; font-size: 1rem; font-weight: 700; white-space: nowrap; text-align: left; cursor: pointer; transition: background .15s, color .15s; }
 .nav .more .menu .mact > button + button { border-top: 1px solid color-mix(in srgb, var(--g3) 70%, transparent); }
 .nav .more .menu .mact > button:hover, .nav .more .menu > .mout:hover { background: var(--hover); color: var(--ink); }
 .nav .more .menu .mact > button svg { flex: none; color: var(--muted); }
@@ -94,7 +94,7 @@
   :root { --nav-h: 64px; }
   .nav { height: var(--nav-h); display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; padding: 0 24px;
     background: color-mix(in srgb, var(--g0) 80%, transparent); -webkit-backdrop-filter: blur(18px) saturate(1.5); backdrop-filter: blur(18px) saturate(1.5); border-bottom: 1px solid var(--g3); }
-  .nav > .logo { justify-self: start; padding: .3rem .2rem; font-size: 1.4rem; font-weight: 850; letter-spacing: -.035em; border-radius: var(--rad-s, 10px); }
+  .nav > .logo { justify-self: start; padding: .3rem .2rem; font-size: 1.5rem; font-weight: 850; letter-spacing: -.035em; border-radius: var(--rad-s, 10px); }
   .nav .navlinks { gap: 4px; padding: 4px; background: var(--g1); border: 1px solid var(--g3); border-radius: 18px; }
   .nav .navlinks > button { width: 52px; height: 40px; padding: 0; border-radius: 13px; font-size: 1rem; }
   .nav .navlinks > button:hover { background: var(--g2); color: var(--ink); }
@@ -122,13 +122,13 @@
   .nav .more .menu > .mcard { border-radius: 19px; border-color: color-mix(in srgb, var(--g3) 55%, transparent); box-shadow: none; }
   .nav .more .menu > .mnotif { background: var(--g1); }
   .nav .more .menu .mcardhead { padding: 14px 18px 6px; }
-  .nav .more .menu .mcardhead h2 { font-size: .72rem; letter-spacing: .1em; }
+  .nav .more .menu .mcardhead h2 { font-size: 0.75rem; letter-spacing: .1em; }
   .nav .more .menu .mnotif .nlist { max-height: min(340px, 42dvh); overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--g3) transparent; }
   .nav .more .menu > .mprof { padding: 10px 14px; border-radius: 19px; }
   .nav .more .menu > .mprof:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--g3)); }
   .nav .more .menu > .mact, .nav .more .menu > .mout { background: none; border: 0; border-radius: 0; box-shadow: none; overflow: visible; margin: 0; padding: 0 0 0; }
   .nav .more .menu > .mact { gap: 2px; margin-top: 2px; }
-  .nav .more .menu .mact > button, .nav .more .menu > .mout { width: 100%; min-height: 44px; padding: 10px 14px; gap: 14px; border-radius: 14px; font-size: .95rem; }
+  .nav .more .menu .mact > button, .nav .more .menu > .mout { width: 100%; min-height: 44px; padding: 10px 14px; gap: 14px; border-radius: 14px; font-size: 0.9375rem; }
   .nav .more .menu .mact > button + button { border-top: 0; }
   .nav .more .menu > .mout { background: none; border: 0; border-radius: 14px; margin-bottom: 2px; }
   .nav .more .menu > .mout:hover { background: color-mix(in srgb, var(--red, #ff6b6b) 12%, transparent); }
@@ -144,7 +144,7 @@
   .nav > .logo { display: none; }
   .nav .navlinks { flex: 1 1 auto; align-self: stretch; gap: 0; padding: 0; background: none; border: 0; border-radius: 0; }
   .nav .navlinks > .nv-profile { display: none; }   /* the last slot is you: your picture opens your profile, notifications and settings */
-  .nav .navlinks > button, .nav .more > .avbtn { flex: 1 1 0; justify-content: center; height: 100%; padding: 0; border-radius: 20px; font-size: .95rem; }
+  .nav .navlinks > button, .nav .more > .avbtn { flex: 1 1 0; justify-content: center; height: 100%; padding: 0; border-radius: 20px; font-size: 0.9375rem; }
   .nav .navlinks > button.on, .nav .navlinks > button.on:hover { background: none; box-shadow: none; color: var(--ink); }
   /* icon box 30px (the glyph itself is about 80% of that, ~24px) inside a 60 x 40 pill: clearly readable, still with air around it inside the highlight */
   .nav .navlinks .navicw { --nav-ic: 30px; width: 60px; height: 40px; border-radius: 20px; transition: background .22s var(--ease), color .22s, transform .2s var(--ease), box-shadow .22s; }

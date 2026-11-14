@@ -40,8 +40,8 @@ button, .navlinks, .tabs { -webkit-user-select: none; user-select: none; }
 .skip:focus { transform: none; }
 .tabs > .tabsin { display: flex; gap: inherit; flex-wrap: wrap; min-width: 0; }
 @media (max-width: 700px) { .homemain > .tabs > .tabsin { flex: 1 1 100%; } .homemain > .tabs > .tabsin button { flex: 1 1 auto; } }
-.post h2.ptl { margin: 0; font-size: 1.17em; font-weight: 800; }   /* post titles are level 2 under the page's level-1 heading */
-.bub:not(.mine) small { opacity: 1; color: #b3b3b3; }                /* message times: 6:1 on the bubble, was 4.2:1 */
+.post h2.ptl { margin: 0; font-size: 1.15em; font-weight: 800; }   /* post titles are level 2 under the page's level-1 heading */
+.bub:not(.mine) small { opacity: 1; color: var(--muted); }                /* message times: 6:1 on the bubble, was 4.2:1 */
 
 /* ---------- no accidental pull-to-refresh, sheets stay put ---------- */
 html, body { overscroll-behavior-y: none; }   /* the browser's pull-down-to-reload no longer fires while you swipe a sheet or scroll a list */
@@ -62,18 +62,18 @@ html, body { overscroll-behavior-y: none; }   /* the browser's pull-down-to-relo
   .nav { background: var(--t-frame, #000); }   /* solid: the page no longer shows through the bar */
   /* Home: three equal tabs in one row, the place picker underneath */
   .homemain > .tabs > .tabsin { display: grid; grid-template-columns: 1fr 1.35fr .9fr; gap: 6px; }
-  .homemain > .tabs > .tabsin button { min-width: 0; padding: 0 .35rem; font-size: .92rem; }
+  .homemain > .tabs > .tabsin button { min-width: 0; padding: 0 .35rem; font-size: 0.9375rem; }
   /* People: tidy 2 x 2 grid, every cell the same size */
   .plain.view > .tabs:has(> button:nth-child(4):last-child) { gap: 8px; }
   .plain.view > .tabs:has(> button:nth-child(4):last-child) > * { width: 100%; min-height: 48px; justify-content: center; }
 }
-.clist h2.clisth { margin: 0 0 6px; padding: 0 8px; font-size: 1.17em; font-weight: 700; }   /* was an h3 straight under the page title; keeps the old look */
+.clist h2.clisth { margin: 0 0 6px; padding: 0 8px; font-size: 1.15em; font-weight: 700; }   /* was an h3 straight under the page title; keeps the old look */
 
 /* ---------- likes on chat messages ---------- */
 .bub { position: relative; }
 .bub:has(> .mheart) { overflow: visible; }
 .brow:has(.mheart) { margin-bottom: 22px; }   /* the heart hangs 20px below the bubble and touches only its bottom edge (4px), so it never covers the time or the text */
-.mheart { position: absolute; bottom: -20px; left: 10px; z-index: 2; display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-width: 26px; height: 24px; padding: 0 6px; margin: 0; border-radius: 999px; border: 2px solid var(--g1, #111); background: var(--g3, #333); color: var(--ink, #fff); font: inherit; font-size: .72rem; font-weight: 800; cursor: pointer; box-shadow: none; }
+.mheart { position: absolute; bottom: -20px; left: 10px; z-index: 2; display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-width: 26px; height: 24px; padding: 0 6px; margin: 0; border-radius: 999px; border: 2px solid var(--g1, #111); background: var(--g3, #333); color: var(--ink, #fff); font: inherit; font-size: 0.75rem; font-weight: 800; cursor: pointer; box-shadow: none; }
 .mheart svg { color: #ff5a78; }
 .mheart.pop svg { animation: likepop .5s cubic-bezier(.3, 1.6, .5, 1); }
 .replybtn.likebtn.on { color: var(--pink, #ff4d6d); }
@@ -117,7 +117,7 @@ span.av.av { display: inline-block; position: relative; flex: none; aspect-ratio
 .nav .more .menu .nrow, .nav .more .menu .nitem { width: 100%; }
 
 /* "See all" / "Show older" as a button on the /notifications page */
-.npage .nseeall.nmore { display: flex; align-items: center; justify-content: center; gap: 6px; width: calc(100% - 8px); margin: 10px 4px 4px; padding: .55rem .9rem; border-radius: 999px; background: var(--g2); color: var(--ink); border: 1px solid var(--g3); font-size: .85rem; font-weight: 700; cursor: pointer; }
+.npage .nseeall.nmore { display: flex; align-items: center; justify-content: center; gap: 6px; width: calc(100% - 8px); margin: 10px 4px 4px; padding: .55rem .9rem; border-radius: 999px; background: var(--g2); color: var(--ink); border: 1px solid var(--g3); font-size: 0.875rem; font-weight: 700; cursor: pointer; }
 .npage .nseeall.nmore:hover { background: var(--hover); }
 
 /* ---------- locality picker (LocalityPicker.jsx): searchable replacement for the long <select> ---------- */
@@ -135,14 +135,14 @@ span.av.av { display: inline-block; position: relative; flex: none; aspect-ratio
 .lpsearch .lpclear { flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%; background: var(--g3); color: var(--ink); cursor: pointer; }
 .lpsearch .lpclear:hover { background: var(--g4); }
 .lplist { list-style: none; margin: 0; padding: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 1px; }
-.lpgroup { padding: 8px 10px 2px; font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.lpgroup { padding: 8px 10px 2px; font-size: 0.75rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .lpopt { display: flex; align-items: center; gap: 8px; padding: .5rem .65rem; border-radius: 10px; cursor: pointer; min-height: 40px; }
 .lpopt .lpn { font-weight: 650; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lpopt small { margin-left: auto; padding-left: 8px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: .78rem; }
+.lpopt small { margin-left: auto; padding-left: 8px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 0.75rem; }
 .lpopt svg { flex: none; color: var(--accent-fg, var(--accent)); margin-left: auto; } .lpopt small + svg { margin-left: 0; } .lpopt.act { background: var(--hover); }
 .lppop { max-width: calc(100vw - 16px); }
 .lpopt[aria-selected=true] .lpn { color: var(--accent-fg, var(--accent)); }
-.lphelp { padding: 8px 10px; font-size: .82rem; color: var(--muted); }
+.lphelp { padding: 8px 10px; font-size: 0.8125rem; color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .lppop { animation: none; } }
 
 /* ---------- music player (desktop "single" layout): time labels stay under the seek bar ----------
@@ -169,14 +169,14 @@ span.av.av { display: inline-block; position: relative; flex: none; aspect-ratio
 .mapbar .msearch input, .mapbar .msearch input:hover, .mapbar .msearch input:focus { flex: 1; min-width: 0; width: auto; height: 100%; padding: 0; font-size: inherit; font-weight: 500; background: none !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; outline: 0 !important; -webkit-appearance: none; appearance: none; }
 .mapbar .msearch .mclear { flex: none; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%; background: var(--g2); color: var(--ink); box-shadow: none; }
 .mapbar .msearch .mclear:hover { background: var(--g3); }
-.mapbar .msearch .primary { flex: none; height: 32px; min-height: 0; padding: 0 .9rem; border-radius: calc(var(--rad-m, 12px) - 3px); font-size: .9rem; box-shadow: none; }
+.mapbar .msearch .primary { flex: none; height: 32px; min-height: 0; padding: 0 .9rem; border-radius: calc(var(--rad-m, 12px) - 3px); font-size: 0.875rem; box-shadow: none; }
 .mapbar .mtogs { display: inline-flex; gap: 8px; padding: 0; background: none; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-.mapbar .mtog { display: inline-flex; align-items: center; gap: 7px; height: 42px; padding: 0 .9rem; background: var(--g1); border: 1px solid var(--g3); border-radius: var(--rad-m, 12px); color: var(--muted); font-weight: 650; font-size: .95rem; white-space: nowrap; box-shadow: 0 4px 14px -6px rgba(0, 0, 0, .7); transition: background .15s, color .15s, border-color .15s; }
+.mapbar .mtog { display: inline-flex; align-items: center; gap: 7px; height: 42px; padding: 0 .9rem; background: var(--g1); border: 1px solid var(--g3); border-radius: var(--rad-m, 12px); color: var(--muted); font-weight: 650; font-size: 0.9375rem; white-space: nowrap; box-shadow: 0 4px 14px -6px rgba(0, 0, 0, .7); transition: background .15s, color .15s, border-color .15s; }
 .mapbar .mtog:hover { background: var(--g1); border-color: var(--accent-fg, var(--accent)); color: var(--ink); }
 .mapbar .mtog.on, .mapbar .mtog.on:hover { background: color-mix(in srgb, var(--accent) 20%, var(--g1)); border-color: var(--accent); color: var(--ink); }   /* "showing": tinted + accent border, so the one solid accent button on this screen stays Add a place */
-.mapbar .mtog .mcount { min-width: 1.5em; margin: 0; padding: 0 .4em; border-radius: 99px; background: var(--g3); color: var(--ink); font-size: .75rem; font-weight: 750; line-height: 1.5; text-align: center; }
+.mapbar .mtog .mcount { min-width: 1.5em; margin: 0; padding: 0 .4em; border-radius: 99px; background: var(--g3); color: var(--ink); font-size: 0.75rem; font-weight: 750; line-height: 1.5; text-align: center; }
 .mapbar .mtog.on .mcount { background: var(--accent); color: var(--on-accent); }
-.mapbar .madd { display: inline-flex; align-items: center; gap: 6px; height: 42px; padding: 0 1rem; border-radius: var(--rad-m, 12px); font-weight: 700; font-size: .95rem; white-space: nowrap; background: var(--accent); border: 1px solid var(--accent); color: var(--on-accent); box-shadow: 0 4px 14px -6px rgba(0, 0, 0, .7); }
+.mapbar .madd { display: inline-flex; align-items: center; gap: 6px; height: 42px; padding: 0 1rem; border-radius: var(--rad-m, 12px); font-weight: 700; font-size: 0.9375rem; white-space: nowrap; background: var(--accent); border: 1px solid var(--accent); color: var(--on-accent); box-shadow: 0 4px 14px -6px rgba(0, 0, 0, .7); }
 .mapbar .madd:hover { filter: brightness(.92); border-color: var(--accent); }
 .mapbar .madd.on { background: var(--g1); color: var(--ink); border-color: var(--g3); filter: none; }
 .mapbar button:focus-visible { outline: 2px solid var(--accent-fg, var(--accent)); outline-offset: 2px; }
@@ -187,7 +187,7 @@ span.av.av { display: inline-block; position: relative; flex: none; aspect-ratio
 .mapview.open .mrecenter { right: 10px; }
 .maphint { max-width: calc(100% - 24px); text-align: center; }
 .leaflet-control-zoom { margin-right: 10px !important; margin-bottom: 14px !important; }
-.leaflet-control-attribution { font-size: 10px; }
+.leaflet-control-attribution { font-size: 0.6875rem; }
 @media (max-width: 700px) {
   .mapbar { left: 8px; right: 8px; top: 8px; gap: 6px; }
   .mapbar .msearch { flex: 1 1 100%; max-width: none; height: 44px; }

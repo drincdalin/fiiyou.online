@@ -63,7 +63,7 @@ export default function GithubActivity({ repo }) {
     return (
       <section className="gha" aria-busy="true">
         <h3 className="gha__title">Built in the open</h3>
-        <p className="gha__note">Loading…</p>
+        <p className="gha__note" role="status">Loading…</p>
       </section>
     );
   }

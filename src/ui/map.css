@@ -15,7 +15,7 @@
 
 .mapview { overscroll-behavior: none; }
 .mapview .leaflet-container { font-family: var(--ui-font, inherit); }
-.mapview .leaflet-control-attribution { max-width: calc(100vw - 16px); padding: 2px 8px; font-size: 10px; line-height: 1.5; border-radius: 10px 0 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mapview .leaflet-control-attribution { max-width: calc(100vw - 16px); padding: 2px 8px; font-size: 0.6875rem; line-height: 1.5; border-radius: 10px 0 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mapview .leaflet-control-attribution a { text-decoration: none; }
 .mapview .sresults { z-index: 5; max-height: min(45dvh, 360px); overscroll-behavior: contain; }
 .mapview .mapbar .mtog .mlbl, .mapview .mapbar .madd .mlbl { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -27,7 +27,7 @@
   .mapview .mapbar { top: calc(8px + env(safe-area-inset-top, 0px)); left: 8px; right: 8px; max-width: none; display: grid; grid-template-columns: auto auto minmax(0, 1fr); grid-auto-rows: 44px; gap: 8px; align-items: stretch; }
   .mapview .mapbar .msearch { grid-column: 1 / -1; flex: none; width: 100%; max-width: none; height: 44px; box-sizing: border-box; }
   .mapview .mapbar .mtogs { display: contents; }   /* the two chips become cells of the grid; the group role stays for screen readers */
-  .mapview .mapbar .mtog, .mapview .mapbar .madd { height: 44px; min-width: 0; box-sizing: border-box; justify-content: center; font-size: .92rem; }
+  .mapview .mapbar .mtog, .mapview .mapbar .madd { height: 44px; min-width: 0; box-sizing: border-box; justify-content: center; font-size: 0.9375rem; }
   .mapview .mapbar .mtog { padding: 0 .75rem; gap: 6px; }
   .mapview .mapbar .madd { flex: none; width: 100%; padding: 0 .75rem; gap: 6px; }
   .mapview.open .mapbar { grid-template-columns: minmax(0, 1fr); }   /* a place is open: only the search stays (the chips and Add return when it closes) */
@@ -35,7 +35,7 @@
 
   /* map buttons and hints: clear of each other and of the credit line */
   .mapview .mrecenter { right: 10px; bottom: 38px; width: 44px; height: 44px; border-radius: 14px; }
-  .mapview .maphint { left: 10px; right: 64px; bottom: 36px; width: auto; max-width: none; transform: none; padding: .55rem .9rem; border-radius: 16px; font-size: .88rem; line-height: 1.35; }
+  .mapview .maphint { left: 10px; right: 64px; bottom: 36px; width: auto; max-width: none; transform: none; padding: .55rem .9rem; border-radius: 16px; font-size: 0.875rem; line-height: 1.35; }
   .mapview .cand { bottom: 26px; }
 }
 
@@ -47,7 +47,7 @@
 @media (max-width: 340px) {
   .mapview .mapbar { gap: 6px; }
   .mapview .mapbar .madd > svg { display: none; }
-  .mapview .mapbar .mtog, .mapview .mapbar .madd { font-size: .82rem; }
+  .mapview .mapbar .mtog, .mapview .mapbar .madd { font-size: 0.8125rem; }
   .mapview .mapbar .mtog { padding: 0 .5rem; gap: 5px; }
   .mapview .mapbar .madd { padding: 0 .4rem; }
   .mapview .mapbar .mtog .mcount { min-width: 1.4em; padding: 0 .3em; }

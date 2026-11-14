@@ -27,7 +27,20 @@ export const VERIFIED_BLUE = '#1d9bf0';
 /** Text colour for a button/badge/marker with this fill: pure white or pure black, whichever reads better. */
 export const onColor = (rgb) => (contrast(rgb, BLACK) >= contrast(rgb, WHITE) ? '#000000' : '#ffffff');
 
-/** Returns the CSS variables to set on <html> for a given theme object. */
+/** Smallest nudge of `c` toward `toward` that reaches `min` contrast on EVERY surface in `on` (a text colour that has to be read on the
+ *  page, the cards, the hover fill...). Stops at `toward` itself if even that is not enough, so it always terminates. */
+const ensure = (c, on, min, toward) => {
+  const goal = min + 0.12;   // a little headroom, so rounding never lands a hair under the limit
+  let v = c;
+  for (let k = 0.02; k <= 1.0001 && on.some((s) => contrast(v, s) < goal); k += 0.02) v = mix(c, toward, k);
+  return v;
+};
+/** Pure black or pure white, whichever reads better on the WORST of these surfaces (a light theme can still have a dark page behind it). */
+const bestExtreme = (on) => (Math.min(...on.map((s) => contrast(BLACK, s))) >= Math.min(...on.map((s) => contrast(WHITE, s))) ? BLACK : WHITE);
+
+/** Returns the CSS variables to set on <html> for a given theme object.
+ *  Every colour that is used as TEXT (muted, secondary, accent, link, error) is checked here against the surfaces it really sits on,
+ *  so all themes (including the ones people make themselves) reach WCAG AA 4.5:1, and form borders reach the 3:1 non-text minimum. */
 export function appThemeVars(theme) {
   const t = theme || {};
   const pick = (k) => parse(t[k]) || parse(MONO_COLORS[k]);
@@ -35,23 +48,37 @@ export function appThemeVars(theme) {
   const text = pick('text_color'), link = pick('link_color'), accent = pick('accent_color');
   const dark = lum(bg) < 0.4;
 
-  // Accent used as TEXT or an icon colour: nudge it toward the text colour until it is readable on the surfaces.
-  const legible = (c, on) => { let v = c; for (let k = 0.05; contrast(v, on) < 3.2 && k <= 1; k += 0.05) v = mix(c, text, k); return v; };
-  const accentFg = legible(accent, card);
-  const linkFg = legible(link, card);
+  // The surfaces text can land on (same maths as the color-mix() rules in ui-theme.css).
+  const g2 = mix(card, text, 0.14), hover = mix(card, text, 0.2);
+  let surfaces = [bg, frame, card, g2, hover];
+  // A theme whose page colour and card colour are on opposite sides (teal page, silver cards) has no single text colour for both:
+  // text lives on the cards and the frame, so those win and the bare page background is left out.
+  if (Math.min(...surfaces.map((s) => contrast(bestExtreme(surfaces), s))) < 4.6) surfaces = [frame, card, g2, hover];
+
+  // Body text and secondary text: never below 4.5:1 on any of them.
+  const ink = ensure(text, surfaces, 4.5, bestExtreme(surfaces));
+  const ink2 = ensure(mix(bg, ink, 0.8), surfaces, 4.5, ink);
+  const muted = ensure(mix(bg, ink, 0.7), surfaces, 4.5, ink);
+
+  // Accent / link used as TEXT or an icon: nudge toward the text colour until it is readable on the surfaces.
+  const accentFg = ensure(accent, surfaces, 4.5, ink);
+  const linkFg = ensure(link, surfaces, 4.5, ink);
 
   // Semantic roles come from the theme too (no fixed yellow / red / green / pink).
   //   notice -> accent, success -> link. Errors and destructive actions are always red, whatever the theme (still marked with a ⚠).
   const notice = accent, good = link, like = accent;
   const danger = parse(DANGER);
-  const dangerFg = parse(dark ? '#ff6b72' : '#c4242c');
+  const dangerFg = ensure(parse(dark ? '#ff6b72' : '#c4242c'), surfaces, 4.5, bestExtreme(surfaces));
   // Shadow tone: near-black on dark themes, the theme's own text colour on light ones (so lifts stay visible).
   const shade = dark ? mix(bg, BLACK, 0.7) : mix(text, BLACK, 0.2);
+  // Form fields need a visible edge (3:1 against what is behind them); decorative dividers keep the softer --t-border.
+  const field = ensure(border, [bg, card], 3, ink);
 
   return {
-    '--t-bg': hex(bg), '--t-frame': hex(frame), '--t-card': hex(card), '--t-border': hex(border), '--t-text': hex(text), '--t-link': hex(link),
+    '--t-bg': hex(bg), '--t-frame': hex(frame), '--t-card': hex(card), '--t-border': hex(border), '--t-text': hex(ink), '--t-link': hex(link),
     '--accent': hex(accent), '--on-accent': onColor(accent), '--accent-fg': hex(accentFg), '--on-accent-fg': onColor(accentFg),
     '--link-fg': hex(linkFg),
+    '--muted': hex(muted), '--ink2': hex(ink2), '--field-border': hex(field),
     '--notice': hex(notice), '--on-notice': onColor(notice),
     '--green': hex(good), '--on-green': onColor(good),
     '--red': hex(danger), '--on-red': '#ffffff', '--red-fg': hex(dangerFg),

@@ -21,7 +21,7 @@ export function ChangePasswordModal({ onClose, notify }) {
   const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
   const bad = !cur || pw.length < 8 || pw !== again || pw === cur;
   const submit = async (e) => {
-    e.preventDefault(); setMsg('');
+    e.preventDefault(); if (busy) return; setMsg('');
     if (passwordStrength(pw).score === 0) return setMsg('Choose a less common password.');
     setBusy(true);
     try { await auth.changePassword(cur, pw); notify('Password changed'); onClose(); }
@@ -39,7 +39,7 @@ export function ChangePasswordModal({ onClose, notify }) {
     <label className="field"><span>New password again</span><input type="password" required minLength={8} autoComplete="new-password" value={again} onChange={(e) => setAgain(e.target.value)} />
       {again && pw !== again && <small className="err">The two passwords do not match.</small>}</label>
     {msg && <p className="err" role="alert">{msg}</p>}
-    <div className="acts"><button className="primary" disabled={busy || bad}>{busy ? '…' : 'Change password'}</button><button type="button" className="ghost" onClick={onClose}>Cancel</button></div>
+    <div className="acts"><button className="primary" disabled={bad} aria-busy={busy || undefined}>Change password</button><button type="button" className="ghost" onClick={onClose}>Cancel</button></div>
     <button type="button" className="link muted" onClick={reset}>I do not remember it. Email me a reset link.</button>
   </form></div>);
 }

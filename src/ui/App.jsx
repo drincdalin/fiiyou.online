@@ -39,7 +39,7 @@ function Auth() {
   const [invite] = useState(() => getInvite()); const [mode, setMode] = useState(invite ? 'up' : 'in'); const [f, setF] = useState({ email: '', password: '', username: '', displayName: '' }); const [agree, setAgree] = useState(false); const [banned, setBanned] = useState(false);
   const [msg, setMsg] = useState(''); const [ok, setOk] = useState(false); const [busy, setBusy] = useState(false); const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const say = (m, good = false) => { setMsg(m); setOk(good); };
-  const go = async (e) => { e.preventDefault(); say(''); if (mode === 'up' && isReserved(f.username)) return say('That username is reserved.'); if (needCap()) return say('Please finish the security check first.'); setBusy(true);
+  const go = async (e) => { e.preventDefault(); if (busy) return; say(''); if (mode === 'up' && isReserved(f.username)) return say('That username is reserved.'); if (needCap()) return say('Please finish the security check first.'); setBusy(true);
     try { if (mode === 'in') await auth.signIn({ ...f, captchaToken: cap }); else { const r = await auth.signUp({ ...f, invitedBy: invite, captchaToken: cap }); if (!r.session) say('Check your email to confirm your account.', true); } }
     catch (er) { if (er.message === 'banned') setBanned(true); else say(er.message === 'username_taken' ? 'That username is taken.' : friendlyError(er)); } capRef.current?.reset(); setBusy(false); };
   const forgot = async () => { if (!f.email) return say('Type your email first.'); if (needCap()) return say('Please finish the security check first.'); try { await auth.resetPassword(f.email, cap); say('If that email has an account, a reset link is on its way.', true); } catch (er) { say(friendlyError(er)); } capRef.current?.reset(); };
@@ -65,7 +65,7 @@ function Auth() {
         {up && <label className="agree"><input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} /><span>I am 16 or older and accept the <a href={`${BASE}terms.html`} target="_blank" rel="noopener">Terms</a> and <a href={`${BASE}privacy.html`} target="_blank" rel="noopener">Privacy Policy</a>.</span></label>}
         <Captcha ref={capRef} onToken={setCap} onProblem={() => say('The security check could not load. Turn off your ad blocker for this site, or check your connection, then reload.')} />
         {msg && <p className={ok ? 'okmsg' : 'err'} role="alert">{msg}</p>}
-        <button className="primary wide authgo" disabled={busy || (up && !agree) || needCap()}>{busy ? 'One moment…' : up ? 'Create account' : 'Sign in'}</button>
+        <button className="primary wide authgo" disabled={(up && !agree) || needCap()} aria-busy={busy || undefined}>{up ? 'Create account' : 'Sign in'}</button>
         {!up && <button type="button" className="link muted authforgot" onClick={forgot}>Forgot your password?</button>}
         {!up && <button type="button" className="link muted authforgot" disabled={busy} onClick={magic}>Email me a sign-in link instead</button>}
         <p className="legal"><a href={`${BASE}privacy.html`} target="_blank" rel="noopener">Privacy</a> · <a href={`${BASE}terms.html`} target="_blank" rel="noopener">Terms</a> · <a href={`${BASE}accessibility.html`} target="_blank" rel="noopener">Accessibility</a></p>
@@ -85,11 +85,11 @@ function Banned({ onBack }) {
 
 function NewPassword({ onDone }) {
   const [pw, setPw] = useState(''); const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
-  const save = async (e) => { e.preventDefault(); setBusy(true); try { await auth.updatePassword(pw); onDone(); } catch (er) { setMsg(friendlyError(er)); setBusy(false); } };
+  const save = async (e) => { e.preventDefault(); if (busy) return; setBusy(true); try { await auth.updatePassword(pw); onDone(); } catch (er) { setMsg(friendlyError(er)); setBusy(false); } };
   return (<div className="authwrap"><form className="authcard" onSubmit={save}><h1 className="brand">New password</h1><p className="muted">Choose a new password for your account.</p>
     <input type="password" minLength={8} required autoFocus placeholder="new password (8+ characters)" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="new-password" />
     <PasswordMeter value={pw} />
-    {msg && <p className="err">{msg}</p>}<button className="primary" disabled={busy}>{busy ? '…' : 'Save password'}</button></form></div>);
+    {msg && <p className="err" role="alert">{msg}</p>}<button className="primary wide" aria-busy={busy || undefined}>Save password</button></form></div>);
 }
 
 function Guestbook({ profileId, go, own, meName, notify }) {

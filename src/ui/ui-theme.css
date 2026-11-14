@@ -216,8 +216,8 @@ img { image-rendering: auto; }
 }
 .authcard { width: 100%; max-width: 400px; padding: 32px 28px 24px; gap: 16px; border-radius: 16px; background: var(--g1); border: 1px solid var(--g3); box-shadow: none; }
 .authhead { display: grid; gap: 6px; justify-items: start; text-align: left; margin-bottom: 2px; }
-.authhead .brand { margin: 0; font-size: 2.4rem; line-height: 1; letter-spacing: normal; font-weight: 800; }
-.authlead { margin: 0; font-size: .95rem; font-weight: 500; color: var(--muted); }
+.authhead .brand { margin: 0; font-size: 2.5rem; line-height: 1; letter-spacing: normal; font-weight: 800; }
+.authlead { margin: 0; font-size: 0.9375rem; font-weight: 500; color: var(--muted); }
 /* plain text tabs with an underline, like a normal sign-in form */
 .authtabs { display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding: 0; border: 0; border-bottom: 1px solid var(--g3); border-radius: 0; background: none; }
 .authtabs button { border: 0; background: none; padding: .7rem .5rem; margin-bottom: -1px; border-bottom: 2px solid transparent; border-radius: 0; font-weight: 700; color: var(--muted); transition: color .15s, border-color .15s; }
@@ -225,7 +225,7 @@ img { image-rendering: auto; }
 .authtabs button.on { background: none; color: var(--ink); border-bottom-color: var(--ink); box-shadow: none; }
 .authcard input { border-width: 1px; border-radius: 10px; font-weight: 500; }
 .authcard .authgo { border-radius: 10px; box-shadow: none; }
-.field { display: grid; gap: 6px; } .field > span { font-size: .82rem; font-weight: 800; color: var(--ink2); }
+.field { display: grid; gap: 6px; } .field > span { font-size: 0.8125rem; font-weight: 800; color: var(--ink2); }
 .pwbox { position: relative; } .pwbox input { padding-right: 3rem; }
 .pweye { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: var(--rad-s); background: none; color: var(--muted); }
 .pweye:hover { background: var(--g2); color: var(--ink); }
@@ -289,7 +289,7 @@ input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px var(--ring); }
 .alog p { border-bottom-width: 1px; } input[type=file] { border-width: 1px; }
 
 /* sidebar buttons on a profile: compact, one line */
-.side > .wide, .actions .primary, .actions .ghost { min-height: 40px; padding: .45rem .8rem; font-size: .92rem; font-weight: 600; white-space: nowrap; gap: 8px; }
+.side > .wide, .actions .primary, .actions .ghost { min-height: 40px; padding: .45rem .8rem; font-size: 0.9375rem; font-weight: 600; white-space: nowrap; gap: 8px; }
 .side > .wide svg { flex: none; }
 @media (max-width: 700px) { .primary { min-height: 42px; } .ghost { min-height: 38px; } .side > .wide, .actions .primary, .actions .ghost { min-height: 44px; } }
 
