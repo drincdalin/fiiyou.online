@@ -19,6 +19,16 @@
 .nav .navlinks > button:active, .nav .more > .avbtn:active { transform: scale(.95); }
 .nav .navlinks > button:focus-visible, .nav .logo:focus-visible, .nav .more > .avbtn:focus-visible { outline: 2px solid var(--accent-fg, var(--accent)); outline-offset: 2px; }
 .nav .navlinks .navicw { position: relative; display: grid; place-items: center; flex: none; }
+/* ONE icon size for every slot. more.css used to scale chat x1.12, people x1.16 (x1.2 on hover) on top of a 1.4em glyph, which is why they overflowed
+   their pill. Now every glyph is the same box, no per-icon scaling; the optical difference is handled by the pill, not by the icon. */
+.nav .navlinks .navicw .navic { width: calc(var(--nav-ic, 24px) * var(--nav-ic-k, 1)); height: calc(var(--nav-ic, 24px) * var(--nav-ic-k, 1)); transform: none !important; transition: none; }
+.nav .navlinks > button:hover .navic, .nav .navlinks > button:active .navic { transform: none !important; }
+/* optical sizing: Phosphor glyphs do not fill their box equally (the chat bubble is a big circle, the people icon is wide but short, and the active
+   state is the heavier "fill" weight). Same box for every slot, but each glyph gets a small size nudge, via a variable (no transform, so nothing overflows). */
+.nav .navlinks > .nv-messages .navicw { --nav-ic-k: .96; }
+.nav .navlinks > .nv-people .navicw   { --nav-ic-k: 1.12; }
+.nav .navlinks > .nv-map .navicw      { --nav-ic-k: 1; }
+.nav .navlinks > .nv-admin .navicw    { --nav-ic-k: .96; }
 .nav .navlinks .navicw .dotb { position: absolute; margin: 0; pointer-events: none; box-shadow: 0 0 0 2px var(--g1); }
 .nav .more > .avbtn .navicw { position: relative; display: block; flex: none; border-radius: 50%; }
 .nav .more > .avbtn .navicw .av { display: block; width: 100% !important; height: 100% !important; }
@@ -86,11 +96,11 @@
     background: color-mix(in srgb, var(--g0) 80%, transparent); -webkit-backdrop-filter: blur(18px) saturate(1.5); backdrop-filter: blur(18px) saturate(1.5); border-bottom: 1px solid var(--g3); }
   .nav > .logo { justify-self: start; padding: .3rem .2rem; font-size: 1.4rem; font-weight: 850; letter-spacing: -.035em; border-radius: var(--rad-s, 10px); }
   .nav .navlinks { gap: 4px; padding: 4px; background: var(--g1); border: 1px solid var(--g3); border-radius: 18px; }
-  .nav .navlinks > button { width: 50px; height: 40px; padding: 0; border-radius: 13px; font-size: 1rem; }
+  .nav .navlinks > button { width: 52px; height: 40px; padding: 0; border-radius: 13px; font-size: 1rem; }
   .nav .navlinks > button:hover { background: var(--g2); color: var(--ink); }
   .nav .navlinks > button.on, .nav .navlinks > button.on:hover { background: var(--accent); color: var(--on-accent); box-shadow: var(--lift); }
   .nav .navlinks > button.on:hover { filter: brightness(1.08); }
-  .nav .navlinks .navicw { width: 1.7em; height: 1.7em; font-size: 1.05em; }
+  .nav .navlinks .navicw { width: 26px; height: 26px; --nav-ic: 22px; }
   .nav .navlinks .navicw .dotb { top: -7px; right: -10px; }
   .nav .navlinks > button.on .navicw .dotb { box-shadow: 0 0 0 2px var(--accent); }
 
@@ -136,9 +146,12 @@
   .nav .navlinks > .nv-profile { display: none; }   /* the last slot is you: your picture opens your profile, notifications and settings */
   .nav .navlinks > button, .nav .more > .avbtn { flex: 1 1 0; justify-content: center; height: 100%; padding: 0; border-radius: 20px; font-size: .95rem; }
   .nav .navlinks > button.on, .nav .navlinks > button.on:hover { background: none; box-shadow: none; color: var(--ink); }
-  .nav .navlinks .navicw { width: 52px; height: 36px; border-radius: 18px; font-size: 1.3rem; transition: background .22s var(--ease), color .22s, transform .2s var(--ease); }
-  .nav .navlinks > button.on .navicw { background: var(--accent); color: var(--on-accent); box-shadow: var(--lift); }
-  .nav .navlinks .navicw .dotb { top: -4px; right: 0; left: auto; }
+  /* icon 24px inside a 56 x 34 pill: about 5px of air on every side, so the glyph sits inside its highlight instead of filling it */
+  .nav .navlinks .navicw { --nav-ic: 24px; width: 56px; height: 34px; border-radius: 17px; transition: background .22s var(--ease), color .22s, transform .2s var(--ease), box-shadow .22s; }
+  .nav .navlinks > button.on .navicw { background: var(--accent); color: var(--on-accent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent), 0 6px 16px -6px color-mix(in srgb, var(--accent) 70%, transparent); }   /* solid fill + thin ring + soft glow: readable at a glance */
+  .nav .navlinks > button:not(.on):hover .navicw { background: var(--g2); color: var(--ink); }
+  .nav .navlinks .navicw .dotb { top: -5px; right: -2px; left: auto; }
   .nav .navlinks > button:active .navicw, .nav .more > .avbtn:active .navicw { transform: scale(.9); }
 
   .nav .more { position: static; flex: 1 1 0; align-self: stretch; display: flex; min-width: 0; margin: 0; }   /* static: the panel lines up with the whole dock, not with one slot */
@@ -174,7 +187,7 @@
 /* very small phones */
 @media (max-width: 380px) {
   .nav { left: 6px; right: 6px; padding: 0 4px; }
-  .nav .navlinks .navicw { width: 46px; }
+  .nav .navlinks .navicw { width: 46px; --nav-ic: 22px; }
   .nav .navmusic:not(:empty) { width: 40px; height: 40px; margin: 0 6px 0 2px; }
   .nav .navmusic .mp-dock-disc { width: 38px; height: 38px; }
 }
