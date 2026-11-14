@@ -53,6 +53,7 @@ export async function relationshipWith(otherId) {
 
 export async function updateMyProfile(patch) {
   const clean = Object.fromEntries(Object.entries(patch).filter(([k]) => EDITABLE.includes(k)));
+  if (clean.music && typeof clean.music === 'object') { const { audio, ...rest } = clean.music; clean.music = rest; }   // uploaded audio no longer exists: never send the old key back (the database refuses it)
   const { data: { user } } = await supabase.auth.getUser();
   return unwrap(await supabase.from('profiles').update(clean).eq('id', user.id).select().single());
 }

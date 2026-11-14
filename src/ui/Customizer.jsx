@@ -19,7 +19,7 @@ import {
   ArrowLineDown, ArrowLineUp, ArrowDown, ArrowUp, BookOpenText, Cards, CaretDoubleRight,
   CaretDown, CaretLeft, CaretRight, Check, CircleNotch, DotsSixVertical, DownloadSimple, Eye, EyeSlash,
   FloppyDisk, Hash, Heart, IdentificationCard, Image as ImageIcon, ImageSquare, Images, Layout,
-  LinkSimple, MusicNote, MusicNotes, Palette, PencilSimple, Plus, Shapes, ShieldCheck,
+  LinkSimple, MusicNotes, Palette, PencilSimple, Plus, Shapes, ShieldCheck,
   SlidersHorizontal, Sparkle, Stack, Sticker, TextAa, TextAlignLeft, Trash, UploadSimple,
   UserCircle, UsersThree, WarningCircle, X,
 } from '@phosphor-icons/react';
@@ -759,40 +759,31 @@ function MusicSection({ ctx }) {
   const { draft, setMusic, run, busy } = ctx;
   const m = draft.fields.music || {};
   const orig = draft.origMusic || {};
-  const del = { audio: media.deleteAudio, cover: media.deleteImage };
 
-  // Files uploaded during this edit session (not the saved ones) are deleted as soon as they're replaced or removed.
-  const dropFile = (kind) => { if (m[kind] && m[kind] !== orig[kind]) del[kind](m[kind]).catch(() => {}); };
-  const upload = (kind, file) => run(async () => {
-    const path = kind === 'audio' ? await media.uploadAudio(file) : await media.uploadImage(file, 'cover');
-    dropFile(kind);
-    setMusic(kind === 'audio' ? { audio: path, url: '' } : { cover: path });
+  // The cover picture uploaded during this edit session (not the saved one) is deleted as soon as it is replaced or removed.
+  const dropCover = () => { if (m.cover && m.cover !== orig.cover) media.deleteImage(m.cover).catch(() => {}); };
+  const upload = (file) => run(async () => {
+    const path = await media.uploadImage(file, 'cover');
+    dropCover();
+    setMusic({ cover: path });
   });
-  const remove = (kind) => { dropFile(kind); setMusic({ [kind]: '' }); };
+  const remove = () => { dropCover(); setMusic({ cover: '' }); };
 
   return (
-    <Section title="Music" icon={MusicNotes} defaultOpen={!!(m.audio || m.url)}>
-      {m.audio ? (
-        <FileChip icon={MusicNote} removeLabel="Remove audio" onRemove={() => remove('audio')}>Audio file added</FileChip>
-      ) : (
-        <>
-          <FilePick accept="audio/*" icon={MusicNote} disabled={busy} block onFiles={(fs) => upload('audio', fs[0])}>Upload audio</FilePick>
-          <p className="cz-hint">mp3, m4a or ogg, up to 3 MB. Plays on its own, with no video. Only upload music you have the right to share.</p>
-          <Field label="Or paste a link">
-            <input className="cz-input" placeholder="YouTube or direct .mp3 link" value={m.url || ''} onChange={(e) => setMusic({ url: e.target.value.trim() })} />
-          </Field>
-          <p className="cz-hint">YouTube links play in the app's music player (cover art, queue, mini player); the video only shows if a listener opens it.</p>
-        </>
-      )}
+    <Section title="Music" icon={MusicNotes} defaultOpen={!!m.url}>
+      <Field label="YouTube link">
+        <input className="cz-input" placeholder="https://www.youtube.com/watch?v=…" value={m.url || ''} onChange={(e) => setMusic({ url: e.target.value.trim() })} />
+      </Field>
+      <p className="cz-hint">Only YouTube links are supported. They play in the app's music player (cover art, queue, mini player); the video only shows if a listener opens it. Music files can't be uploaded.</p>
       <div className="cz-grid2">
         <TextField label="Title" max={80} value={m.title || ''} onChange={(v) => setMusic({ title: v })} />
         <TextField label="Artist" max={80} value={m.artist || ''} onChange={(v) => setMusic({ artist: v })} />
       </div>
       <Group label="Cover image">
         {m.cover ? (
-          <FileChip icon={ImageSquare} removeLabel="Remove cover image" onRemove={() => remove('cover')}>Cover image added</FileChip>
+          <FileChip icon={ImageSquare} removeLabel="Remove cover image" onRemove={remove}>Cover image added</FileChip>
         ) : (
-          <FilePick disabled={busy} block onFiles={(fs) => upload('cover', fs[0])}>Choose cover image</FilePick>
+          <FilePick disabled={busy} block onFiles={(fs) => upload(fs[0])}>Choose cover image</FilePick>
         )}
       </Group>
     </Section>
@@ -1165,7 +1156,6 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
     if (f && f !== draft.origFont) media.deleteFont(f).catch(() => {});
     const o = draft.origMusic || {}, n = draft.fields.music || {};
     if (n.cover && n.cover !== o.cover) media.deleteImage(n.cover).catch(() => {});
-    if (n.audio && n.audio !== o.audio) media.deleteAudio(n.audio).catch(() => {});
     setAsking(false);
     onClose();
   };
@@ -1179,7 +1169,6 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
     { // files replaced or removed while editing are deleted now
       const o = draft.origMusic || {}, n = draft.fields.music || {};
       if (o.cover && o.cover !== n.cover) media.deleteImage(o.cover).catch(() => {});
-      if (o.audio && o.audio !== n.audio) media.deleteAudio(o.audio).catch(() => {});
     }
     const flow = draft.cards.filter((c) => c.type !== 'sticker');
     const res = await Promise.allSettled(draft.cards.map((c) => (c.type === 'sticker'
@@ -1201,10 +1190,10 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
     setDraft((d) => ({ ...d, cards: [...d.cards, c] }));
   });
   const addSticker = (file) => run(async () => {
-    const bmp = await createImageBitmap(file);
-    const w = 150, h = clamp(Math.round((w * bmp.height) / bmp.width), 40, 2000);   // units: 150 = 15% of the cards column
+    // Compressed first (max 420 px, ~45 KB WebP, transparency kept), and sized from the picture that is really stored.
+    const { path, width, height } = await media.uploadSticker(file);
+    const w = 150, h = clamp(Math.round((w * height) / width), 40, 2000);           // units: 150 = 15% of the cards column
     const first = draft.cards.find((x) => x.visible && isFlow(x));                  // new stickers start pinned to the first card
-    const path = await media.uploadImage(file, 'sticker');
     const c = await cardsApi.createCard({ type: 'sticker', content: { images: [path], at: { card: first?.id || null, v: 't' } }, x: 40, y: 40, w, h, z: topZ + 1 });
     setDraft((d) => ({ ...d, cards: [...d.cards, c] }));
     setSel(c.id);

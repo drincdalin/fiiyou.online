@@ -1,6 +1,6 @@
 import { loadYouTubeApi } from './youtube.js';
 
-/* Two playback engines with the same small interface, so the controller (musicPlayer.jsx) never cares which one is playing.
+/* The playback engine (YouTube only: uploaded and direct audio files were removed). Its small interface is what the controller (musicPlayer.jsx) talks to.
      load(track, { autoplay }) -> Promise   play()  pause()  stop()  seek(sec)  setVolume(0..1)  setMuted(bool)
      getTime()  getDuration()  getBuffered() (0..1)  destroy()
    They report back through emit():
@@ -9,60 +9,6 @@ import { loadYouTubeApi } from './youtube.js';
      { type: 'error', message, skip }   skip = this track can never play (removed video), so the queue may move on. */
 
 const safe = (fn, d) => { try { const v = fn(); return v === undefined ? d : v; } catch { return d; } };
-
-/* ---------- plain audio: uploaded files and direct https links ---------- */
-export function createAudioEngine({ emit }) {
-  const el = new Audio();
-  el.preload = 'auto'; el.setAttribute('playsinline', ''); el.playsInline = true;
-  let want = false;
-
-  const startPlayback = () => {
-    want = true;
-    const p = el.play();
-    if (p && p.catch) p.catch((err) => {
-      if (!want || (err && err.name === 'AbortError')) return;   // superseded by another load / a pause: not a failure
-      if (err && err.name === 'NotAllowedError') emit({ type: 'status', status: 'blocked' });
-      else emit({ type: 'error', message: "This audio couldn't be played.", skip: true });
-    });
-  };
-
-  const on = {
-    playing: () => emit({ type: 'status', status: 'playing' }),
-    waiting: () => { if (want) emit({ type: 'status', status: 'buffering' }); },
-    pause: () => { if (!el.ended) emit({ type: 'status', status: 'paused' }); },
-    ended: () => { want = false; emit({ type: 'status', status: 'ended' }); },
-    loadedmetadata: () => { if (el.duration > 0 && Number.isFinite(el.duration)) emit({ type: 'meta', duration: el.duration }); },
-    durationchange: () => { if (el.duration > 0 && Number.isFinite(el.duration)) emit({ type: 'meta', duration: el.duration }); },
-    error: () => {
-      if (!el.getAttribute('src')) return;   // we just cleared the source ourselves
-      const c = el.error && el.error.code;
-      emit({ type: 'error', skip: true, message: c === 2 ? 'Network problem while loading this audio.' : c === 4 ? 'This audio format or link is not supported (an expired link can cause this too).' : "This audio couldn't be played." });
-    },
-  };
-  Object.entries(on).forEach(([k, f]) => el.addEventListener(k, f));
-
-  return {
-    load(track, { autoplay = true } = {}) {
-      want = false; el.src = track.src; el.load();
-      if (autoplay) startPlayback(); else emit({ type: 'status', status: 'cued' });
-      return Promise.resolve();
-    },
-    play: startPlayback,
-    pause() { want = false; el.pause(); },
-    stop() { want = false; el.pause(); el.removeAttribute('src'); el.load(); },
-    seek(s) { if (Number.isFinite(s)) el.currentTime = s; },
-    setVolume(v) { el.volume = Math.max(0, Math.min(1, v)); },
-    setMuted(m) { el.muted = !!m; },
-    getTime: () => el.currentTime || 0,
-    getDuration: () => (Number.isFinite(el.duration) ? el.duration : 0),
-    getBuffered() {
-      const d = el.duration; if (!(d > 0) || !el.buffered.length) return 0;
-      const t = el.currentTime; for (let i = el.buffered.length - 1; i >= 0; i--) if (el.buffered.start(i) <= t + 0.5) return Math.min(1, el.buffered.end(i) / d);
-      return 0;
-    },
-    destroy() { want = false; Object.entries(on).forEach(([k, f]) => el.removeEventListener(k, f)); el.pause(); el.removeAttribute('src'); el.load(); },
-  };
-}
 
 /* ---------- YouTube: the IFrame API used as an audio engine ---------- */
 const YT_ERRORS = {

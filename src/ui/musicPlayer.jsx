@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { MUSIC_CONFIG as CFG } from '../lib/musicConfig.js';
 import { cleanArtist, loadYouTubeApi, ytThumb } from '../lib/youtube.js';
-import { createAudioEngine, createYouTubeEngine } from '../lib/playerEngines.js';
+import { createYouTubeEngine } from '../lib/playerEngines.js';
 import { createClock } from '../lib/playerClock.js';
 import { currentOf, emptyQueue, makeTrack, pickNext, pickPrev, reduce } from '../lib/playerQueue.js';
 
@@ -37,17 +37,13 @@ function makeController({ R, clock, S, mountRef }) {
   const dispatch = (a) => { const n = reduce(R.current.q, a); R.current.q = n; S.setQ(n); return n; };
   const status = (s) => { R.current.status = s; S.setStatus(s); };
   const want = (w) => { R.current.want = w; S.setWant(w); };
-  const engineFor = (kind) => (kind === 'yt' ? R.current.yt : R.current.au);
-  const pauseAll = () => { const r = R.current; if (r.yt) r.yt.pause(); if (r.au) r.au.pause(); };
+  const engineFor = (kind) => (kind === 'yt' ? R.current.yt : null);   // YouTube is the only engine: uploaded / direct audio was removed
+  const pauseAll = () => { const r = R.current; if (r.yt) r.yt.pause(); };
 
-  const getEngine = (kind) => {
+  const getEngine = () => {
     const r = R.current;
-    if (kind === 'yt') {
-      if (!r.yt) { r.yt = createYouTubeEngine({ container: mountRef.current, host: CFG.host, origin: location.origin, blockedMs: CFG.blockedMs, emit: (e) => onEngine('yt', e) }); r.yt.setVolume(r.volume); r.yt.setMuted(r.muted); }
-      return r.yt;
-    }
-    if (!r.au) { r.au = createAudioEngine({ emit: (e) => onEngine('audio', e) }); r.au.setVolume(r.volume); r.au.setMuted(r.muted); }
-    return r.au;
+    if (!r.yt) { r.yt = createYouTubeEngine({ container: mountRef.current, host: CFG.host, origin: location.origin, blockedMs: CFG.blockedMs, emit: (e) => onEngine('yt', e) }); r.yt.setVolume(r.volume); r.yt.setMuted(r.muted); }
+    return r.yt;
   };
 
   const seekTo = (sec) => {
@@ -63,8 +59,7 @@ function makeController({ R, clock, S, mountRef }) {
     clock.set({ position: 0, duration: 0, buffered: 0 }); S.setError(null);
     if (!autoplay) { r.loaded = null; pauseAll(); want(false); status('paused'); return; }
     r.loaded = t.qid; want(true); status('loading'); S.setLoadTick((n) => n + 1);
-    const other = t.kind === 'yt' ? r.au : r.yt; if (other) other.pause();
-    getEngine(t.kind).load(t, { autoplay: true }).catch((e) => {
+    getEngine().load(t, { autoplay: true }).catch((e) => {
       if (R.current.loaded !== t.qid || /destroyed/.test(String(e && e.message))) return;
       want(false); status('error');
       S.setError({ message: "Couldn't reach YouTube. Check your connection or ad blocker, then try again.", skip: false });
@@ -102,7 +97,7 @@ function makeController({ R, clock, S, mountRef }) {
 
   const stopAll = () => {
     const r = R.current; clearTimeout(r.skipTimer); r.loaded = null; want(false); status('idle'); S.setError(null);
-    if (r.yt) r.yt.stop(); if (r.au) r.au.stop();
+    if (r.yt) r.yt.stop();
     clock.set({ position: 0, duration: 0, buffered: 0 }); S.setExpanded(false); S.setVideoOpen(false);
   };
 
@@ -142,8 +137,8 @@ function makeController({ R, clock, S, mountRef }) {
     }
   }
 
-  const setMuted = (m) => { const r = R.current; r.muted = !!m; if (r.yt) r.yt.setMuted(r.muted); if (r.au) r.au.setMuted(r.muted); S.setMuted(r.muted); };
-  const setVolume = (v) => { const r = R.current; r.volume = clamp01(v); if (r.yt) r.yt.setVolume(r.volume); if (r.au) r.au.setVolume(r.volume); S.setVolume(r.volume); if (r.muted && r.volume > 0) setMuted(false); };
+  const setMuted = (m) => { const r = R.current; r.muted = !!m; if (r.yt) r.yt.setMuted(r.muted); S.setMuted(r.muted); };
+  const setVolume = (v) => { const r = R.current; r.volume = clamp01(v); if (r.yt) r.yt.setVolume(r.volume); S.setVolume(r.volume); if (r.muted && r.volume > 0) setMuted(false); };
 
   const actions = {
     /** Play a track (or an array = a new queue). The same song that is already loaded just toggles. Returns false when the link is not playable. */
@@ -190,7 +185,7 @@ function makeController({ R, clock, S, mountRef }) {
     setVinyl: (v) => S.setVinyl(!!v),
   };
 
-  return { actions, destroy() { const r = R.current; clearTimeout(r.skipTimer); if (r.yt) r.yt.destroy(); if (r.au) r.au.destroy(); r.yt = r.au = null; } };
+  return { actions, destroy() { const r = R.current; clearTimeout(r.skipTimer); if (r.yt) r.yt.destroy(); r.yt = null; } };
 }
 
 const INERT_SNAP = { position: 0, duration: 0, buffered: 0 };   // one object: useSyncExternalStore loops forever if getSnapshot returns a fresh one each call
@@ -242,7 +237,7 @@ export function MusicPlayerProvider({ children }) {
   useEffect(() => {
     if (status !== 'playing' && status !== 'buffering') return;
     const tick = () => {
-      const t = currentOf(R.current.q); const e = t && (t.kind === 'yt' ? R.current.yt : R.current.au); if (!e) return;
+      const t = currentOf(R.current.q); const e = t && t.kind === 'yt' ? R.current.yt : null; if (!e) return;
       const d = e.getDuration(); clock.set({ position: e.getTime(), duration: d > 0 ? d : clock.get().duration, buffered: e.getBuffered() });
     };
     tick(); const id = setInterval(tick, 250); document.addEventListener('visibilitychange', tick);

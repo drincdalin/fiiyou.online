@@ -10,8 +10,7 @@ import { CoverImg, Eq, PlayGlyph, Scrubber, VolumeIcon, useCover } from './playe
    when you leave this profile, and a mini player appears at the bottom. The markup keeps the classes the page layouts, Fine-tune CSS and
    sticker anchors already target (.player .pcover .ptitle .seek .times .ctrl .volrow, data-cid, {children}).
 
-   src: a YouTube link or a direct https audio URL. trackKey: a stable id for "the same song" (the storage path for uploaded audio, whose
-   signed link changes every time). Nothing is requested from YouTube until the visitor presses play (unless autoThumbnail is on, see musicConfig.js). */
+   src: a YouTube link (the only supported source; uploaded and direct audio files were removed). Nothing is requested from YouTube until the visitor presses play (unless autoThumbnail is on, see musicConfig.js). */
 
 /** Seek bar + times for this card. Its own component so only it re-renders 4x a second while the song plays. */
 const CardProgress = memo(function CardProgress({ mine }) {
@@ -25,8 +24,8 @@ const CardProgress = memo(function CardProgress({ mine }) {
   );
 });
 
-export default function Player({ src, title, artist, cover, cid, trackKey, children }) {
-  const track = useMemo(() => makeTrack({ src, title, artist, cover, key: trackKey }, 'card'), [src, title, artist, cover, trackKey]);
+export default function Player({ src, title, artist, cover, cid, children }) {
+  const track = useMemo(() => makeTrack({ src, title, artist, cover }, 'card'), [src, title, artist, cover]);
   const p = useMusicState(); const a = useMusicActions();
   const mine = !!track && !!p.current && p.current.key === track.key;
   const playing = mine && p.playing; const busy = mine && p.busy;

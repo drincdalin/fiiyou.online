@@ -1,4 +1,4 @@
-import { isYouTubeHost, parseYouTubeId } from './youtube.js';
+import { parseYouTubeId } from './youtube.js';
 
 /* The queue as plain data + pure functions (no React, no DOM), so the rules for shuffle / repeat / "play next" are unit-tested.
    state = { queue: Track[], cursor, shuffle, repeat: 'off'|'all'|'one', played: qid[], trail: qid[], up: qid[] }
@@ -10,19 +10,19 @@ let seq = 0;
 const STR = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 const URLISH = /^(https:|blob:)/i;
 
-/** A playable track from { src, title, artist, cover, key }, or null when src is neither a YouTube link nor an https audio url.
+/** A playable track from { src, title, artist, cover }, or null when src is not a valid YouTube link (audio files and direct audio urls are not supported).
  *  Accepts an existing track too (re-wrapped with a fresh qid, so the same song can sit in the queue twice).
- *  key = identity of "the same song": the video id for YouTube, `key` for uploaded audio (its signed url changes every time), else the url. */
+ *  key = identity of "the same song": the video id. */
 export function makeTrack(x, origin = 'app') {
   if (!x || typeof x !== 'object') return null;
   const src = STR(x.src, 2048); if (!src) return null;
   const videoId = parseYouTubeId(src);
-  if (!videoId && (!URLISH.test(src) || isYouTubeHost(src))) return null;
+  if (!videoId) return null;
   return {
     qid: `q${++seq}`,
-    key: videoId ? `yt:${videoId}` : (STR(x.key, 512) || src),
-    kind: videoId ? 'yt' : 'audio',
-    src, videoId: videoId || '',
+    key: `yt:${videoId}`,
+    kind: 'yt',
+    src, videoId,
     title: STR(x.title, 160), artist: STR(x.artist, 160),
     cover: URLISH.test(x.cover || '') ? x.cover : '',
     origin,

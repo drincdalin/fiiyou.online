@@ -196,6 +196,15 @@ html.kb .mp-dock { bottom: 8px; }
 .player .ctrl button:disabled { opacity: .4; cursor: default; }
 .player.mpcard .ctrl .big { display: inline-flex; }
 
+/* ---------- profile music card on a phone: less tall, nothing else changed ----------
+   Only the EMPTY SPACE between the rows is tightened. The owner's own card padding, corner radius, border and colours, the cover, the title size,
+   and every media control (play / queue / expand buttons and their 44px touch size, the seek bar) are exactly as before.
+   Where the height was going: the grid kept a fifth, empty row for the volume line (hidden on phones) and put a 10px gap after every row. */
+@media (max-width: 700px) {
+  .page .player.mpcard { row-gap: 2px; grid-template-areas: "cover title" "cover ctrl" "seek seek" "times times"; }
+  .page .player.mpcard.nocover { grid-template-areas: "title" "ctrl" "seek" "times"; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .mp-dock, .mp-sheet, .mp-art, .mp-art-img, .mp-art-glow, .mp-dock-art, .mp-disc, .mp-bg img, .mp-cover, .mp-art-pic { animation: none !important; transition: none !important; }
   .mp-art[data-vinyl] .mp-art-img { animation: none !important; } .mp-eq.on i { animation: none; height: 60%; } .mp-art[data-playing="false"] { transform: none; }

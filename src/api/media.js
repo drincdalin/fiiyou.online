@@ -5,34 +5,54 @@ const BUCKET = 'media';
 const MAX_BYTES = 1_500_000;        // keep under bucket limit (1572864)
 
 // Per-use targets: longest side (px) and max size (KB). WebP, EXIF stripped, re-encoded until it fits.
-export const PRESETS = { avatar: { max: 512, kb: 70 }, sticker: { max: 480, kb: 60 }, cover: { max: 640, kb: 80 },
+// Stickers are small on screen (about 15% of the cards column, so roughly 140 CSS px wide before the owner resizes them), which is why they get the tightest
+// budget of all: 420 px on the long side and ~45 KB. Transparency is kept (WebP has an alpha channel).
+export const PRESETS = { avatar: { max: 512, kb: 70 }, sticker: { max: 420, kb: 45 }, cover: { max: 640, kb: 80 },
   photo: { max: 1280, kb: 200 }, post: { max: 1280, kb: 200 }, event: { max: 1280, kb: 240 }, bg: { max: 1600, kb: 260 } };
 
-export async function compressImage(file, preset = 'photo') {
+// Animated GIFs are kept as they are (nothing in the browser can re-encode an animation), so they must already be small. Stickers get a lower cap.
+const GIF_MAX = { sticker: 300_000, default: 600_000 };
+const QUALITY = [0.82, 0.7, 0.58, 0.46, 0.36];           // tried in this order at each size
+const HARD_MAX = { sticker: 120_000, default: 300_000 }; // last resort: anything still bigger than this after every shrink round is refused
+
+/** Resizes + re-encodes. Returns { blob, width, height } (the stored picture's real size, which stickers need for their aspect ratio). */
+async function encodeImage(file, preset = 'photo') {
   const { max, kb } = PRESETS[preset] ?? PRESETS.photo;
+  const isSticker = preset === 'sticker';
   if (file.type === 'image/gif') {                       // keep animation; must already be small
-    if (file.size > 600_000) throw new Error('GIF is over 600 KB. Use a smaller GIF or a still image.');
-    if (preset === 'avatar') {                           // a GIF cannot be cropped here without losing the animation, so it must already be square
-      const g = await createImageBitmap(file); const w = g.width, h = g.height; g.close?.();
-      if (Math.abs(w - h) > 1) throw new Error('Animated avatars must be square (same width and height). Crop the GIF, or use a still image.');
-    }
-    return file;
+    const cap = isSticker ? GIF_MAX.sticker : GIF_MAX.default;
+    if (file.size > cap) throw new Error(`GIF is over ${Math.round(cap / 1000)} KB. Use a smaller GIF or a still image.`);
+    const g = await createImageBitmap(file); const w = g.width, h = g.height; g.close?.();
+    if (preset === 'avatar' && Math.abs(w - h) > 1)      // a GIF cannot be cropped here without losing the animation, so it must already be square
+      throw new Error('Animated avatars must be square (same width and height). Crop the GIF, or use a still image.');
+    return { blob: file, width: w, height: h };
   }
   const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
-  // Avatars are stored SQUARE. Everything that shows one (circles, the 5:6 profile frame, chat bubbles, notifications) then looks right
-  // without guessing. Landscape: centred. Portrait: the square starts 30% from the top, because faces sit in the upper part of a photo.
-  let sx = 0, sy = 0, sw = bmp.width, sh = bmp.height;
-  if (preset === 'avatar') { const s = Math.min(bmp.width, bmp.height); sx = (bmp.width - s) / 2; sy = bmp.height > bmp.width ? (bmp.height - s) * 0.3 : 0; sw = sh = s; }
-  let scale = Math.min(1, max / Math.max(sw, sh)), blob;
-  for (let round = 0; round < 6; round++) {
-    const c = new OffscreenCanvas(Math.max(1, Math.round(sw * scale)), Math.max(1, Math.round(sh * scale)));
-    c.getContext('2d').drawImage(bmp, sx, sy, sw, sh, 0, 0, c.width, c.height);
-    for (let q = 0.82; q >= 0.4; q -= 0.14) { blob = await c.convertToBlob({ type: 'image/webp', quality: q }); if (blob.size <= kb * 1024) return blob; }
-    scale *= 0.85;                                       // still too big: shrink and retry
-  }
-  if (blob.size > 300_000) throw new Error('Image is too large.');   // was 1.4 MB: a photo that could not be squeezed still went up at up to 1.4 MB
-  return blob;
+  try {
+    // Avatars are stored SQUARE. Everything that shows one (circles, the 5:6 profile frame, chat bubbles, notifications) then looks right
+    // without guessing. Landscape: centred. Portrait: the square starts 30% from the top, because faces sit in the upper part of a photo.
+    let sx = 0, sy = 0, sw = bmp.width, sh = bmp.height;
+    if (preset === 'avatar') { const s = Math.min(bmp.width, bmp.height); sx = (bmp.width - s) / 2; sy = bmp.height > bmp.width ? (bmp.height - s) * 0.3 : 0; sw = sh = s; }
+    let scale = Math.min(1, max / Math.max(sw, sh)), blob = null, cw = 1, ch = 1;
+    for (let round = 0; round < 7; round++) {
+      cw = Math.max(1, Math.round(sw * scale)); ch = Math.max(1, Math.round(sh * scale));
+      const c = new OffscreenCanvas(cw, ch); const g = c.getContext('2d');
+      g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+      g.drawImage(bmp, sx, sy, sw, sh, 0, 0, cw, ch);
+      for (const q of QUALITY) {
+        const b = await c.convertToBlob({ type: 'image/webp', quality: q });
+        if (b.type !== 'image/webp') { blob = b; break; }  // this browser cannot write WebP (it silently returns PNG): shrink the picture instead of trusting quality
+        blob = b; if (b.size <= kb * 1024) return { blob: b, width: cw, height: ch };
+      }
+      scale *= isSticker ? 0.8 : 0.85;                   // still too big: shrink and retry
+    }
+    const hard = isSticker ? HARD_MAX.sticker : HARD_MAX.default;
+    if (!blob || blob.size > hard) throw new Error(isSticker ? 'That sticker is too detailed to shrink. Try a simpler or smaller picture.' : 'Image is too large.');   // was 1.4 MB: a photo that could not be squeezed still went up at up to 1.4 MB
+    return { blob, width: cw, height: ch };
+  } finally { bmp.close?.(); }
 }
+
+export async function compressImage(file, preset = 'photo') { return (await encodeImage(file, preset)).blob; }
 
 async function myId() {
   // getSession() reads the local session; getUser() calls the server and can drop the local session on a server-side error.
@@ -41,15 +61,23 @@ async function myId() {
   return data.session.user.id;
 }
 
-/** Uploads and returns the storage path (store THIS in avatar_path / card content / posts). */
-export async function uploadImage(file, preset = 'photo') {
-  const blob = await compressImage(file, preset);
-  const ext = blob.type === 'image/gif' ? 'gif' : 'webp';
+async function store(blob) {
+  const ext = { 'image/gif': 'gif', 'image/png': 'png', 'image/jpeg': 'jpg' }[blob.type] || 'webp';   // normally webp; the others only when a browser cannot write WebP
   const path = `${await myId()}/${crypto.randomUUID()}.${ext}`;
   unwrap(await supabase.storage.from(BUCKET).upload(path, blob, {
     contentType: blob.type, cacheControl: '31536000', upsert: false,
   }));
   return path;
+}
+
+/** Uploads and returns the storage path (store THIS in avatar_path / card content / posts). */
+export async function uploadImage(file, preset = 'photo') { return store(await compressImage(file, preset)); }
+
+/** Stickers: compressed hard (see PRESETS.sticker), then uploaded. Returns { path, width, height } of the stored picture, so the caller can size the sticker
+ *  from what is really stored (the original may be rotated by EXIF or far bigger). */
+export async function uploadSticker(file) {
+  const { blob, width, height } = await encodeImage(file, 'sticker');
+  return { path: await store(blob), width, height };
 }
 
 export async function deleteImage(path) {
@@ -92,18 +120,6 @@ export async function signedUrls(paths, bucket = BUCKET) {
 }
 export async function signedUrl(path, bucket = BUCKET) { return path ? (await signedUrls([path], bucket))[path] : null; }
 
-const AUDIO_TYPES = ['audio/mpeg', 'audio/ogg', 'audio/mp4', 'audio/x-m4a', 'audio/aac', 'audio/wav', 'audio/webm'];
-/** Audio-only music, max 3 MB (was 8 MB: every full play of a track costs its whole size in egress). Returns the storage path for profile.music.audio. */
-export async function uploadAudio(file) {
-  if (!AUDIO_TYPES.includes(file.type)) throw new Error('Unsupported audio format (use mp3, m4a, ogg or wav).');
-  if (file.size > 3 * 1024 * 1024) throw new Error('Audio file is over 3 MB. Use a shorter or lower-bitrate file, or paste a YouTube link instead.');
-  const ext = (file.name.split('.').pop() || 'mp3').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) || 'mp3';
-  const path = `${await myId()}/${crypto.randomUUID()}.${ext}`;
-  unwrap(await supabase.storage.from('audio').upload(path, file, { contentType: file.type, upsert: false }));
-  return path;
-}
-export async function deleteAudio(path) { unwrap(await supabase.storage.from('audio').remove([path])); }
-
 // ---- custom fonts: private 'fonts' bucket, one file per profile theme (theme.font_file) ----
 const MAX_FONT = 300 * 1024;                              // keep equal to the bucket's file_size_limit (307200)
 const tag = (u8) => String.fromCharCode(...u8);
@@ -127,7 +143,7 @@ export async function deleteFont(path) { unwrap(await supabase.storage.from('fon
 
 export async function removeAllMyImages() {
   const id = await myId();
-  for (const b of [BUCKET, 'audio', 'fonts']) {
+  for (const b of [BUCKET, 'audio', 'fonts']) {   // 'audio' no longer receives uploads; it is still emptied so any old file is deleted too
     const files = unwrap(await supabase.storage.from(b).list(id, { limit: 1000 }));
     if (files.length) unwrap(await supabase.storage.from(b).remove(files.map((f) => `${id}/${f.name}`)));
   }
@@ -149,9 +165,9 @@ export async function sweepOrphans(graceMs = 2 * 3600e3) {
   const media = new Set([prof.avatar_path, prof.theme?.bg_image, prof.music?.cover, ...cards.flatMap((c) => c.content?.images || []),
     ...photos.map((p) => p.path), ...posts.flatMap((p) => [p.image_path, ...(p.extra_images || [])]),
     ...(scheduled || []).flatMap((p) => [p.image_path, ...(p.extra_images || [])])].filter(Boolean));
-  const audio = new Set([prof.music?.audio].filter(Boolean));
+  const audio = new Set();                              // audio uploads were removed: anything left in the old 'audio' bucket is an orphan and is swept away
   const fonts = new Set([prof.theme?.font_file].filter(Boolean));
-  for (const keep of [media, audio, fonts]) for (const p of draftMediaPaths(id)) keep.add(p);   // files of an autosaved, unsaved editor draft are still wanted
+  for (const keep of [media, fonts]) for (const p of draftMediaPaths(id)) keep.add(p);   // files of an autosaved, unsaved editor draft are still wanted
   let removed = 0;
   for (const [bucket, keep] of [[BUCKET, media], ['audio', audio], ['fonts', fonts]]) {
     const files = unwrap(await supabase.storage.from(bucket).list(id, { limit: 1000 }));

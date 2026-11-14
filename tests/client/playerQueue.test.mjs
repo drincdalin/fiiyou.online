@@ -1,7 +1,7 @@
 import test from 'node:test'; import assert from 'node:assert/strict';
 import { makeTrack, emptyQueue, currentOf, reduce, pickNext, pickPrev } from '../../src/lib/playerQueue.js';
 
-const T = (n) => makeTrack({ src: `https://cdn.example.com/${n}.mp3`, title: n });
+const T = (n) => makeTrack({ src: `https://youtu.be/${String(n).padEnd(11, 'x').slice(0, 11)}`, title: n });   // 11-character video ids
 const load = (n, o) => reduce(emptyQueue(o), { type: 'set', tracks: Array.from({ length: n }, (_, i) => T(`s${i}`)), start: 0 });
 const seq = (...v) => { let i = 0; return () => v[i++ % v.length]; };
 
@@ -11,11 +11,12 @@ test('makeTrack: YouTube links of every shape share one key, bad links are refus
   for (const src of ['', 'javascript:alert(1)', 'http://x.com/a.mp3', 'ftp://x/a.mp3', 'https://youtube.com/watch?v=short', 'not a url', null]) assert.equal(makeTrack({ src }), null, String(src));
   assert.equal(makeTrack(null), null);
 });
-test('makeTrack: uploaded audio keeps its stable key; re-wrapping gives a fresh qid but the same key', () => {
-  const a = makeTrack({ src: 'https://x.supabase.co/sign/audio/u/1.mp3?token=aaa', key: 'u/1.mp3', cover: 'https://x/c.webp' }, 'card');
-  assert.equal(a.kind, 'audio'); assert.equal(a.key, 'u/1.mp3'); assert.equal(a.origin, 'card'); assert.equal(a.cover, 'https://x/c.webp');
+test('makeTrack: audio files (uploaded or direct links) are not supported; re-wrapping a track gives a fresh qid but the same key', () => {
+  for (const src of ['https://x.supabase.co/sign/audio/u/1.mp3?token=aaa', 'https://cdn.example.com/a.mp3', 'https://cdn.example.com/a.m4a', 'blob:https://x/1']) assert.equal(makeTrack({ src, key: 'u/1.mp3' }), null, src);
+  const a = makeTrack({ src: 'https://youtu.be/dQw4w9WgXcQ', cover: 'https://x/c.webp' }, 'card');
+  assert.equal(a.kind, 'yt'); assert.equal(a.key, 'yt:dQw4w9WgXcQ'); assert.equal(a.origin, 'card'); assert.equal(a.cover, 'https://x/c.webp');
   const b = makeTrack(a); assert.equal(b.key, a.key); assert.notEqual(b.qid, a.qid);
-  assert.equal(makeTrack({ src: 'https://a.com/x.mp3', cover: 'javascript:x' }).cover, '');
+  assert.equal(makeTrack({ src: 'https://youtu.be/dQw4w9WgXcQ', cover: 'javascript:x' }).cover, '');
 });
 test('set / add / currentOf', () => {
   let s = emptyQueue(); assert.equal(currentOf(s), null); assert.equal(pickNext(s), -1); assert.equal(pickPrev(s), -1);

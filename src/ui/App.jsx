@@ -165,7 +165,6 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
   const shown = draft ? draft.cards : d?.cards; const theme = draft ? draft.theme : d?.profile.theme; const music = (draft ? draft.fields.music : d?.profile.music) || {};
   const img = useImages(d ? [d.profile.avatar_path, theme.bg_image, music.cover, ...shown.flatMap((c) => c.content.images || []), ...d.photos.map((p) => p.path), ...d.topFriends.map((f) => f.avatar_path)] : []);
   const fontFamily = useCustomFont(theme?.font_file);   // registers the uploaded font (draft or saved) so the page can use it
-  const [audioUrl, setAudioUrl] = useState(null);
   const [spans, setSpans] = useState({});   // width of each anchor in its own units
   const [, bump] = useState(0);   // bumped when a sticker image finishes loading: re-renders, and the measuring effect below runs again
   const [units, setUnits] = useState({});   // px per sticker unit of every anchor (cards, avatar, name box, player, buttons), re-measured whenever one resizes
@@ -190,7 +189,6 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
     return () => clearTimeout(t);
   }, [d]);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (autoEdit && d && d.relationship.status === 'self' && !draft) { setCollapsed(false); setDraft(makeDraft(d)); navigate(`/${meName.toLowerCase()}`, { replace: true }); } }, [d, autoEdit]);   // "Edit my profile" on Home opens the editor straight away
-  useEffect(() => { let on = true; setAudioUrl(null); if (music.audio) media.signedUrl(music.audio, 'audio').then((u) => on && setAudioUrl(u)).catch(() => {}); return () => { on = false; }; }, [music.audio]);
   if (missing) return <div className="plain view"><p className="empty">This profile does not exist, or it is not available to you.</p></div>;
   if (!d) return loadErr ? <ErrorState error={loadErr} onRetry={() => { setLoadErr(null); return load(); }} title="Could not load this profile" /> : <Boot />;
   const { profile, relationship: rel } = d; const own = rel.status === 'self';
@@ -205,7 +203,7 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
   // Stickers are rendered inside the card they are pinned to (or at the top of the cards column when that card is hidden / gone / they are not pinned yet).
   const flowShown = shown.filter((c) => c.visible && c.type !== 'music' && c.type !== 'sticker'); const flowIds = new Set(flowShown.map((c) => c.id));
   const stickerList = shown.filter((c) => c.type === 'sticker' && c.visible).map((c) => ({ c, m: stickerModel(c, theme) }));
-  const hasPlayer = !!(audioUrl || music.url);
+  const hasPlayer = !!music.url;
   const rendered = new Set([...flowIds, 'avatar', 'nameplate', 'actions', 'frame', ...(hasPlayer ? ['player'] : [])]);   // anchors that exist on the page; stickers pinned to anything else sit at the top of the cards column
   const stickersOn = (cardId) => stickerList.filter(({ m }) => (cardId ? m.card === cardId : !rendered.has(m.card))).map(({ c, m }) => (
     <Sticker key={c.id} c={c} m={m} unit={units[m.card] || colW / 1000} edge={(m.x + m.w / 2 < 0) || (m.x + m.w / 2 > (spans[m.card] ?? 1000))} getRoot={() => frame.current} src={img[c.content.images?.[0]]} edit={!!draft} selected={sel === c.id} onSelect={setSel} onLoad={() => bump((n) => n + 1)} onChange={(p) => patchSticker(c.id, p)} />));
@@ -239,7 +237,7 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
           <div className="nameplate" data-cid="nameplate"><h1>{name}{profile.is_official && <Verified />}</h1><small>@{profile.username}{profile.locality ? ` · ${profile.locality.name}` : ''}</small>
             <small className="views">{d.friendCount} friend{d.friendCount === 1 ? '' : 's'} · {d.views} view{d.views === 1 ? '' : 's'}</small>{headline && theme.layout === 'single' && <p className="headline in">{headline}</p>}{stickersOn('nameplate')}</div>
           {headline && theme.layout !== 'single' && <p className="headline">{headline}</p>}
-          {(audioUrl || music.url) && <Player key={music.audio || music.url} src={audioUrl || music.url} trackKey={music.audio || undefined} title={music.title} artist={music.artist} cover={img[music.cover]} cid="player">{stickersOn('player')}</Player>}
+          {music.url && <Player key={music.url} src={music.url} title={music.title} artist={music.artist} cover={img[music.cover]} cid="player">{stickersOn('player')}</Player>}
           {own ? (!draft ? <div className="acw own" data-cid="actions"><button className="primary wide" onClick={startEdit}><PencilSimple size={18} weight="bold" aria-hidden="true" />Customize profile</button><button className="ghost wide" disabled={sharing} onClick={openShare}><ShareNetwork size={18} weight="bold" aria-hidden="true" />{sharing ? 'Loading…' : 'Share profile'}</button>{stickersOn('actions')}</div>
             : <div className="acw" data-cid="actions"><div className="actions preview" aria-hidden="true"><div className="arow"><button className="primary" tabIndex={-1} disabled>Message</button><button className="ghost" tabIndex={-1} disabled>Friends</button></div>
               <div className="safe"><span>Report</span><span>·</span><span>Block</span></div></div>{stickersOn('actions')}</div>) : <div className="acw" data-cid="actions"><div className="actions">
@@ -391,13 +389,12 @@ export default function App() {
     <button type="button" className="skip" onClick={() => { const m = document.getElementById('main'); m?.focus(); m?.scrollIntoView?.(); }}>Skip to content</button>
     {menu && <div className="menuscrim" onClick={() => setMenu(false)} aria-hidden="true" />}
     <nav className="nav" aria-label="Main"><button className="logo" onClick={() => top('home')}>fiiyou</button>
-      <div className="navlinks">{NAV.map(([v, l]) => <button key={v} className={`nv-${v}${active(v) ? ' on' : ''}`} aria-label={l} title={l} aria-current={active(v) ? 'page' : undefined} onClick={() => top(v)}><span className="navicw"><NavIcon name={v} active={active(v)} />{v === 'messages' && unread > 0 && <em className="dotb">{unread > 99 ? '99+' : unread}</em>}</span><span className="navlbl" aria-hidden="true">{l}</span></button>)}</div>
+      <div className="navlinks">{NAV.map(([v, l]) => <button key={v} className={`nv-${v}${active(v) ? ' on' : ''}`} aria-label={l} title={l} aria-current={active(v) ? 'page' : undefined} onClick={() => top(v)}><span className="navicw"><NavIcon name={v} active={active(v)} />{v === 'messages' && unread > 0 && <em className="dotb">{unread > 99 ? '99+' : unread}</em>}</span></button>)}</div>
       <div className="navmusic" id="nav-music" />
       <div className="more" ref={menuRef}>
         <button ref={avRef} type="button" className={`avbtn${active('profile') || menu ? ' on' : ''}`} onClick={() => setMenu(!menu)} aria-haspopup="dialog" aria-expanded={menu} title="You, notifications and settings"
           aria-label={nCount > 0 ? `Account and notifications (${nCount} new)` : 'Account and notifications'}>
           <span className="navicw"><Avatar src={myImg[me.avatar_path]} size={34} name={me.display_name || me.username} />{nCount > 0 && <em className="avdot" aria-hidden="true">{nCount > 9 ? '9+' : nCount}</em>}</span>
-          <span className="navlbl" aria-hidden="true">Me</span>
         </button>
         {menu && <div className="menu" role="dialog" aria-label="Notifications and account" tabIndex={-1} ref={panelRef}>
           <section className="mcard mnotif" aria-labelledby="mn-h">
