@@ -18,6 +18,7 @@ import Player from './Player.jsx';
 import { stickerModel, stickerStyle, withModel, reanchor, nearestAnchor, settleSticker, pinStray, rehome, unitsOf, spansOf } from './stickerAnchor.js';
 // Loaded on demand: the editor and the share-image generators are big and most visits never open them.
 const Customizer = lazy(() => import('./Customizer.jsx'));
+const ContentView = lazy(() => import('./ContentView.jsx'));   // "Your posts", at /settings/content
 const MapView = lazy(() => import('./MapView.jsx'));   // brings Leaflet with it, so it is only downloaded when the map is opened
 import { ask } from './dialog.jsx';
 import { usePath, parseRoute, navigate, isReserved } from './router.jsx';
@@ -31,7 +32,7 @@ import { PasswordMeter } from './PasswordMeter.jsx';
 import Captcha, { CAPTCHA_ON } from './Captcha.jsx';
 import { registerSW, forgetDevice, syncPush, listenForOpen, clearDeliveredNotifications } from './push.js';
 import GithubActivity from './GithubActivity.jsx';
-import { Bell, CaretRight, Eye, EyeSlash, Check, GearSix, Heart, MagnifyingGlass, PencilSimple, ShareNetwork, SignOut, Trash, UserPlus } from '@phosphor-icons/react';
+import { Bell, CaretRight, Eye, EyeSlash, Check, GearSix, Heart, ListChecks, MagnifyingGlass, PencilSimple, ShareNetwork, SignOut, Trash, UserPlus } from '@phosphor-icons/react';
 
 const BASE = import.meta.env.BASE_URL;
 function Auth() {
@@ -239,7 +240,7 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
             <small className="views">{d.friendCount} friend{d.friendCount === 1 ? '' : 's'} · {d.views} view{d.views === 1 ? '' : 's'}</small>{headline && theme.layout === 'single' && <p className="headline in">{headline}</p>}{stickersOn('nameplate')}</div>
           {headline && theme.layout !== 'single' && <p className="headline">{headline}</p>}
           {music.url && <Player key={music.url} src={music.url} title={music.title} artist={music.artist} cover={img[music.cover]} cid="player">{stickersOn('player')}</Player>}
-          {own ? (!draft ? <div className="acw own" data-cid="actions"><button className="primary wide" onClick={startEdit}><PencilSimple size={18} weight="bold" aria-hidden="true" />Customize profile</button><button className="ghost wide" disabled={sharing} onClick={openShare}><ShareNetwork size={18} weight="bold" aria-hidden="true" />{sharing ? 'Loading…' : 'Share profile'}</button>{stickersOn('actions')}</div>
+          {own ? (!draft ? <div className="acw own" data-cid="actions"><button className="primary wide" onClick={startEdit}><PencilSimple size={18} weight="bold" aria-hidden="true" />Customize profile</button><button className="ghost wide" aria-busy={sharing || undefined} onClick={() => !sharing && openShare()}><ShareNetwork size={18} weight="bold" aria-hidden="true" />Share profile</button><button className="ghost wide" onClick={() => go('content')}><ListChecks size={18} weight="bold" aria-hidden="true" />Your posts</button>{stickersOn('actions')}</div>
             : <div className="acw" data-cid="actions"><div className="actions preview" aria-hidden="true"><div className="arow"><button className="primary" tabIndex={-1} disabled>Message</button><button className="ghost" tabIndex={-1} disabled>Friends</button></div>
               <div className="safe"><span>Report</span><span>·</span><span>Block</span></div></div>{stickersOn('actions')}</div>) : <div className="acw" data-cid="actions"><div className="actions">
             {rel.status === 'friends' ? <div className="arow">
@@ -275,7 +276,8 @@ function toRoute(path) {
   const dec = (x) => { try { return decodeURIComponent(x); } catch { return x; } };
   switch (r.page) {
     case 'map': case 'people': case 'admin': return { v: r.page };
-    case 'notifications': case 'settings': return { v: r.page };
+    case 'notifications': return { v: r.page };
+    case 'settings': return { v: first === 'content' ? 'content' : 'settings' };
     case 'search': return { v: 'search', q: new URLSearchParams(location.search).get('q') || '' };
     case 'tag': return { v: 'search', tag: first ? dec(first).toLowerCase().replace(/[^\p{L}\p{N}_]/gu, '').slice(0, 32) : '' };
     case 'chat': return { v: 'messages', peer: first };
@@ -380,12 +382,12 @@ export default function App() {
       : v === 'post' ? `/post/${encodeURIComponent(username)}`
       : v === 'tag' ? `/tag/${encodeURIComponent(username)}`
       : v === 'search' ? (username ? `/search?q=${encodeURIComponent(username)}` : '/search')
-      : v === 'home' ? '/' : `/${v}`;
+      : v === 'home' ? '/' : v === 'content' ? '/settings/content' : `/${v}`;
     setMenu(false); navigate(to); };
   const top = (v) => { if (active(v) && !(v === 'profile' && route.edit)) { window.scrollTo({ top: 0, behavior: 'smooth' }); if (v === 'home') window.dispatchEvent(new Event('fiiyou:refresh')); } else go(v); };   // pressing the page you are on = back to the top (and a fresh feed on Home)
   const NAV = [['home', 'Home'], ['profile', 'Me'], ['map', 'Map'], ['messages', 'Chat'], ['people', 'People'], ...(staffRole ? [['admin', staffRole === 'admin' ? 'Admin' : 'Mod']] : [])];
   const active = (v) => (v === 'profile' ? route.v === 'profile' && (!route.username || route.username === me.username.toLowerCase()) : route.v === v);
-  const PAGE = { home: 'Home', profile: 'Profile', map: 'Map', messages: 'Messages', people: 'People', search: 'Search', settings: 'Settings', notifications: 'Notifications', post: 'Post', admin: 'Admin' };
+  const PAGE = { home: 'Home', profile: 'Profile', map: 'Map', messages: 'Messages', people: 'People', search: 'Search', settings: 'Settings', content: 'Your posts', notifications: 'Notifications', post: 'Post', admin: 'Admin' };
   return (<div className="app">
     <button type="button" className="skip" onClick={() => { const m = document.getElementById('main'); m?.focus(); m?.scrollIntoView?.(); }}>Skip to content</button>
     {menu && <div className="menuscrim" onClick={() => setMenu(false)} aria-hidden="true" />}
@@ -423,6 +425,7 @@ export default function App() {
     {route.v === 'search' && <Suspense fallback={<Boot />}><SearchView key={`${route.tag || ''}|${route.q || ''}`} me={me} go={go} notify={notify} initialQuery={route.q || ''} initialTag={route.tag || ''} /></Suspense>}
     {route.v === 'notifications' && <NotificationsView go={go} notify={notify} tick={nTick} onRead={setNCount} />}
     {route.v === 'settings' && <SettingsView notify={notify} go={go} />}
+    {route.v === 'content' && <Suspense fallback={<Boot />}><ContentView me={me} go={go} notify={notify} /></Suspense>}
     {route.v === 'people' && <PeopleView me={me} go={go} notify={notify} onInvite={() => setInviteOpen(true)} />}
     {route.v === 'post' && <PostView key={route.id} id={route.id} me={me} go={go} notify={notify} />}
     {route.v === 'profile' && <ProfileView key={route.username || me.username} username={route.username || me.username} go={go} notify={notify} refreshMe={refreshMe} meName={me.username} autoEdit={!!route.edit} />}

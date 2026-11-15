@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { LockKey, Trash, DeviceMobile, DownloadSimple } from '@phosphor-icons/react';
+import { Article, LockKey, Trash, DeviceMobile, DownloadSimple } from '@phosphor-icons/react';
 import { auth, safety } from '../index.js';
 import { useImages, Avatar } from './shared.jsx';
 import { ask, tell } from './dialog.jsx';
@@ -63,6 +63,7 @@ export default function SettingsView({ notify, go }) {
     <div className="tabs" role="tablist" aria-label="Settings">
       {[['account', 'Account'], ['notifications', 'Notifications'], ['blocked', 'Blocked']].map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}</div>
     {tab === 'account' && <>
+      <div className="panel sgroup"><div className="srow"><span className="sico"><Article size={20} weight="bold" aria-hidden="true" /></span><div><b>Your posts</b><small>Find, open or delete everything you have posted, and see what is scheduled.</small></div><button type="button" className="ghost sm" onClick={() => go('content')}>Open</button></div></div>
       <div className="panel sgroup"><InstallRow notify={notify} /></div>
       <div className="panel sgroup"><div className="srow"><span className="sico"><LockKey size={20} weight="bold" aria-hidden="true" /></span><div><b>Password</b><small>Choose a new password for signing in.</small></div><button type="button" className="ghost sm" onClick={() => setPw(true)}>Change</button></div></div>
       <div className="panel sgroup sdanger"><div className="srow"><span className="sico"><Trash size={20} weight="bold" aria-hidden="true" /></span><div><b>Delete account</b><small>Removes your profile, posts, photos and messages for good.</small></div><button type="button" className="ghost sm danger" onClick={del}>Delete</button></div></div></>}

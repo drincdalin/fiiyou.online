@@ -17,6 +17,7 @@ import './musicPlayer.css'; // global music player: mini dock, Now Playing sheet
 import './nav.css';         // navigation redesign: floating island on phones, roomy top bar on desktop (every rule is .nav-scoped, so it wins without touching the old nav rules)
 import './map.css';         // map screen layout: search row + one-line chips on phones, controls that never overlap (loads after nav.css)
 import './system.css';      // design system: type, spacing, motion and elevation tokens, shared states (loads last so it is the final word)
+import './composer.css';    // the post composer (after system.css so it has the last word on the older composer rules)
 
 bootRouter();       // old /#/... links become real paths
 captureInvite({ base: import.meta.env.BASE_URL.replace(/\/$/, '') });   // /invite/<username>: remember who invited you, then show the normal page

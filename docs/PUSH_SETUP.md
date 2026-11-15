@@ -19,7 +19,7 @@ supabase functions deploy send-push --no-verify-jwt
 `--no-verify-jwt` is intended: the function is only reachable with the `x-webhook-secret` header and refuses everything else with 403.
 
 ## 3. Database webhooks (two of them: notifications AND messages)
-**Easiest:** open `supabase/push_webhooks.sql`, fill in your project reference and the same `WEBHOOK_SECRET`, run it in the SQL editor. It creates both webhooks, so the chat one cannot be forgotten.
+**Easiest:** open `supabase/push_webhooks.sql`, fill in your project reference and the same `WEBHOOK_SECRET`, run it in the SQL editor. It creates both triggers, so the chat one cannot be forgotten. It calls the pg_net extension directly, so the dashboard's "Database Webhooks" feature does not have to be enabled (turn pg_net on under Database -> Extensions if it is off).
 
 By hand instead (Dashboard → Database → Webhooks → Create), twice:
 - Table `public.notifications`, event **Insert**; and table `public.messages`, event **Insert** (chat messages are not rows in `notifications`)

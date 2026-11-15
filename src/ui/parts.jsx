@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { House, User, MapPin, ChatCircle, ShieldCheck, Heart, X, CaretLeft, CaretRight, Flag, PencilSimple, Trash, PaperPlaneRight, ImageSquare, CalendarBlank, ShareNetwork, DotsThree, Clock, ImageBroken, UsersThree, Link as LinkIcon, ArrowSquareOut } from '@phosphor-icons/react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { House, User, MapPin, ChatCircle, ShieldCheck, Heart, X, CaretLeft, CaretRight, Flag, PencilSimple, Trash, PaperPlaneRight, ImageSquare, CalendarBlank, ShareNetwork, DotsThree, Clock, ImageBroken, UsersThree, Link as LinkIcon, ArrowSquareOut , SlidersHorizontal } from '@phosphor-icons/react';
 import PostShareModal from './PostShare.jsx';
 import { posts, safety } from '../index.js';
 import { friendlyError } from './errors.jsx';
@@ -255,7 +255,10 @@ export function Composer({ me, places = [], fixedPlace = null, onPosted, notify 
   const scope = fixedPlace ? `place:${fixedPlace}` : 'home';
   const [f, setF] = useState(blank); const [files, setFiles] = useState([]); const [later, setLater] = useState(''); const [busy, setBusy] = useState(false);
   const [drag, setDrag] = useState(false); const [open, setOpen] = useState(false); const [more, setMore] = useState(false); const [restored, setRestored] = useState(false); const [schedVer, setSchedVer] = useState(0);
-  const ev = f.kind === 'event'; const set = (k) => (e) => setF({ ...f, [k]: e.target.value }); const expanded = open || f.body || files.length || ev;
+  const ev = f.kind === 'event'; const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  const formRef = useRef(null); const uid = useId(); const optId = `${uid}-opt`; const laterId = `${uid}-later`; const whenId = `${uid}-when`; const whereId = `${uid}-where`;
+  const pristine = !f.body.trim() && !f.title.trim() && !files.length && !later;   // nothing typed or chosen yet
+  const expanded = open || !pristine;                                              // so an empty composer can fold back up, whatever was clicked inside it
   const previews = useMemo(() => files.map((x) => URL.createObjectURL(x)), [files]);
   useEffect(() => () => previews.forEach((u) => URL.revokeObjectURL(u)), [previews]);
   useEffect(() => {   // bring back an unfinished draft of this composer
@@ -272,8 +275,18 @@ export function Composer({ me, places = [], fixedPlace = null, onPosted, notify 
   const addFiles = (e) => { const l = Array.from(e.target.files || []); e.target.value = ''; take(l); };
   const hasFiles = (e) => Array.from(e.dataTransfer?.types || []).includes('Files');
   const discard = () => { clearPostDraft(me.id, scope); setF({ ...blank, kind: f.kind, visibility: f.visibility }); setRestored(false); };
+  /** Back to the one-line box. Only ever called when nothing has been written, so nothing is lost. The Post / Question / Event choice goes back to Post. */
+  const fold = () => { setOpen(false); setMore(false); setLater(''); setRestored(false); setF((x) => ({ ...x, body: '', title: '', when: '', where: '', kind: 'status' })); };
+  useEffect(() => {   // a click or tap anywhere else folds an empty composer
+    if (!open || !pristine) return undefined;
+    const away = (e) => { if (formRef.current && !formRef.current.contains(e.target)) fold(); };
+    document.addEventListener('pointerdown', away, true);
+    return () => document.removeEventListener('pointerdown', away, true);
+  }, [open, pristine]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const kinds = [['status', 'Post'], ['ask', 'Question'], ...(fixedPlace ? [] : [['event', 'Event']])];
+  const kindKeys = (e) => { const n = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0; if (!n) return; e.preventDefault(); const at = kinds.findIndex(([k]) => k === f.kind); const next = kinds[(at + n + kinds.length) % kinds.length][0]; setF({ ...f, kind: next }); requestAnimationFrame(() => e.currentTarget.querySelector('[aria-checked="true"]')?.focus()); };
   const minLater = () => { const d = new Date(Date.now() + 2 * 60000); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); };
-  const submit = async (e) => { e.preventDefault();
+  const submit = async (e) => { e.preventDefault(); if (busy) return;
     const when = later ? new Date(later) : null;
     if (when && (Number.isNaN(+when) || +when < Date.now() + 60000)) return notify('Pick a time in the future.', 'err');
     if (when && ev && +when > +new Date(f.when)) return notify('The post should go out before the event starts.', 'err');
@@ -286,26 +299,37 @@ export function Composer({ me, places = [], fixedPlace = null, onPosted, notify 
       if (when) { setSchedVer((v) => v + 1); notify(`Scheduled for ${when.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}`); } else { onPosted(); notify(ev ? 'Event published' : 'Posted'); }
     } catch (er) { notify(er.message === 'too_many_scheduled' ? 'You can have up to 20 scheduled posts.' : spamMessage(er) || er.message || 'Could not post', 'err'); } setBusy(false); };
   return (<>
-    <form className={`composer panel${expanded ? ' open' : ''}${drag ? ' drag' : ''}`} onSubmit={submit}
+    <form ref={formRef} className={`composer panel${expanded ? ' open' : ''}${drag ? ' drag' : ''}`} onSubmit={submit}
+      onKeyDown={(e) => { if (e.key === 'Escape' && pristine && open) { e.preventDefault(); fold(); document.activeElement?.blur?.(); } }}
+      onBlur={(e) => { const next = e.relatedTarget; if (pristine && open && next && !e.currentTarget.contains(next)) fold(); }}
       onDragOver={(e) => { if (hasFiles(e)) { e.preventDefault(); setDrag(true); } }} onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDrag(false); }}
       onDrop={(e) => { if (hasFiles(e)) { e.preventDefault(); setDrag(false); take(e.dataTransfer.files); } }}
       onPaste={(e) => { const fl = Array.from(e.clipboardData?.files || []); if (fl.length) { e.preventDefault(); take(fl); } }}>
       {drag && <div className="dropnote" aria-hidden="true"><ImageSquare size={28} weight="bold" />Drop photos to attach</div>}
-      {ev && <input placeholder="Event title" maxLength={100} required value={f.title} onChange={set('title')} />}
-      <MentionInput as="textarea" rows={expanded ? 3 : 1} maxLength={1000} required placeholder={ev ? 'Details' : f.kind === 'ask' ? 'Ask your neighbours…' : "What's happening?"} value={f.body} onFocus={() => setOpen(true)} onChange={set('body')}
+      {expanded && <div className="ckind" role="radiogroup" aria-label="What are you posting?" onKeyDown={kindKeys}>
+        {kinds.map(([k, l]) => <button key={k} type="button" role="radio" aria-checked={f.kind === k} tabIndex={f.kind === k ? 0 : -1} className={f.kind === k ? 'on' : ''} onClick={() => setF({ ...f, kind: k })}>{l}</button>)}</div>}
+      {ev && <input className="ctitle" placeholder="Event title" aria-label="Event title" maxLength={100} required value={f.title} onChange={set('title')} />}
+      <MentionInput as="textarea" rows={expanded ? 3 : 1} maxLength={1000} required placeholder={ev ? 'Details' : f.kind === 'ask' ? 'Ask your neighbours…' : "What's happening?"} aria-label={ev ? 'Event details' : f.kind === 'ask' ? 'Your question' : 'Write a post'} value={f.body} onFocus={() => setOpen(true)} onChange={set('body')}
         onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); if (f.body.trim() && !busy) e.currentTarget.form?.requestSubmit(); } }} />
-      {f.body.length > 800 && <small className={`ccount${f.body.length >= 980 ? ' hot' : ''}`} aria-live="polite">{f.body.length}/1000</small>}
       {restored && <small className="draftnote">Draft restored. <button type="button" className="link" onClick={discard}>Discard</button></small>}
       {expanded && <>
-        {ev && <div className="crow"><input type="datetime-local" required value={f.when} onChange={set('when')} aria-label="When" /><input placeholder="Where (text)" maxLength={120} value={f.where} onChange={set('where')} /></div>}
+        {ev && <div className="cgrid">
+          <div className="cf"><label htmlFor={whenId}>Starts</label><input id={whenId} type="datetime-local" required value={f.when} onChange={set('when')} /></div>
+          <div className="cf"><label htmlFor={whereId}>Where</label><input id={whereId} placeholder="Where is it?" maxLength={120} value={f.where} onChange={set('where')} /></div></div>}
         {previews.length > 0 && <div className="cthumbs">{previews.map((u, i) => <span key={u} className="cthumb"><img src={u} alt="" /><button type="button" aria-label={`Remove photo ${i + 1}`} onClick={() => setFiles(files.filter((_, j) => j !== i))}><X size={12} weight="bold" aria-hidden="true" /></button></span>)}</div>}
-        {more && <div className="crow">{!fixedPlace && !ev && places.length > 0 && <select value={f.place} onChange={set('place')} aria-label="Place"><option value="">No place</option>{places.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select>}
-          <select value={f.visibility} onChange={set('visibility')} aria-label="Who can see"><option value="public">Everyone</option><option value="friends">Friends only</option></select>
-          <label className="laterbox"><Clock size={16} weight="bold" aria-hidden="true" /><span>Publish later</span><input type="datetime-local" min={minLater()} value={later} onChange={(e) => setLater(e.target.value)} aria-label="Publish later" />{later && <button type="button" className="ghost sm" onClick={() => setLater('')}>Now</button>}</label></div>}
-        <div className="crow"><label className={`filebtn${files.length >= posts.MAX_IMAGES ? ' off' : ''}`}><ImageSquare size={16} weight="bold" aria-hidden="true" />{files.length ? `Photos ${files.length}/${posts.MAX_IMAGES}` : 'Photo'}<input type="file" accept="image/*" multiple disabled={files.length >= posts.MAX_IMAGES} onChange={addFiles} /></label>
-          <select value={f.kind} onChange={set('kind')} aria-label="Type"><option value="status">Post</option><option value="ask">Question</option>{!fixedPlace && <option value="event">Event</option>}</select>
-          <button type="button" className="ghost sm" onClick={() => setMore(!more)}>{more ? 'Fewer options' : 'More options'}</button>
-          <button className="primary" title="Ctrl + Enter" disabled={busy || !f.body.trim()}>{busy ? (later ? 'Scheduling…' : 'Posting…') : later ? 'Schedule' : ev ? 'Publish' : 'Post'}</button></div></>}
+        {more && <div className="cgrid copts" id={optId}>
+          <div className="cf"><label htmlFor={`${uid}-vis`}>Who can see it</label><select id={`${uid}-vis`} value={f.visibility} onChange={set('visibility')}><option value="public">Everyone</option><option value="friends">Friends only</option></select></div>
+          {!fixedPlace && !ev && places.length > 0 && <div className="cf"><label htmlFor={`${uid}-place`}>Place</label><select id={`${uid}-place`} value={f.place} onChange={set('place')}><option value="">No place</option>{places.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>}
+          <div className="cf cf-wide"><label htmlFor={laterId}>Publish later</label>
+            <div className="cf-inline"><input id={laterId} type="datetime-local" min={minLater()} value={later} onChange={(e) => setLater(e.target.value)} />{later && <button type="button" className="ghost sm" onClick={() => setLater('')}>Post now</button>}</div>
+            <small>Leave it empty to post right away.</small></div></div>}
+        <div className="cfoot">
+          <div className="cfoot-l">
+            <label className={`filebtn cbtn${files.length >= posts.MAX_IMAGES ? ' off' : ''}`}><ImageSquare size={18} weight="bold" aria-hidden="true" />{files.length ? `Photos ${files.length}/${posts.MAX_IMAGES}` : 'Photo'}<input type="file" accept="image/*" multiple disabled={files.length >= posts.MAX_IMAGES} onChange={addFiles} /></label>
+            <button type="button" className="ghost cbtn" aria-expanded={more} aria-controls={more ? optId : undefined} onClick={() => setMore(!more)}><SlidersHorizontal size={18} weight="bold" aria-hidden="true" />Options</button></div>
+          <div className="cfoot-r">
+            {f.body.length > 800 && <small className={`ccount${f.body.length >= 980 ? ' hot' : ''}`} aria-live="polite">{f.body.length}/1000</small>}
+            <button className="primary cpost" title="Ctrl + Enter" disabled={!f.body.trim()} aria-busy={busy || undefined}>{later ? 'Schedule' : ev ? 'Publish' : 'Post'}</button></div></div></>}
     </form>
     {!fixedPlace && <ScheduledList version={schedVer} notify={notify} />}
   </>);

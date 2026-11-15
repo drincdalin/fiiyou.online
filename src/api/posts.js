@@ -45,6 +45,12 @@ export async function cancelScheduled(row) {
 /** Moves posts whose time has come into the feed. Safe to call as often as you like; returns how many were published. */
 export const publishDue = async () => Number(unwrap(await supabase.rpc('publish_due_posts')) || 0);
 
+/** Your own posts, newest first (the "Your posts" screen). kind: 'status' | 'ask' | 'event' | null, visibility: 'public' | 'friends' | null, q: a word to look for. */
+export async function myPosts({ before = null, limit = 30, kind = null, visibility = null, q = null } = {}) {
+  return unwrap(await supabase.rpc('my_posts', { p_before: before, p_limit: limit, p_kind: kind, p_visibility: visibility, p_q: q || null })) || [];
+}
+/** { posts, events, friends_only, likes, comments } for the header of the "Your posts" screen. */
+export async function myPostStats() { const r = unwrap(await supabase.rpc('my_post_stats')); return (Array.isArray(r) ? r[0] : r) || { posts: 0, events: 0, friends_only: 0, likes: 0, comments: 0 }; }
 export async function updatePost(id, { body, title }, { removeImage = false, oldImage = null, oldExtras = [] } = {}) {
   const patch = { body }; if (title !== undefined) patch.title = title; if (removeImage) { patch.image_path = null; patch.extra_images = []; }
   const r = unwrap(await supabase.from('posts').update(patch).eq('id', id).select().single());

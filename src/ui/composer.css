@@ -1,0 +1,73 @@
+/* The post composer (Composer in parts.jsx). Loaded after system.css, so it has the last word on the older .composer / .crow rules.
+   Folded: one calm line. Open: Post / Question / Event choice, the text box, then one footer row (Photo, Options, Post).
+   Everything else (who can see it, place, publish later) sits behind Options, with a visible label on every field. */
+
+.composer.panel { gap: var(--s-3); padding: var(--s-3) var(--s-4); }
+.composer.panel.open { padding: var(--s-4); }
+
+/* text box */
+.composer textarea {
+  width: 100%; min-height: 48px; padding: 12px 14px; box-sizing: border-box; border: 1px solid var(--g3); border-radius: var(--rad-m, 10px);
+  background: var(--g2); font-size: var(--fs-lg); line-height: var(--lh-body); resize: none;
+}
+.composer.open textarea { min-height: 96px; resize: vertical; }
+.composer textarea:hover:not(:focus) { border-color: var(--g4); }
+.composer textarea:focus-visible { border-color: var(--accent-fg); }
+.composer .ctitle { font-weight: 650; }
+.composer .draftnote { margin-top: calc(var(--s-1) * -1); }
+
+/* Post / Question / Event */
+.ckind { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; width: min(100%, 330px); padding: 3px; box-sizing: border-box; border-radius: var(--rad-m, 10px); background: var(--g2); border: 1px solid var(--g3); }
+.ckind button {
+  min-height: 34px; padding: 0 var(--s-3); border: 0; border-radius: calc(var(--rad-m, 10px) - 3px); background: transparent; color: var(--ink2);
+  font-size: var(--fs-md); font-weight: 600; line-height: 1; cursor: pointer; white-space: nowrap;
+  transition: background-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
+}
+.ckind button:hover:not(.on) { background: var(--hover); color: var(--ink); }
+.ckind button.on { background: var(--accent); color: var(--on-accent); }
+
+/* labelled fields: event date and place, and everything behind Options */
+.composer .cgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
+.composer .cf { display: grid; gap: 6px; align-content: start; min-width: 0; }
+.composer .cf-wide { grid-column: 1 / -1; }
+.composer .cf > label { color: var(--ink2); font-size: var(--fs-sm); font-weight: 650; line-height: 1.2; }
+.composer .cf > small { color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-snug); }
+.composer .cf input, .composer .cf select { width: 100%; min-width: 0; box-sizing: border-box; }
+.composer .cf-inline { display: flex; align-items: center; gap: var(--s-2); }
+.composer .cf-inline input { flex: 1 1 auto; }
+.composer .cf-inline .ghost { flex: none; }
+.composer input[type=datetime-local] { font-variant-numeric: tabular-nums; }
+.composer input[type=datetime-local]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: .85; }
+.composer .ctitle, .composer .cf input, .composer .cf select { background: var(--g2); }   /* same recessed grey as the text box */
+.composer .copts { padding: var(--s-3); border-radius: var(--rad-m, 10px); background: var(--g2); border: 1px solid var(--g3); }
+.composer .copts input, .composer .copts select { background: var(--g1); }
+
+/* photos you are about to attach */
+.composer .cthumbs { gap: var(--s-2); }
+
+/* footer row */
+.cfoot { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); flex-wrap: wrap; }
+.cfoot-l, .cfoot-r { display: flex; align-items: center; gap: var(--s-2); min-width: 0; }
+.cfoot-r { margin-left: auto; gap: var(--s-3); }
+.composer .cbtn {
+  position: relative; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: var(--s-2); height: 40px; min-height: 0; padding: 0 var(--s-4);
+  border: 1px solid var(--g4); border-radius: var(--rad-m, 10px); background: var(--g1); color: var(--ink); box-shadow: none;
+  font-size: var(--fs-md); font-weight: 600; line-height: 1; white-space: nowrap; cursor: pointer;
+}
+.composer .cbtn svg { flex: none; width: 18px; height: 18px; }
+.composer .cbtn:hover { background: var(--hover); border-color: var(--accent-fg); }
+.composer .cbtn[aria-expanded="true"] { background: var(--g2); border-color: var(--accent-fg); }
+.composer .filebtn.off { opacity: .5; cursor: not-allowed; }
+.composer .cpost { height: 40px; min-height: 0; min-width: 96px; padding: 0 var(--s-6); border-radius: var(--rad-m, 10px); }
+.composer .ccount { justify-self: auto; font-size: var(--fs-sm); }
+
+@media (max-width: 600px) {
+  .composer.panel, .composer.panel.open { padding: var(--s-3); }
+  .composer .cgrid { grid-template-columns: minmax(0, 1fr); }
+  .ckind { width: 100%; }
+  .cfoot { display: grid; grid-template-columns: minmax(0, 1fr); justify-content: stretch; gap: var(--s-2); }
+  .cfoot-l { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2); }
+  .cfoot-r { margin-left: 0; }
+  .composer .cpost { flex: 1 1 auto; width: 100%; height: 44px; }
+  .composer .cbtn { height: 44px; }
+}
