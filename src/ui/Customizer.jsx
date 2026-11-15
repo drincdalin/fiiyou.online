@@ -27,6 +27,7 @@ import { auth, profiles, cards as cardsApi, media, discover, friends, social } f
 import { THEME_DEFAULTS, OPTIONS, COLOR_KEYS, GROUPS, radii } from './theme.js';
 import { SELECTORS, PROPS } from './customCss.js';
 import { PRESETS } from './themes.js';
+import { themeContrast } from '../lib/contrast.js';
 import { stickerModel, withModel, pinTo } from './stickerAnchor.js';
 import { buildThemeExport, download } from './themeFile.js';
 import ImportModal from './ImportModal.jsx';
@@ -246,6 +247,15 @@ const CSS = `
 .cz-color:hover{background:var(--cz-hover)}
 .cz-color-name{flex:1;font-weight:600}
 .cz-color-hex{font:700 12.5px ui-monospace,SFMono-Regular,Menlo,monospace;padding:3px 8px;border-radius:7px;background:var(--cz-sunk);color:var(--cz-ink2)}
+.cz-contrast{display:grid;gap:8px;margin-top:12px}
+.cz-contrast-item{display:flex;align-items:center;gap:10px;padding:10px 10px 10px 12px;border-radius:12px;border:1px solid var(--cz-line2);background:var(--cz-accent-soft)}
+.cz-contrast-item>svg{flex:none;color:var(--cz-accent)}
+.cz-contrast-text{flex:1 1 auto;min-width:0;font-size:13px;line-height:1.4;font-weight:600;color:var(--cz-ink)}
+.cz-contrast-text small{display:block;margin-top:2px;font-size:12px;font-weight:500;color:var(--cz-ink2)}
+.cz-contrast-fix{flex:none;min-height:34px;padding:0 12px;gap:8px;font-size:13px}
+.cz-contrast-dot{display:block;flex:none;width:14px;height:14px;border-radius:50%;box-shadow:0 0 0 1px var(--cz-line2),0 0 0 2px var(--cz-card)}
+.cz-contrast-ok{display:flex;align-items:center;gap:6px;margin-top:12px}
+.cz-contrast-ok>svg{flex:none;color:var(--cz-accent)}
 
 /* presets */
 .cz-presets{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 10px}
@@ -470,6 +480,27 @@ function ColorField({ label, value, onChange }) {
       <span className="cz-color-name">{label}</span>
       <span className="cz-color-hex">{String(value).toUpperCase()}</span>
     </label>
+  );
+}
+
+/** Tells the person when their text or link colour is hard to read on their cards, and offers the nearest colour that is (WCAG AA, 4.5:1).
+ *  Only the colours are judged: a background picture is not, because its pixels are unknown here. */
+function ContrastNotes({ th, onFix }) {
+  const { checks } = themeContrast(th);
+  const bad = checks.filter((c) => !c.ok);
+  if (!bad.length) return <p className="cz-hint cz-contrast-ok"><Check size={14} weight="bold" aria-hidden="true" />Text and links are easy to read.</p>;
+  return (
+    <div className="cz-contrast" role="status" aria-live="polite">
+      {bad.map((c) => (
+        <div className="cz-contrast-item" key={c.id}>
+          <WarningCircle size={18} weight="fill" aria-hidden="true" />
+          <span className="cz-contrast-text">{c.label} is hard to read on your cards.<small>Contrast {c.ratio.toFixed(1)}:1, it should be at least {c.min}:1.</small></span>
+          <button type="button" className="cz-btn cz-contrast-fix" onClick={() => onFix(c.key, c.fix)} aria-label={`Use ${c.fix.toUpperCase()} for ${c.label.toLowerCase()}`}>
+            <i className="cz-contrast-dot" style={{ background: c.fix }} aria-hidden="true" />Fix
+          </button>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -968,6 +999,7 @@ function ThemeTab({ ctx }) {
         <div className="cz-colors">
           {COLOR_KEYS.map((k) => <ColorField key={k} label={colorLabel(k)} value={th[k]} onChange={(v) => setTheme(k, v)} />)}
         </div>
+        <ContrastNotes th={th} onFix={(k, v) => setTheme(k, v)} />
       </Section>
 
       <BackgroundSection ctx={ctx} />

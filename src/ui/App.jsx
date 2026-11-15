@@ -3,7 +3,7 @@ import { auth, admin as adminApi, posts, profiles, cards as cardsApi, friends, w
 import { useImages, Boot, Avatar, Rich } from './shared.jsx';
 import { toCss } from './customCss.js';
 import { Lightbox, LikersModal, ReportModal, Verified, NavIcon, spamMessage } from './parts.jsx';
-import { HomeView, MapView, MessagesView, PostView } from './views.jsx';
+import { HomeView, MessagesView, PostView } from './views.jsx';
 import { PeopleView } from './PeopleView.jsx';
 import Onboarding from './Onboarding.jsx';
 import { friendlyError, ErrorState } from './errors.jsx';
@@ -18,6 +18,7 @@ import Player from './Player.jsx';
 import { stickerModel, stickerStyle, withModel, reanchor, nearestAnchor, settleSticker, pinStray, rehome, unitsOf, spansOf } from './stickerAnchor.js';
 // Loaded on demand: the editor and the share-image generators are big and most visits never open them.
 const Customizer = lazy(() => import('./Customizer.jsx'));
+const MapView = lazy(() => import('./MapView.jsx'));   // brings Leaflet with it, so it is only downloaded when the map is opened
 import { ask } from './dialog.jsx';
 import { usePath, parseRoute, navigate, isReserved } from './router.jsx';
 const SearchView = lazy(() => import('./SearchView.jsx'));
@@ -416,7 +417,7 @@ export default function App() {
     <main id="main" className="appmain" tabIndex={-1} ref={mainRef}>
     <h1 className="sronly pagetitle" ref={h1Ref}>{PAGE[route.v] || 'fiiyou'}</h1>
     {route.v === 'home' && <HomeView me={me} go={go} notify={notify} unread={unread} />}
-    {route.v === 'map' && <MapView me={me} go={go} notify={notify} />}
+    {route.v === 'map' && <Suspense fallback={<Boot />}><MapView me={me} go={go} notify={notify} /></Suspense>}
     {route.v === 'messages' && <MessagesView key="chat" me={me} peer={route.peer} go={go} notify={notify} refreshUnread={refreshUnread} />}
     {route.v === 'admin' && staffRole && <Suspense fallback={<Boot />}><AdminView go={go} notify={notify} role={staffRole} /></Suspense>}
     {route.v === 'search' && <Suspense fallback={<Boot />}><SearchView key={`${route.tag || ''}|${route.q || ''}`} me={me} go={go} notify={notify} initialQuery={route.q || ''} initialTag={route.tag || ''} /></Suspense>}

@@ -1,5 +1,6 @@
 // Supabase Edge Function `send-moderation-email`.
-// Callers: (1) the database webhook on public.moderation_outbox (INSERT), (2) you, with {"retry":true}, to resend failed mails.
+// Callers: (1) the database webhook on public.moderation_outbox (INSERT), (2) a scheduled job with {"sweep":true} (supabase/moderation_retry_cron.sql),
+// which sends anything still pending or failed, so a mail never waits for a person to notice, (3) you, with {"retry":true}, to resend everything stuck.
 // Both prove themselves with the x-webhook-secret header; anything else gets 403.
 //
 // Deploy: Supabase dashboard -> Edge Functions -> send-moderation-email -> edit -> paste this whole file -> Deploy updates. Keep "Verify JWT" OFF.
@@ -216,6 +217,11 @@ Deno.serve(async (req) => {
 
   let body: any = {}; try { body = await req.json(); } catch { /* empty body is fine */ }
 
+  if (body?.sweep) {                                          // scheduled safety net: pending and failed only (never 'sending', so it cannot collide with a mail that is going out right now)
+    const { data } = await db.from('moderation_outbox').select('id').in('status', ['pending', 'failed']).lt('attempts', MAX_ATTEMPTS).order('created_at').limit(25);
+    const results: Record<string, string> = {}; for (const r of data ?? []) results[r.id] = await processRow(r.id, false);
+    return json({ count: Object.keys(results).length, results });
+  }
   if (body?.retry) {                                          // manual resend of everything that is stuck
     const { data } = await db.from('moderation_outbox').select('id').in('status', ['pending', 'failed', 'sending']).lt('attempts', MAX_ATTEMPTS).order('created_at').limit(25);
     const results: Record<string, string> = {}; for (const r of data ?? []) results[r.id] = await processRow(r.id, true);

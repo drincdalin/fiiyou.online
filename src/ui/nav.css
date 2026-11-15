@@ -25,7 +25,7 @@
 .nav .navlinks > button:hover .navic, .nav .navlinks > button:active .navic { transform: none !important; }
 /* optical sizing: Phosphor glyphs do not fill their box equally (the chat bubble is a big circle, the people icon is wide but short, and the active
    state is the heavier "fill" weight). Same box for every slot, but each glyph gets a small size nudge, via a variable (no transform, so nothing overflows). */
-.nav .navlinks > .nv-messages .navicw { --nav-ic-k: .96; }
+.nav .navlinks > .nv-messages .navicw { --nav-ic-k: 1.12; }   /* measured: the bubble's ink is 208x208 of 256, the pin is 176x224 and the house 192x200. A circle looks smaller than a shape with corners at the same extent, so it is drawn 12% larger to read as the same size */
 .nav .navlinks > .nv-people .navicw   { --nav-ic-k: 1.12; }
 .nav .navlinks > .nv-map .navicw      { --nav-ic-k: 1; }
 .nav .navlinks > .nv-admin .navicw    { --nav-ic-k: .96; }
