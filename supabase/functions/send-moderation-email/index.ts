@@ -165,6 +165,7 @@ const MAX_ATTEMPTS = 5;
 const SMTP_USER = env('SMTP_USER');
 const MAIL_FROM = env('MAIL_FROM', SMTP_USER);   // providers like Resend use a non-address SMTP user, so the visible sender is separate
 const SMTP_PORT = Number(env('SMTP_PORT', '465'));
+const EMAIL_RE = /^[^\s<>"'@]+@[^\s<>"'@]+\.[^\s<>"'@]+$/;   // one plain address: no name, no <angle brackets>, no quotes, no spaces
 const mailer = nodemailer.createTransport({
   host: env('SMTP_HOST'), port: SMTP_PORT, secure: SMTP_PORT === 465,
   auth: { user: SMTP_USER, pass: env('SMTP_PASS') },
@@ -213,9 +214,19 @@ async function processRow(id: string, force = false): Promise<string> {
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'method' }, 405);
   if (!env('MOD_WEBHOOK_SECRET') || !safeEqual((req.headers.get('x-webhook-secret') ?? '').trim(), env('MOD_WEBHOOK_SECRET'))) return json({ error: 'forbidden' }, 403);
-  if (!SMTP_USER || !env('SMTP_PASS') || !env('SMTP_HOST')) return json({ error: 'smtp_not_configured' }, 500);
-
   let body: any = {}; try { body = await req.json(); } catch { /* empty body is fine */ }
+
+  if (body?.diag) {                                           // what the function actually sees, with no secret shown (only the password's length and prefix). Uses no mail attempts.
+    return json({
+      smtp_host: env('SMTP_HOST') || null, smtp_port: SMTP_PORT, smtp_user: SMTP_USER === 'resend' ? 'resend' : SMTP_USER ? '(set, not "resend")' : null,
+      smtp_pass_length: env('SMTP_PASS').length, smtp_pass_starts_with_re_: env('SMTP_PASS').startsWith('re_'),
+      mail_from_secret_is_set: !!env('MAIL_FROM'), mail_from_in_use: JSON.stringify(MAIL_FROM), mail_from_is_a_plain_address: EMAIL_RE.test(MAIL_FROM),
+      site_url: cfg.siteUrl, support_email: cfg.supportEmail,
+    });
+  }
+  if (!SMTP_USER || !env('SMTP_PASS') || !env('SMTP_HOST')) return json({ error: 'smtp_not_configured' }, 500);
+  // Say it plainly instead of letting the mail server answer "501 Bad sender address syntax" and burning the mail's attempts.
+  if (!EMAIL_RE.test(MAIL_FROM)) return json({ error: 'mail_from_invalid', got: JSON.stringify(MAIL_FROM), hint: 'Set the MAIL_FROM secret to one plain address such as noreply@yourdomain.com (no name, no <>, no quotes, no spaces).' }, 500);
 
   if (body?.sweep) {                                          // scheduled safety net: pending and failed only (never 'sending', so it cannot collide with a mail that is going out right now)
     const { data } = await db.from('moderation_outbox').select('id').in('status', ['pending', 'failed']).lt('attempts', MAX_ATTEMPTS).order('created_at').limit(25);

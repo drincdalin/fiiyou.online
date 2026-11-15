@@ -414,3 +414,12 @@ enabled = true
 # formatted with uppercase keywords, indent 2, max width 180, trailing commas,
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
+
+# Both functions are called by database webhooks and prove themselves with the x-webhook-secret header (anything else gets 403),
+# so Supabase's own JWT check must stay OFF for them. Deploying with the CLI now keeps it off without the --no-verify-jwt flag.
+# (Deploying by pasting into the dashboard editor does NOT read this file: check the "Verify JWT" switch after every deploy.)
+[functions.send-moderation-email]
+verify_jwt = false
+
+[functions.send-push]
+verify_jwt = false
