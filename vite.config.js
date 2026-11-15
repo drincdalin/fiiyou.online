@@ -35,6 +35,16 @@ export default defineConfig(({ mode }) => {
         return { html: html.replace('<!--CSP-->', prod ? `<meta http-equiv="Content-Security-Policy" content="${csp}">` : '').replace('<!--SEO-->', seo), tags: appTags };
       },
     }],
-    build: { sourcemap: false, chunkSizeWarningLimit: 700 },
+    build: {
+      sourcemap: false, chunkSizeWarningLimit: 700,
+      // Vendor code changes far less often than the app, so it gets its own files: a new deploy only re-downloads the app chunk, and the browser fetches them in parallel.
+      // (Leaflet is NOT listed here on purpose: it stays inside the lazy map chunk, so it is only downloaded when someone opens the map.)
+      rollupOptions: { output: { manualChunks(id) {
+        if (!id.includes('node_modules')) return undefined;
+        if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'vendor-react';
+        if (id.includes('node_modules/@supabase/')) return 'vendor-supabase';
+        return undefined;
+      } } },
+    },
   };
 });
