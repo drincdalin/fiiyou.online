@@ -44,7 +44,7 @@
 @media (pointer: coarse) { :root { --target: 44px; } }
 
 /* ---------- typography ---------- */
-body { font-size: var(--fs-base); line-height: var(--lh-body); text-rendering: optimizeLegibility; font-synthesis: none; }
+body { font-size: var(--fs-base); line-height: var(--lh-body); }   /* (no font-synthesis / text-rendering rules here: a profile's custom font has one weight, and the page and the share card must fake bold the same way) */
 h1, h2, h3, h4 { text-wrap: balance; line-height: var(--lh-tight); overflow-wrap: anywhere; }
 h1 { font-size: var(--fs-3xl); font-weight: 800; letter-spacing: -.02em; }
 h2 { font-size: var(--fs-2xl); font-weight: 750; letter-spacing: -.015em; }
@@ -253,3 +253,19 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .nav .more .menu .mact > button svg, .nav .more .menu > .mout svg { display: block; flex: none; width: 20px; height: 20px; }
 .nav .more .menu .mnotif .nrow, .nav .more .menu > .mprof { transition: background-color var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out); }
 .nav .more .menu .mnotif .nseeall svg { flex: none; }
+
+/* ======================================================================
+   THE THEMED PROFILE (main.frame) IS THE PERSON'S OWN DESIGN
+   Its text size, colours and radius come from their theme, and the share card (storyImage.js) draws it from those same theme values.
+   So the app's own rules for headings, helper text, fields and buttons stop at its edge: inside it, the page looks exactly as it did before this layer.
+   ====================================================================== */
+.frame :is(h1, h2, h3, h4) { letter-spacing: normal; text-wrap: wrap; }
+.frame :is(p, li, .muted, .hint) { text-wrap: wrap; }
+.frame :is(small, .muted, .hint) { line-height: inherit; }
+.frame :is(input, select, textarea):not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]) {
+  min-height: 0; font-size: inherit; line-height: normal; border-color: var(--g3); border-radius: 12px;
+}
+.frame :is(input, select, textarea):hover:not(:disabled):not(:focus):not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]) { border-color: var(--g4); }
+.frame textarea { min-height: 0; }
+.frame :is(.primary, .ghost) { min-height: 0; font-size: inherit; line-height: normal; }
+.frame :is(.primary, .ghost, button).sm { min-height: 0; font-size: inherit; }
