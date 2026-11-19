@@ -5,7 +5,8 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3.6.7';
 
-const env = (k: string) => Deno.env.get(k) ?? '';
+const env = (k: string) => (Deno.env.get(k) ?? '').trim();   // trim: a pasted trailing newline in a secret must not break auth
+const safeEqual = (a: string, b: string) => { const x = new TextEncoder().encode(a), y = new TextEncoder().encode(b); let d = x.length ^ y.length; for (let i = 0; i < Math.max(x.length, y.length); i++) d |= (x[i] ?? 0) ^ (y[i] ?? 0); return d === 0; };
 const admin = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'));
 
 // A bad or missing key must not stop the function from starting: it answers every call with a readable reason instead.
@@ -71,7 +72,7 @@ Deno.serve(async (req) => {
   if (req.method === 'GET') return json({ ok: true, push: setupError ? 'misconfigured' : 'ready' });
   if (req.method !== 'POST') return json({ error: 'method not allowed' }, 405);
 
-  const isHook = !!env('WEBHOOK_SECRET') && req.headers.get('x-webhook-secret') === env('WEBHOOK_SECRET');
+  const isHook = !!env('WEBHOOK_SECRET') && safeEqual((req.headers.get('x-webhook-secret') ?? '').trim(), env('WEBHOOK_SECRET'));
   let body: { type?: string; table?: string; user_id?: string; record?: Record<string, string | null> };
   try { body = await req.json(); } catch { return json({ error: 'bad request' }, 400); }
 
