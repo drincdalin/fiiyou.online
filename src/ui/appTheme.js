@@ -96,4 +96,6 @@ export function applyAppTheme(theme) {
   const root = document.documentElement; const v = appThemeVars(theme);
   for (const [k, x] of Object.entries(v)) root.style.setProperty(k, x);
   root.style.colorScheme = v['--scheme']; root.dataset.tone = v['--scheme'];
+  // the phone's browser bar and the installed app's title bar take the page colour too
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', v['--t-frame']);
 }

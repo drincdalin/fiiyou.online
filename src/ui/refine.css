@@ -1,0 +1,88 @@
+/* ======================================================================
+   refine.css: the last layer (main.jsx imports it after composer.css).
+
+   What it does, and only this:
+   1. Input + action pairs share one height, one radius, one baseline, on every screen.
+   2. Icons: a button that holds only an icon always centres it, and icons never shrink in a flex row.
+   3. Press feedback: every control gives a small, quick scale on press. Hover effects stay off touch screens,
+      so nothing stays "stuck" lit after a tap.
+   4. Numbers that change (counts, stats, times) never change width.
+   5. A calm reveal for content that appears under a tab bar.
+
+   Every colour still comes from the person's theme variables. Nothing here sets a colour. The themed profile
+   (.frame / .page) is the person's own design, so the hover and press rules below stay out of it.
+   Motion respects prefers-reduced-motion: styles.css already switches every animation and transition off.
+   ====================================================================== */
+
+:root { --press: .97; }
+
+/* ---------- 0. touch: no grey flash, no double-tap zoom delay ---------- */
+:where(button, a, [role=button], [role=tab], label, select, summary) { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+
+/* ---------- 1. input + action pairs ----------
+   One row = one height (--pair-h), one radius (--pair-r). Inputs, selects, the place picker and the buttons beside them
+   all take both, so a row can never come out ragged again. */
+.inline { --pair-h: var(--target, 40px); --pair-r: var(--rad-m, 12px); align-items: center; }
+.cmform { --pair-r: 999px; }                       /* comment box is a pill, so its button is too */
+.cthread .inline { --pair-h: 46px; --pair-r: var(--rad-l, 14px); }   /* chat: the send button is a 46px square */
+
+.inline > :is(input:not([type=checkbox]):not([type=radio]):not([type=file]), select, .mentionwrap, .locpick, .primary, .ghost) {
+  box-sizing: border-box; height: var(--pair-h); min-height: var(--pair-h);
+}
+.inline input:not([type=checkbox]):not([type=radio]):not([type=file]), .inline select, .inline .locpick, .inline > .primary, .inline > .ghost {
+  border-radius: var(--pair-r);
+}
+.inline .mentionwrap > input { height: 100%; min-height: 0; }
+/* the small variants are for dense lists. Next to a field they would be shorter than it, so they grow to the field's height */
+.inline > .primary.sm, .inline > .ghost.sm { padding-top: 0; padding-bottom: 0; padding-inline: var(--s-4, 16px); font-size: var(--fs-md, .875rem); }
+.inline > .primary.sendbtn { width: var(--pair-h); padding: 0; }
+.inline > .primary svg, .inline > .ghost svg { flex: none; }
+/* the text field takes the room, the rest keep their natural width. On a phone the field gets a full line and the
+   picker and Clear share the next one, instead of three ragged boxes. */
+.plain.view .inline > :is(input, .mentionwrap) { flex: 1 1 14rem; min-width: 0; }
+.plain.view .inline > :is(.locpick, select) { flex: 1 1 10rem; width: auto; min-width: 0; }
+.plain.view .inline > .ghost, .plain.view .inline > .primary { flex: none; }
+.inline > select, .inline > .locpick { padding-top: 0; padding-bottom: 0; }
+
+/* full-width call-to-action: one size, easy to hit, clearly the main thing on the screen */
+.primary.wide, .authgo, .obnav .primary { min-height: 48px; font-size: var(--fs-lg, 1rem); font-weight: 750; }
+.ghost.wide { min-height: var(--target, 40px); }
+/* a button with an icon used to come out ~4px taller than one with text only (the icon, not min-height, set its size), so two buttons
+   side by side did not match. Vertical padding is now small and min-height does the sizing for every button the same way. */
+.primary:not(.sm):not(.frame *), .ghost:not(.sm):not(.frame *) { padding-top: .2rem; padding-bottom: .2rem; }
+
+/* ---------- 2. icons ---------- */
+/* a bare icon button (an svg and nothing else, so it always has an aria-label): centred both ways, no baseline gap under the glyph.
+   The WHOLE selector sits inside :where() (a :has() outside it would bring its own specificity), so every component rule that already
+   styles its own button wins over this. Buttons with an icon AND a text label are not matched: :only-child ignores text. */
+:where(button[aria-label]:has(> svg:only-child), a[aria-label]:has(> svg:only-child), [role=button][aria-label]:has(> svg:only-child)) { display: inline-grid; place-items: center; line-height: 0; }
+:where(button, a, [role=button], .badge, .chip, .dotb) > svg { flex: none; display: block; }
+
+/* ---------- 3. press feedback ---------- */
+.locpick, .pweye, .lpclear, .mclear, .authtabs button { transition: background-color var(--dur-1, 150ms) var(--ease-out, ease), border-color var(--dur-1, 150ms) var(--ease-out, ease), color var(--dur-1, 150ms) var(--ease-out, ease), transform var(--dur-1, 150ms) var(--ease-out, ease); }
+:is(.locpick, .lpclear, .mclear, .filebtn, .chip, .seg button, .tabs button, .like, .mheart, .authtabs button):active:not(:disabled):not(.frame *) { transform: scale(var(--press)); }
+.pweye:active { transform: translateY(-50%) scale(var(--press)); }   /* it is centred with a transform, so the press has to keep that */
+:is(.primary, .ghost):active:not(:disabled):not([aria-busy=true]):not(.frame *) { transform: scale(var(--press)); }
+/* hover on a touch screen is a tap that never ends: drop the hover look there, keep it for mouse and trackpad */
+@media (hover: none) {
+  .primary:hover:not(:disabled):not(.frame *) { filter: none; transform: none; }
+  .ghost:hover:not(:disabled):not(.frame *), .locpick:hover:not(:disabled), .filebtn:hover { background: none; border-color: var(--g4); }
+  .like:hover:not(.on):not(:disabled) { background: var(--g2); border-color: var(--g3); color: var(--ink2); }
+  .like:hover:not(.on) svg { color: inherit; }
+  input:hover:not(:disabled):not(:focus), select:hover:not(:disabled):not(:focus), textarea:hover:not(:disabled):not(:focus) { border-color: var(--field-border); }
+}
+
+/* ---------- 4. numbers never change width ---------- */
+.badge, .dotb, .count, .cnt, .mcount, .cmcount, .mheart, .times, time, .nrow small, .bub small,
+.stats3 b, .stats4 b, .snapstats b, .lbcount, [data-num], input[type=number] { font-variant-numeric: tabular-nums; }
+
+/* ---------- 5. calm reveal under tab bars ----------
+   Content that mounts under a tab bar or segmented control fades up a few pixels. 'backwards' (not 'both') leaves no transform
+   behind afterwards, so popups and fixed children inside are never trapped by a transformed parent. */
+@keyframes fy-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.tabs + :is(div, ul, section, form), .seg + :is(div, ul, section, form) { animation: fy-rise var(--dur-3, 250ms) var(--ease-out, ease) backwards; }
+
+/* a theme switch (onboarding or the editor) fades colours instead of snapping them */
+html.fy-theme-fade, html.fy-theme-fade *, html.fy-theme-fade *::before, html.fy-theme-fade *::after {
+  transition: background-color .28s var(--ease-out, ease), border-color .28s var(--ease-out, ease), color .28s var(--ease-out, ease), box-shadow .28s var(--ease-out, ease) !important;
+}
