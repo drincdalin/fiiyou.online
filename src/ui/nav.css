@@ -149,14 +149,13 @@ html.droid { --sab: 0px; }
     border: 1px solid color-mix(in srgb, var(--g3) 85%, transparent); border-radius: 26px; background: color-mix(in srgb, var(--g1) 93%, transparent); -webkit-backdrop-filter: blur(22px) saturate(1.6); backdrop-filter: blur(22px) saturate(1.6);
     box-shadow: 0 16px 34px -16px color-mix(in srgb, var(--shade, #000) 100%, transparent), inset 0 1px 0 color-mix(in srgb, var(--ink) 7%, transparent); }
   .nav > .logo { display: none; }
-  .nav .navlinks { flex: 1 1 auto; align-self: stretch; gap: 0; padding: 0; background: none; border: 0; border-radius: 0; }
+  .nav .navlinks { flex: 4 1 0; min-width: 0; align-self: stretch; gap: 0; padding: 0; background: none; border: 0; border-radius: 0; }
   .nav .navlinks > .nv-profile { display: none; }   /* the last slot is you: your picture opens your profile, notifications and settings */
   .nav .navlinks > button, .nav .more > .avbtn { flex: 1 1 0; justify-content: center; height: 100%; padding: 0; border-radius: 20px; font-size: 0.9375rem; }
   .nav .navlinks > button.on, .nav .navlinks > button.on:hover { background: none; box-shadow: none; color: var(--ink); }
   /* icon box 30px (the glyph itself is about 80% of that, ~24px) inside a 60 x 40 pill: clearly readable, still with air around it inside the highlight */
-  .nav .navlinks .navicw { --nav-ic: 30px; width: 60px; height: 40px; border-radius: 20px; transition: background .22s var(--ease), color .22s, transform .2s var(--ease), box-shadow .22s; }
-  .nav .navlinks > button.on .navicw { background: var(--accent); color: var(--on-accent);
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent), 0 6px 16px -6px color-mix(in srgb, var(--accent) 70%, transparent); }   /* solid fill + thin ring + soft glow: readable at a glance */
+  .nav .navlinks .navicw { --nav-ic: 30px; width: 60px; max-width: calc(100% - 2px); height: 40px; border-radius: 20px; transition: background .22s var(--ease), color .22s, transform .2s var(--ease), box-shadow .22s; }
+  .nav .navlinks > button.on .navicw { background: var(--accent); color: var(--on-accent); box-shadow: none; }   /* solid pill, no ring, no glow */
   .nav .navlinks > button:not(.on):hover .navicw { background: var(--g2); color: var(--ink); }
   .nav .navlinks .navicw .dotb { top: -5px; right: -2px; left: auto; }
   .nav .navlinks > button:active .navicw, .nav .more > .avbtn:active .navicw { transform: scale(.9); }
