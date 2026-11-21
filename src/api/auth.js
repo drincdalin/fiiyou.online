@@ -1,8 +1,9 @@
 import { supabase, unwrap } from '../lib/client.js';
 import { removeAllMyImages } from './media.js';
 
-export async function usernameAvailable(username) {
-  return unwrap(await supabase.rpc('username_available', { p_username: username }));
+/** Pass the email too: a sign-up that is still waiting for its confirmation email holds its username, and the email lets the SAME person try again. */
+export async function usernameAvailable(username, email = null) {
+  return unwrap(await supabase.rpc('username_available', { p_username: username, p_email: email }));
 }
 
 /** True when an admin banned this email (see spam_and_bans.sql). Only used to show the right message: the database blocks the sign-up itself. */
@@ -14,10 +15,11 @@ async function orBanned(email, fn) {
   try { return await fn(); } catch (e) { if (await emailBanned(email)) throw new Error('banned'); throw e; }
 }
 
-/** Username/display name are passed as metadata; a DB trigger creates the profile + starter cards. */
+/** Username/display name are passed as metadata. The profile + starter cards are created by a DB trigger only once the email is confirmed (0043),
+ *  so until then the account is invisible in the app: no profile, no Discover, no Search. */
 export async function signUp({ email, password, username, displayName, invitedBy, captchaToken }) {
   if (await emailBanned(email)) throw new Error('banned');
-  if (!(await usernameAvailable(username))) throw new Error('username_taken');
+  if (!(await usernameAvailable(username, email))) throw new Error('username_taken');
   return orBanned(email, async () => unwrap(await supabase.auth.signUp({
     email, password,
     options: { ...(captchaToken ? { captchaToken } : {}), data: { username: username.toLowerCase(), display_name: displayName || username, ...(/^[a-z0-9_]{3,24}$/.test(invitedBy || '') ? { invited_by: invitedBy } : {}) } },

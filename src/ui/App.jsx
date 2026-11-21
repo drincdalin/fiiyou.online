@@ -32,23 +32,36 @@ import { PasswordMeter } from './PasswordMeter.jsx';
 import Captcha, { CAPTCHA_ON } from './Captcha.jsx';
 import { registerSW, forgetDevice, syncPush, listenForOpen, clearDeliveredNotifications } from './push.js';
 import GithubActivity from './GithubActivity.jsx';
-import { Bell, CaretRight, Eye, EyeSlash, Check, GearSix, Heart, ListChecks, MagnifyingGlass, PencilSimple, ShareNetwork, SignOut, Trash, UserPlus } from '@phosphor-icons/react';
+import { Bell, CaretRight, Eye, EyeSlash, Check, GearSix, Heart, ListChecks, MagnifyingGlass, PencilSimple, ShareNetwork, SignOut, Trash, UserPlus, EnvelopeSimple } from '@phosphor-icons/react';
 
 const BASE = import.meta.env.BASE_URL;
+/** A signed-in session whose email is not confirmed is never treated as an account (the profile does not exist until confirmation, see 0043). */
+const isConfirmed = (s) => !!(s?.user?.email_confirmed_at || s?.user?.confirmed_at);
+
 function Auth() {
   const capRef = useRef(null); const [cap, setCap] = useState('');   // Turnstile token (only when VITE_TURNSTILE_SITE_KEY is set)
   const needCap = () => CAPTCHA_ON && !cap;
   const [invite] = useState(() => getInvite()); const [mode, setMode] = useState(invite ? 'up' : 'in'); const [f, setF] = useState({ email: '', password: '', username: '', displayName: '' }); const [agree, setAgree] = useState(false); const [banned, setBanned] = useState(false);
-  const [msg, setMsg] = useState(''); const [ok, setOk] = useState(false); const [busy, setBusy] = useState(false); const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  const [msg, setMsg] = useState(''); const [ok, setOk] = useState(false); const [busy, setBusy] = useState(false); const [sentTo, setSentTo] = useState(''); const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const say = (m, good = false) => { setMsg(m); setOk(good); };
   const go = async (e) => { e.preventDefault(); if (busy) return; say(''); if (mode === 'up' && isReserved(f.username)) return say('That username is reserved.'); if (needCap()) return say('Please finish the security check first.'); setBusy(true);
-    try { if (mode === 'in') await auth.signIn({ ...f, captchaToken: cap }); else { const r = await auth.signUp({ ...f, invitedBy: invite, captchaToken: cap }); if (!r.session) say('Check your email to confirm your account.', true); } }
+    try { if (mode === 'in') await auth.signIn({ ...f, captchaToken: cap }); else { const r = await auth.signUp({ ...f, invitedBy: invite, captchaToken: cap }); if (!r.session) setSentTo(f.email.trim()); } }
     catch (er) { if (er.message === 'banned') setBanned(true); else say(er.message === 'username_taken' ? 'That username is taken.' : friendlyError(er)); } capRef.current?.reset(); setBusy(false); };
   const forgot = async () => { if (!f.email) return say('Type your email first.'); if (needCap()) return say('Please finish the security check first.'); try { await auth.resetPassword(f.email, cap); say('If that email has an account, a reset link is on its way.', true); } catch (er) { say(friendlyError(er)); } capRef.current?.reset(); };
   const magic = async () => { if (!f.email) return say('Type your email first.'); if (needCap()) return say('Please finish the security check first.'); setBusy(true);
     try { await auth.signInWithMagicLink(f.email, cap); say('If that email has an account, a sign-in link is on its way.', true); } catch (er) { if (er.message === 'banned') setBanned(true); else say(friendlyError(er)); } capRef.current?.reset(); setBusy(false); };
   const up = mode === 'up'; const [showPw, setShowPw] = useState(false);
   if (banned) return <Banned onBack={() => setBanned(false)} />;
+  if (sentTo) return (   // the account does not exist in the app yet: it is created when the link is opened
+    <main className="authwrap"><div className="authcard authsent">
+      <header className="authhead"><h1 className="brand">fiiyou</h1></header>
+      <span className="sentic" aria-hidden="true"><EnvelopeSimple size={30} weight="bold" /></span>
+      <h2 tabIndex={-1} ref={(el) => el?.focus({ preventScroll: true })}>Check your inbox</h2>
+      <p>We sent a confirmation link to <b>{sentTo}</b>. Your account is created the moment you open it, then you can sign in.</p>
+      <p className="muted">Nothing there? Look in spam, or go back and check the address for typos.</p>
+      <button type="button" className="ghost wide" onClick={() => { setSentTo(''); setMode('in'); say(''); }}>Back to sign in</button>
+      <button type="button" className="link muted" onClick={() => { setSentTo(''); say(''); }}>Use a different email</button>
+    </div></main>);
   return (
     <main className="authwrap">
       <form className="authcard" onSubmit={go}>
@@ -326,7 +339,8 @@ export default function App() {
   }, [me?.id]);   // service worker: installable app + push notifications
   useEffect(() => { const t = { home: 'Home', profile: route.username ? `@${route.username}` : 'Me', map: 'Map', messages: 'Chat', people: 'People', admin: 'Admin', post: 'Post', search: 'Search', tag: 'Tag', notifications: 'Notifications', settings: 'Settings' }[route.v]; const b = unread + nCount; document.title = `${b > 0 ? `(${b > 99 ? '99+' : b}) ` : ''}fiiyou · ${t}`; }, [route, unread, nCount]);
   useEffect(() => { if (route.legacyMe && me) navigate(`/${me.username.toLowerCase()}${route.edit ? '/edit' : ''}`, { replace: true }); }, [route.legacyMe, route.edit, me?.username]);   // old /me -> /<username>
-  useEffect(() => { if (session) loadMe(); else { setMe(null); setMeErr(null); } }, [session, loadMe]);
+  useEffect(() => { if (session && isConfirmed(session)) loadMe(); else { setMe(null); setMeErr(null); } }, [session, loadMe]);
+  useEffect(() => { if (session && !isConfirmed(session)) auth.signOut().catch(() => {}); }, [session]);
   useEffect(() => {   // someone who is already a member opened an invite link: take them to the person who sent it
     if (!me || me.onboarded_at === null) return; const u = getInvite(); if (!u) return; clearInvite(); if (u !== me.username.toLowerCase()) navigate(`/${u}`);
   }, [me?.id, me?.onboarded_at]);   // eslint-disable-line react-hooks/exhaustive-deps
@@ -370,7 +384,7 @@ export default function App() {
   }, [route.v, !!session, !!me]);   // main only exists once signed in and loaded
   if (session === undefined) return <Boot />;
   if (recovery && session) return <NewPassword onDone={() => setRecovery(false)} />;
-  if (!session) return <Auth />;
+  if (!session || !isConfirmed(session)) return <Auth />;
   if (!me) return meErr ? <div className="authwrap"><ErrorState error={meErr} onRetry={loadMe} title="Could not load your account" /></div> : <Boot />;
   const notify = (msg, type = 'ok') => setToast({ msg: type === 'err' ? friendlyError({ message: msg }) : msg, type });
   // first run after sign-up: the welcome steps (null = not done yet; undefined = the 0024 migration has not run, so nobody is sent through it)

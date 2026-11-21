@@ -1,6 +1,16 @@
 /* onboarding: tap-first steps, live theme preview, brisk transitions. Colours all come from the theme variables, so a picked look repaints this card too. */
-.obcard { max-width: 460px; gap: 16px; }
-.obcard h2 { margin: 0; font-size: var(--fs-2xl); outline: none; }
+/* The card is a fixed-height shell that always fits the screen: header on top, the step scrolls in the middle, the buttons stay pinned
+   at the bottom. Before, a tall step (themes) pushed Next below the fold on every phone and laptop. */
+.authwrap.obwrap { min-height: 100vh; min-height: 100dvh; box-sizing: border-box; align-items: center; padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom)); }
+.obcard { display: flex; flex-direction: column; gap: 0; width: 100%; max-width: 460px; box-sizing: border-box; padding: 22px 20px 16px; max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow: hidden; }
+.obhead { flex: none; display: grid; gap: 12px; padding-bottom: 14px; }
+.obhead .authhead { display: grid; gap: 2px; }
+.obhead .brand { margin: 0; font-size: 1.6rem; line-height: 1.1; }
+.obhead .authlead { margin: 0; }
+.obcard h2 { margin: 0; font-size: var(--fs-2xl); letter-spacing: -.02em; outline: none; }
+.obfoot { flex: none; display: grid; gap: 10px; padding-top: 12px; }
+.obfoot .err { margin: 0; }
+@media (max-height: 700px) { .obhead .authlead { display: none; } .obhead { gap: 10px; padding-bottom: 10px; } .obcard { padding-top: 16px; } }
 .obprog { display: flex; align-items: center; gap: 12px; }
 .obdots { flex: 1; display: flex; gap: 6px; list-style: none; margin: 0; padding: 0; }
 .obdots li { position: relative; flex: 1; height: 4px; border-radius: 99px; background: var(--g3); overflow: hidden; }
@@ -13,7 +23,7 @@
 .obnote { margin: 0; padding: .55rem .8rem; border: 1px solid var(--accent); border-radius: 14px; font-weight: 650; }
 
 /* step body: slides in from the side it came from */
-.obstep { display: grid; gap: 16px; animation: obin var(--dur-3) var(--ease-out) backwards; }
+.obstep { flex: 1 1 auto; min-height: 0; display: grid; align-content: start; gap: 16px; overflow-y: auto; overscroll-behavior: contain; padding: 3px 3px 6px; margin: -3px -3px 0; scrollbar-width: thin; animation: obin var(--dur-3) var(--ease-out) backwards; }
 .obstep[data-dir="-1"] { animation-name: obin-back; }
 @keyframes obin { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
 @keyframes obin-back { from { opacity: 0; transform: translateX(-14px); } to { opacity: 1; transform: none; } }
@@ -29,24 +39,26 @@
 @media (hover: none) { .obchip:hover:not(.on) { border-color: var(--g4); } }
 .obmore { justify-self: start; }
 
-/* theme cards */
-.obvibes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.obvibe { position: relative; display: grid; gap: 6px; cursor: pointer; }
+/* theme cards: a compact 4 x 2 swatch grid, so all eight looks are visible at once without scrolling */
+.obvibes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.obvibe { position: relative; display: grid; gap: 5px; cursor: pointer; min-width: 0; }
 .obvibe input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; z-index: 1; }
-.obpv { display: grid; grid-template-rows: 14px 1fr; gap: 6px; height: 84px; padding: 6px; border-radius: 12px; border: 2px solid var(--g3); overflow: hidden; transition: border-color var(--dur-1) var(--ease-out), transform var(--dur-1) var(--ease-out); }
-.obpv-bar { display: flex; align-items: center; gap: 4px; padding: 0 5px; border: 1px solid; border-radius: 6px; }
-.obpv-bar i { display: block; width: 14px; height: 4px; border-radius: 3px; }
-.obpv-card { display: grid; align-content: center; gap: 4px; padding: 6px 8px; border: 1px solid; position: relative; }
-.obpv-card i { display: block; height: 4px; border-radius: 3px; }
-.obpv-card b { position: absolute; right: 8px; bottom: 6px; width: 22px; height: 8px; border-radius: 99px; }
-.obvname { font-size: var(--fs-md); font-weight: 650; padding: 0 2px; }
-.obvchk { position: absolute; top: 12px; right: 12px; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); color: var(--on-accent); opacity: 0; transform: scale(.6); transition: opacity var(--dur-1) var(--ease-out), transform var(--dur-1) var(--ease-out); }
+.obpv { display: grid; grid-template-rows: 9px 1fr; gap: 4px; aspect-ratio: 1 / .92; padding: 4px; border-radius: 12px; border: 2px solid var(--g3); overflow: hidden; box-sizing: border-box; transition: border-color var(--dur-1) var(--ease-out), transform var(--dur-1) var(--ease-out); }
+.obpv-bar { display: flex; align-items: center; gap: 3px; padding: 0 3px; border: 1px solid; border-radius: 4px; }
+.obpv-bar i { display: block; width: 8px; height: 3px; border-radius: 2px; flex: none; }
+.obpv-card { position: relative; display: grid; align-content: center; gap: 3px; padding: 4px 5px; border: 1px solid; min-width: 0; }
+.obpv-card i { display: block; height: 3px; border-radius: 2px; }
+.obpv-card b { position: absolute; right: 4px; bottom: 4px; width: 14px; height: 5px; border-radius: 99px; }
+.obvname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; font-size: var(--fs-xs); font-weight: 600; color: var(--muted); transition: color var(--dur-1) var(--ease-out); }
+.obvchk { position: absolute; top: 7px; right: 7px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); color: var(--on-accent); opacity: 0; transform: scale(.6); transition: opacity var(--dur-1) var(--ease-out), transform var(--dur-1) var(--ease-out); z-index: 0; }
 .obvchk svg { flex: none; }
 .obvibe:hover .obpv { border-color: var(--g4); }
-.obvibe:active .obpv { transform: scale(.98); }
+.obvibe:active .obpv { transform: scale(.96); }
 .obvibe input:checked ~ .obpv { border-color: var(--accent-fg); }
+.obvibe input:checked ~ .obvname { color: var(--ink); font-weight: 750; }
 .obvibe input:checked ~ .obvchk { opacity: 1; transform: none; }
 .obvibe input:focus-visible ~ .obpv { outline: 2px solid var(--accent-fg); outline-offset: 2px; }
+.obpicked { color: var(--ink); }
 @media (hover: none) { .obvibe:hover .obpv { border-color: var(--g3); } .obvibe input:checked ~ .obpv { border-color: var(--accent-fg); } }
 
 /* photo */
@@ -60,7 +72,7 @@
 .obcam svg { flex: none; }
 
 /* people */
-.oblist { display: grid; gap: 8px; max-height: 40vh; overflow: auto; }
+.oblist { display: grid; gap: 8px; }
 .oblist .row { display: flex; align-items: center; gap: 12px; padding: .5rem .7rem; background: var(--g1); border: 1px solid var(--g3); border-radius: 16px; }
 .obwho { display: grid; min-width: 0; flex: 1; } .obwho small { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .obsent { display: inline-flex; align-items: center; gap: 4px; color: var(--ink2); font-size: var(--fs-sm); font-weight: 650; }
@@ -85,3 +97,6 @@
 .draftbar { position: sticky; top: calc(var(--nav-h, 56px) + 8px); z-index: 60; display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap;
   margin: 8px auto; max-width: min(720px, calc(100vw - 24px)); padding: .55rem .9rem; border-radius: 16px; background: var(--g1); border: 1px solid var(--accent); font-size: 0.875rem; font-weight: 600; }
 .draftbar .acts { display: flex; gap: 6px; }
+
+/* there is no navbar during onboarding, so the page must not reserve room for it (that made the whole screen scroll for nothing) */
+body:has(.obwrap) { padding-bottom: 0; }

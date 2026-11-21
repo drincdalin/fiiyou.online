@@ -45,7 +45,8 @@
 .inline > select, .inline > .locpick { padding-top: 0; padding-bottom: 0; }
 
 /* full-width call-to-action: one size, easy to hit, clearly the main thing on the screen */
-.primary.wide, .authgo, .obnav .primary { min-height: 48px; font-size: var(--fs-lg, 1rem); font-weight: 750; }
+/* (scoped: a bare .primary.wide is also the profile's Customize button, which must keep its own size) */
+.authgo, .obnav .primary { min-height: 48px; font-size: var(--fs-lg, 1rem); font-weight: 750; }
 .ghost.wide { min-height: var(--target, 40px); }
 /* a button with an icon used to come out ~4px taller than one with text only (the icon, not min-height, set its size), so two buttons
    side by side did not match. Vertical padding is now small and min-height does the sizing for every button the same way. */
@@ -86,3 +87,27 @@
 html.fy-theme-fade, html.fy-theme-fade *, html.fy-theme-fade *::before, html.fy-theme-fade *::after {
   transition: background-color .28s var(--ease-out, ease), border-color .28s var(--ease-out, ease), color .28s var(--ease-out, ease), box-shadow .28s var(--ease-out, ease) !important;
 }
+
+/* ---------- 6. navbar stays put ----------
+   a. The page scrollbar comes and goes between views (a long feed, then a short list). On desktop that resizes the viewport and nudges
+      everything that is centred, the navbar included. The gutter is now always reserved, so nothing moves when you switch screens.
+   b. On a phone both the button and the icon pill scaled on press (a double transform). Now only the pill does, once. */
+html { scrollbar-gutter: stable; }
+.nav .navlinks > button:active, .nav .more > .avbtn:active { transform: none; }
+.nav .navlinks > button:active .navicw { transform: scale(.92); }
+.nav .navlinks .navicw { transition: background .22s var(--ease-out, ease), color .22s var(--ease-out, ease), transform .14s var(--ease-out, ease), box-shadow .22s var(--ease-out, ease); }
+
+/* "check your inbox" after sign-up */
+.authsent { text-align: center; justify-items: center; }
+.authsent h2 { margin: 0; font-size: var(--fs-2xl); letter-spacing: -.02em; outline: none; }
+.authsent p { margin: 0; max-width: 34ch; text-wrap: balance; overflow-wrap: anywhere; }
+.authsent .wide { width: 100%; }
+.sentic { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: var(--accent); color: var(--on-accent); animation: fy-rise var(--dur-3) var(--ease-out) backwards; }
+.sentic svg { flex: none; }
+
+/* ---------- 7. your own profile: the Customize / Share / Your posts row ----------
+   One line each, never wrapped text. In the single-column layout the three buttons share a row (and if the screen is too narrow for that,
+   they wrap and stretch to fill, so a lone button is never left at half width). */
+.acw.own > button { min-height: 46px; padding-inline: .8rem; gap: 8px; white-space: nowrap; font-size: .9375rem; font-weight: 650; }
+.frame[data-layout=single] .acw.own { display: flex; flex-wrap: wrap; gap: max(var(--step, 14px), 14px); }
+.frame[data-layout=single] .acw.own > button { flex: 1 1 200px; width: auto; min-width: 0; }

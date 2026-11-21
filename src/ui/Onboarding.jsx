@@ -15,6 +15,8 @@ const InviteModal = lazy(() => import('./InviteModal.jsx'));
 const STEPS = ['Who are you?', 'Pick your vibe', 'Add a photo', 'What are you into?', 'Find your people'];
 const LAST = STEPS.length - 1;
 const VIBES = VIBE_IDS.map((id) => PRESETS.find((p) => p.id === id)).filter(Boolean);
+/** Short names for the cramped swatch grid. The full name still labels the radio for screen readers and shows in the line below. */
+const SHORT = { aero: 'Aero', tokyo: 'Tokyo', rosepine: 'Rosé', vapor: 'Vapor' };
 const INTEREST_ICON = { music: MusicNotes, photo: Camera, gaming: GameController, sports: SoccerBall, art: PaintBrush, code: Code, books: BookOpen, film: FilmSlate, cooking: CookingPot, hiking: Mountains, cycling: Bicycle, animals: PawPrint };
 
 /** One tap-to-toggle chip. Pressed = filled with the person's accent, so the state never depends on colour alone (the shape and the check change too). */
@@ -28,14 +30,14 @@ function Chip({ on, onClick, icon: Icon, children }) {
 function VibeCard({ preset, checked, onPick }) {
   const t = preset.theme;
   return (<label className="obvibe">
-    <input type="radio" name="ob-vibe" value={preset.id} checked={checked} onChange={() => onPick(preset)} />
+    <input type="radio" name="ob-vibe" value={preset.id} aria-label={preset.name} checked={checked} onChange={() => onPick(preset)} />
     <span className="obpv" style={{ background: t.bg_color }} aria-hidden="true">
       <span className="obpv-bar" style={{ background: t.frame_color, borderColor: t.border_color }}><i style={{ background: t.accent_color }} /><i style={{ background: t.text_color, opacity: 0.4 }} /></span>
       <span className="obpv-card" style={{ background: t.card_color, borderColor: t.border_color, borderRadius: Math.min(+t.radius || 0, 12) }}>
         <i style={{ background: t.text_color, width: '70%' }} /><i style={{ background: t.text_color, opacity: 0.4, width: '45%' }} /><b style={{ background: t.accent_color }} />
       </span>
     </span>
-    <span className="obvname">{preset.name}</span>
+    <span className="obvname" aria-hidden="true">{SHORT[preset.id] || preset.name}</span>
     <span className="obvchk" aria-hidden="true"><Check size={12} weight="bold" /></span>
   </label>);
 }
@@ -128,13 +130,15 @@ export default function Onboarding({ me, inviter: rawInviter, onDone, notify }) 
   const pickMood = (m) => { setOwnMood(false); setMood((cur) => (cur === m ? '' : m)); };
   const ctaLabel = step === LAST ? 'Go to fiiyou' : (step === 2 && !avatar) || (step === 3 && !body) ? 'Skip' : 'Next';
 
-  return (<div className="authwrap"><div className="authcard obcard" role="dialog" aria-labelledby="ob-h">
-    <header className="authhead"><h1 className="brand">fiiyou</h1><p className="authlead">Welcome in. Make it yours, it takes a minute.</p></header>
+  return (<div className="authwrap obwrap"><div className="authcard obcard" role="dialog" aria-labelledby="ob-h">
+    <div className="obhead">
+    <header className="authhead"><h1 className="brand">fiiyou</h1>{step === 0 && <p className="authlead">Welcome in. Make it yours, it takes a minute.</p>}</header>
     <div className="obprog">
       <ol className="obdots" aria-label={`Step ${step + 1} of ${STEPS.length}`}>{STEPS.map((s, i) => <li key={s} className={i === step ? 'on' : i < step ? 'done' : ''} aria-current={i === step ? 'step' : undefined}><span className="vh">{s}</span></li>)}</ol>
       <span className="obstepno" aria-hidden="true">{step + 1} / {STEPS.length}</span>
     </div>
     <h2 id="ob-h" tabIndex={-1} ref={head}>{STEPS[step]}</h2>
+    </div>
 
     <div className="obstep" key={step} data-dir={dir}>
       {step === 0 && <>
@@ -151,7 +155,7 @@ export default function Onboarding({ me, inviter: rawInviter, onDone, notify }) 
 
       {step === 1 && <>
         <div className="obvibes" role="radiogroup" aria-label="Look and feel">{VIBES.map((p) => <VibeCard key={p.id} preset={p} checked={vibe === p.id} onPick={pickVibe} />)}</div>
-        <p className="muted obhint">Everything you see here changes with it. More looks and full control live in Customize, any time.</p></>}
+        <p className="muted obhint"><b className="obpicked">{VIBES.find((x) => x.id === vibe)?.name}</b> is live on this screen right now. More looks and full control live in Customize.</p></>}
 
       {step === 2 && <div className="obavatar">
         <label className="obpick"><input type="file" accept="image/*" onChange={pickAvatar} disabled={busy} aria-label={avatar ? 'Choose a different photo' : 'Choose a photo'} />
@@ -177,6 +181,7 @@ export default function Onboarding({ me, inviter: rawInviter, onDone, notify }) 
         <button type="button" className="ghost wide" onClick={() => setInv(true)}>Invite friends (link and QR code)</button></>}
     </div>
 
+    <footer className="obfoot">
     {err && <p className="err" role="alert">{err}{step === LAST && <> <button type="button" className="link" onClick={loadPeople}>Try again</button></>}</p>}
     <div className="obnav">
       {step > 0 && <button type="button" className="ghost obback" onClick={() => go(step - 1)} disabled={busy} aria-label="Back"><CaretLeft size={18} weight="bold" aria-hidden="true" /></button>}
@@ -185,6 +190,7 @@ export default function Onboarding({ me, inviter: rawInviter, onDone, notify }) 
         : <button type="button" className="primary" onClick={finish} aria-busy={busy || undefined}>{ctaLabel}<ArrowRight size={18} weight="bold" aria-hidden="true" /></button>}
     </div>
     <button type="button" className="link muted obskip" onClick={finish} disabled={busy}>Skip setup for now</button>
+    </footer>
     {inv && <Suspense fallback={null}><InviteModal me={me} onClose={() => setInv(false)} notify={notify} /></Suspense>}
   </div></div>);
 }
