@@ -10,6 +10,13 @@
    DESKTOP: a roomy top bar: wordmark left, a centred plate of icon tabs, your picture on the right with the same panel dropping down under it.
    ============================================================================================================================ */
 
+/* Bottom safe-area inset, in ONE place. Every bottom-anchored thing (dock, toast, sheets, menus, music player) reads var(--sab) instead of env(safe-area-inset-bottom).
+   Why: some Android browsers / custom tabs report the system navigation bar as a safe-area inset even though the page is already laid out ABOVE that bar, so the
+   bar was counted twice and the floating dock hovered ~56px above the real bottom edge with page content showing under it. viewport.js adds html.droid on Android,
+   which sets the inset to 0 there. iOS keeps the real value (home indicator). */
+:root { --sab: env(safe-area-inset-bottom, 0px); }
+html.droid { --sab: 0px; }
+
 /* ---------- shared ---------- */
 /* icon-only navigation: should any old markup still render a text label, it is hidden */
 .nav .navlbl { display: none !important; }
@@ -136,9 +143,9 @@
 
 /* ---------- phone: the dock ---------- */
 @media (max-width: 700px) {
-  :root { --nav-h: calc(68px + env(safe-area-inset-bottom, 0px)); }   /* the dock + the gap around it: pages, the map, the chat and the music dock all reserve this much */
+  :root { --nav-h: calc(68px + var(--sab, 0px)); }   /* the dock + the gap around it: pages, the map, the chat and the music dock all reserve this much */
   html.kb { --nav-h: 0px; }
-  .nav { position: fixed; top: auto; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); height: 58px; z-index: 40; display: flex; align-items: stretch; gap: 0; padding: 0 6px; box-sizing: border-box;
+  .nav { position: fixed; top: auto; left: 10px; right: 10px; bottom: calc(10px + var(--sab, 0px)); height: 58px; z-index: 40; display: flex; align-items: stretch; gap: 0; padding: 0 6px; box-sizing: border-box;
     border: 1px solid color-mix(in srgb, var(--g3) 85%, transparent); border-radius: 26px; background: color-mix(in srgb, var(--g1) 93%, transparent); -webkit-backdrop-filter: blur(22px) saturate(1.6); backdrop-filter: blur(22px) saturate(1.6);
     box-shadow: 0 16px 34px -16px color-mix(in srgb, var(--shade, #000) 100%, transparent), inset 0 1px 0 color-mix(in srgb, var(--ink) 7%, transparent); }
   .nav > .logo { display: none; }
@@ -194,7 +201,7 @@
 
 /* landscape phones: a slimmer dock (the page you are on still gets its pill) */
 @media (max-width: 900px) and (max-height: 480px) and (orientation: landscape) {
-  :root { --nav-h: calc(62px + env(safe-area-inset-bottom, 0px)); }
+  :root { --nav-h: calc(62px + var(--sab, 0px)); }
   .nav { height: 52px; border-radius: 22px; }
   .nav .navlinks .navicw { height: 34px; --nav-ic: 25px; }
   .nav .more .menu { max-height: calc(100dvh - var(--nav-h) - 16px); }

@@ -7,7 +7,7 @@ import { bootRouter } from './router.jsx';
 import { Boundary, OfflineBanner } from './errors.jsx';
 import { captureInvite } from '../lib/invite.js';
 import { captureInstall } from './install.js';
-import { watchKeyboard } from './viewport.js';
+import { watchKeyboard, fixAndroidInset } from './viewport.js';
 import './styles.css';
 import './design.css';
 import './ui-theme.css';
@@ -22,6 +22,7 @@ import './refine.css';      // final polish: input + button pairs, icon centring
 
 bootRouter();       // old /#/... links become real paths
 captureInvite({ base: import.meta.env.BASE_URL.replace(/\/$/, '') });   // /invite/<username>: remember who invited you, then show the normal page
+fixAndroidInset();   // Android: don't count the system nav bar twice under the dock
 watchKeyboard();     // phones: tab bar steps aside while the keyboard is open
 captureInstall();   // keep the browser's "install app" offer for the Settings button (it only fires once, early)
 installDialogs();   // any leftover window.alert() shows the in-app card too

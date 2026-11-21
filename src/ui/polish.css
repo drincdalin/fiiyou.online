@@ -14,7 +14,7 @@
   .pimg img { max-height: 58dvh; }
 
   /* messages: the toast sits above the tab bar, not on top of it */
-  .toast { bottom: calc(var(--nav-h) + 18px + env(safe-area-inset-bottom, 0px)); width: max-content; max-width: min(92vw, 420px); }
+  .toast { bottom: calc(var(--nav-h) + 18px + var(--sab, 0px)); width: max-content; max-width: min(92vw, 420px); }
   /* four tabs (People) sit in a tidy 2 x 2 grid instead of 3 + 1 */
   .plain.view > .tabs:has(> button:nth-child(4):last-child) { display: grid; grid-template-columns: 1fr 1fr; }
 
@@ -203,7 +203,7 @@ span.av.av { display: inline-block; position: relative; flex: none; aspect-ratio
 /* ---------- place panel (PlaceSheet in views.jsx) ----------
    The title row stays at the top while the posts scroll, so the close button is always in reach (on a phone the panel is only half the screen).
    Only the panel's OWN header is styled here: a post card inside it has a <header> too, and it must keep its normal layout. */
-.sheet { --sheet-pad: 14px; padding: var(--sheet-pad); padding-bottom: calc(var(--sheet-pad) + env(safe-area-inset-bottom, 0px)); }
+.sheet { --sheet-pad: 14px; padding: var(--sheet-pad); padding-bottom: calc(var(--sheet-pad) + var(--sab, 0px)); }
 .sheet > header { position: sticky; top: calc(var(--sheet-pad) * -1); z-index: 10; margin: calc(var(--sheet-pad) * -1) calc(var(--sheet-pad) * -1) 0; padding: var(--sheet-pad) var(--sheet-pad) 10px; background: inherit; border-bottom: 1px solid var(--g3); }
 .sheet > header h3 { overflow-wrap: anywhere; }
 .sheet > header .muted { margin: 2px 0 0; }

@@ -268,7 +268,7 @@ input[type=file]::file-selector-button { border-radius: var(--rad-s); }
 @keyframes sheetin { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @media (max-width: 700px) {
   .likesheet { align-items: flex-end; padding: 0; }
-  .likepanel { max-width: none; max-height: 72dvh; border-radius: 20px 20px 0 0; border-bottom: 0; padding-bottom: env(safe-area-inset-bottom); animation: sheetup .22s ease-out; }
+  .likepanel { max-width: none; max-height: 72dvh; border-radius: 20px 20px 0 0; border-bottom: 0; padding-bottom: var(--sab, 0px); animation: sheetup .22s ease-out; }
   .likehead { padding-top: 22px; }
   .likehead .grab { display: block; position: absolute; top: 8px; left: 50%; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: currentColor; opacity: .3; }
   .likerow { min-height: 64px; }
@@ -286,7 +286,7 @@ input[type=file]::file-selector-button { border-radius: var(--rad-s); }
 .pmenu button.danger { color: var(--red-fg); }
 @media (max-width: 700px) {
   .pmenuback { background: var(--scrim-lo); }
-  .pmenu { position: fixed; left: 12px; right: 12px; top: auto; bottom: calc(12px + env(safe-area-inset-bottom)); padding: 8px; border-radius: 18px; }
+  .pmenu { position: fixed; left: 12px; right: 12px; top: auto; bottom: calc(12px + var(--sab, 0px)); padding: 8px; border-radius: 18px; }
   .pmenu button { min-height: 52px; font-size: 1rem; }
   .post footer { gap: 8px; }
   .post footer .pshare { margin-left: auto; }

@@ -12,3 +12,9 @@ export function watchKeyboard() {
   };
   vv.addEventListener('resize', update); addEventListener('focusin', update); addEventListener('focusout', () => setTimeout(update, 60));
 }
+
+// Android: the page is already laid out above the system navigation bar, but some browsers still report that bar as env(safe-area-inset-bottom).
+// That doubled the gap under the floating dock (see --sab in nav.css). Marking <html class="droid"> makes the app ignore the inset there.
+export function fixAndroidInset() {
+  if (/Android/i.test(navigator.userAgent)) document.documentElement.classList.add('droid');
+}
