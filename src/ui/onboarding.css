@@ -100,3 +100,24 @@
 
 /* there is no navbar during onboarding, so the page must not reserve room for it (that made the whole screen scroll for nothing) */
 body:has(.obwrap) { padding-bottom: 0; }
+
+/* ---------- the screen never scrolls ----------
+   The page itself is locked while onboarding is open. Only the middle of the card (the step: themes, chips, people) scrolls.
+   On a phone the card IS the screen: full width, full height, no frame, header and buttons pinned. */
+html:has(.obwrap), body:has(.obwrap) { overflow: hidden; overscroll-behavior: none; height: 100%; }
+.authwrap.obwrap { position: fixed; top: 0; left: 0; right: 0; height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
+.obstep { padding-bottom: 22px; -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent); }
+@media (max-width: 600px) {
+  .authwrap.obwrap { padding: 0; align-items: stretch; }
+  .authwrap.obwrap .obcard { max-width: none; width: 100%; height: 100%; max-height: none; border: 0; border-radius: 0; box-shadow: none; background: transparent;
+    padding: max(18px, env(safe-area-inset-top)) 20px max(14px, env(safe-area-inset-bottom)); }
+}
+@media (min-width: 601px) { .authwrap.obwrap .obcard { height: min(660px, calc(100vh - 24px)); height: min(660px, calc(100dvh - 24px)); } }   /* same size on every step, nothing jumps */
+/* phones: the card is the whole screen, so the looks get bigger previews (2 across). If the screen is short, this list scrolls, not the page */
+@media (max-width: 600px) {
+  .obvibes { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 12px; }
+  .obpv { aspect-ratio: 1 / .68; grid-template-rows: 15px 1fr; gap: 6px; padding: 7px; border-radius: 14px; }
+  .obpv-bar { padding: 0 5px; gap: 4px; border-radius: 6px; } .obpv-bar i { width: 12px; height: 4px; }
+  .obpv-card { gap: 5px; padding: 8px 10px; } .obpv-card i { height: 4px; } .obpv-card b { right: 8px; bottom: 7px; width: 24px; height: 8px; }
+  .obvname { font-size: var(--fs-sm); } .obvchk { top: 11px; right: 11px; width: 22px; height: 22px; }
+}
