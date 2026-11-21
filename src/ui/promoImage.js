@@ -1164,7 +1164,12 @@ export async function renderPromo({ template = 'card', ...args }) {
             const cs = Math.min(sw - pad * 2, musicH - pad * 2 - textBlock);
 
             if (cs >= 100) {
-              pic(cover, sx + pad, my + pad, cs, cs, r3, '♪', t.border_color, Math.min(lw, 3));
+              // center the whole block (cover + title + artist) inside the tile, both ways
+              const blockH = cs + textBlock;
+              const top = my + Math.max(pad, Math.round((musicH - blockH) / 2));
+              const cx = sx + sw / 2;
+
+              pic(cover, Math.round(cx - cs / 2), top, cs, cs, r3, '♪', t.border_color, Math.min(lw, 3));
 
               const tFont = `700 28px ${bodyStack}`;
               const aFont = `500 24px ${bodyStack}`;
@@ -1172,20 +1177,22 @@ export async function renderPromo({ template = 'card', ...args }) {
               g.font = tFont;
               put(
                 ellipsize(g, music.title || 'Unknown title', sw - pad * 2),
-                sx + pad,
-                my + pad + cs + 12 + 17,
+                cx,
+                top + cs + 12 + 17,
                 tFont,
-                ink
+                ink,
+                'center'
               );
 
               if (music.artist) {
                 g.font = aFont;
                 put(
                   ellipsize(g, music.artist, sw - pad * 2),
-                  sx + pad,
-                  my + pad + cs + 12 + 34 + 15,
+                  cx,
+                  top + cs + 12 + 34 + 15,
                   aFont,
-                  soft
+                  soft,
+                  'center'
                 );
               }
             }
