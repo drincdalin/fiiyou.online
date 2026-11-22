@@ -9,7 +9,7 @@
         These copies are deleted when the person signs out (message 'fiiyou:clear-private').
       - everything else cross-origin (Supabase API, map tiles, YouTube...) is never touched or stored
    Bump VERSION to throw away every old cache. Lives in /public so it is served from the site root. */
-const VERSION = 'v4';
+const VERSION = 'v5';
 const SHELL = `fiiyou-shell-${VERSION}`;
 const ASSETS = `fiiyou-assets-${VERSION}`;
 const IMG = `fiiyou-img-${VERSION}`;      // private photos and fonts, by path
@@ -126,11 +126,16 @@ self.addEventListener('push', (event) => {
     const open = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     if (open.some((c) => c.visibilityState === 'visible' && c.focused)) return;
     const https = (u) => (typeof u === 'string' && /^https:\/\//.test(u) ? u : undefined);   // only secure links from the server are used
-    const [icon, image] = await Promise.all([d.icon ? notificationPicture(d.icon, 150000) : undefined, d.image ? notificationPicture(d.image, 300000) : undefined]);
+    const [iconPic, imagePic] = await Promise.all([d.icon ? notificationPicture(d.icon, 150000) : undefined, d.image ? notificationPicture(d.image, 300000) : undefined]);
+    // If this worker cannot fetch the picture (bot check, 4 s timeout, too large), hand the signed URL to the
+    // notification itself: Chrome fetches it outside the worker and outside CORS. The data URL is still preferred
+    // because it keeps working for private links that need the worker's cache.
+    const icon = iconPic || https(d.icon);
+    const image = imagePic || https(d.image);
     await self.registration.showNotification(d.title || 'fiiyou', {
       body: d.body || '',
-      icon: icon || `${scope}icon-192.png`,   // profile/sender image fallback to the app mark
-      image: image || https(d.image),         // post photo attachment
+      icon: icon || `${scope}icon-192.png`,   // profile/sender image, then the app mark
+      image,                                  // post photo attachment
       badge: `${scope}badge-96.png`,          // status bar / island notification icon (monochrome, 96px)
       tag: d.tag || undefined,                // same tag = replaces the older notification instead of stacking
       renotify: !!d.tag,
