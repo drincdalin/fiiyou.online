@@ -1,8 +1,8 @@
 -- fiiyou: the two triggers that wake the Edge Function `send-push` (a new notification, a new chat message).
--- Run once in the Supabase SQL editor AFTER the Edge Function is deployed (docs/PUSH_SETUP.md, steps 1 and 2). Re-running is safe.
+-- Run once against the self-hosted database AFTER the function is deployed (docs/PUSH_SETUP.md, steps 1 and 2). Re-running is safe.
 --
 -- It calls the database's own pg_net extension, so it does NOT need the "Database Webhooks" feature (the supabase_functions schema).
--- Turn pg_net on first if it is off: Dashboard -> Database -> Extensions -> pg_net.
+-- The function is called through the stack's own gateway (`api-gw:8000`), so this works even when the public tunnel is down.
 create extension if not exists pg_net;
 
 -- Same helper as in moderation_webhook.sql (defined in both so either script can be run first). A failed call never blocks the insert.
@@ -25,11 +25,11 @@ revoke all on function public.fiiyou_call_edge() from public, anon, authenticate
 
 do $$
 declare
-  fn_url  text := 'https://YOUR-PROJECT-REF.supabase.co/functions/v1/send-push';   -- Project Settings -> General -> Reference ID
+  fn_url  text := 'http://api-gw:8000/functions/v1/send-push';   -- internal gateway of the self-hosted stack
   secret  text := 'THE-SAME-WEBHOOK_SECRET-YOU-SET-WITH-supabase-secrets-set';
 begin
-  if fn_url like '%YOUR-PROJECT-REF%' or secret like 'THE-SAME-%' then
-    raise exception 'Fill in fn_url and secret at the top of this script first';
+  if secret like 'THE-SAME-%' then
+    raise exception 'Fill in the webhook secret at the top of this script first';
   end if;
   drop trigger if exists push_on_notification on public.notifications;
   execute format('create trigger push_on_notification after insert on public.notifications for each row execute function public.fiiyou_call_edge(%L, %L, %L)', fn_url, trim(secret), 'full');

@@ -1,4 +1,4 @@
--- Why are moderation emails stuck in "pending"?   Run the blocks one at a time in the Supabase SQL editor.
+-- Why are moderation emails stuck in "pending"?   Run the blocks one at a time with psql against the self-hosted database.
 --
 -- A row stays 'pending' only when the Edge Function never got as far as claiming it. If it had tried to send and the mail server said no,
 -- the row would say 'failed' with the error in last_error. So "pending" = the webhook did not reach the function, or the function
@@ -21,9 +21,9 @@ select tgname, tgenabled from pg_trigger where tgrelid = 'public.moderation_outb
 select id, status_code, left(content::text, 200) as answer, error_msg, created
 from net._http_response order by created desc limit 20;
 
--- 4) After fixing the cause: send everything that is stuck, right now (needs the real project ref + secret; do not commit them anywhere)
+-- 4) After fixing the cause: send everything that is stuck, right now (needs the real secret; do not commit it anywhere)
 -- select net.http_post(
---   url     := 'https://YOUR-PROJECT-REF.supabase.co/functions/v1/send-moderation-email',
+--   url     := 'http://api-gw:8000/functions/v1/send-moderation-email',
 --   headers := jsonb_build_object('Content-Type', 'application/json', 'x-webhook-secret', 'THE-REAL-SECRET'),
 --   body    := '{"retry": true}'::jsonb);
 -- then run block 3 again (a few seconds later) and block 1: the rows should say 'sent'.

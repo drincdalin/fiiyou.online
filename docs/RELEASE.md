@@ -1,6 +1,6 @@
-# Releasing fiiyou (Vercel + Supabase)
+# Releasing fiiyou (Vercel + self-hosted Supabase)
 
-The site is a static Vite build hosted on **Vercel**; data, auth and files live in **Supabase**. Setup below is one-time. After that every `git push` to `main` is built and deployed by Vercel, and GitHub Actions (`.github/workflows/ci.yml`) checks that the app builds and the database tests pass.
+The site is a static Vite build hosted on **Vercel**; data, auth and files live in **self-hosted Supabase** on the Ubuntu host (see [SELF_HOSTING.md](SELF_HOSTING.md)). Setup below is one-time. After that every `git push` to `main` is built and deployed by Vercel, and GitHub Actions (`.github/workflows/ci.yml`) checks that the app builds and the database tests pass.
 
 ## 0. Before anything else
 - `public/privacy.html` and `public/terms.html` use **contact@fiiyou.online** as the contact address. Make sure that mailbox exists (or forwards to your real inbox) before launch. A legal contact address that bounces is worse than none.
@@ -8,23 +8,22 @@ The site is a static Vite build hosted on **Vercel**; data, auth and files live 
 - Have someone you trust read both pages, and update them whenever you change how data is handled.
 - Fonts (Ubuntu Sans, woff2) and their licence are already in `public/fonts/`.
 
-## 1. Supabase (production settings)
-1. SQL Editor: migrations `0001` to `0043` and `seed.sql` must all have been run, in order, once each. **`0040_outbox_admin.sql` was called `0036_outbox_admin.sql` until now** (two files shared the number 0036, which the Supabase CLI cannot record twice); its SQL is unchanged, so if you already ran it under the old name, do NOT run it again. The file `0036_moderation_emails.sql` keeps its name. Files `0015`–`0022` were renumbered in git so every file has its own version number; **their SQL is unchanged**. If you already ran them under their old names, the only new file to run is **`0023_media_read_scope.sql`**. Add `lat`/`lng` to your localities (the map skips localities without coordinates; verify the names in the seed while you are there).
-2. Authentication → URL Configuration: **Site URL** = `https://app.fiiyou.online`. **Redirect URLs**: add `https://app.fiiyou.online` and `https://app.fiiyou.online/**` (keep `http://localhost:5173` and `http://localhost:5173/**` for local work). Password-reset and confirmation links depend on this.
-   Also check Authentication → Sign In / Providers → Email: **Confirm email must be ON**. From migration `0043` a profile (and its place in Discover and Search) is only created when the confirmation link is opened, so with it off every sign-up would be confirmed instantly.
-3. Authentication → Email: turn **Confirm email** on. Set up your **own SMTP provider** before inviting people: Supabase's built-in sender is for testing and is heavily limited.
-4. Authentication → Attack protection / password settings: use the strongest options your plan offers. CAPTCHA (Turnstile) is optional and the forms do send its token, but it only works when BOTH `VITE_TURNSTILE_SITE_KEY` (Vercel) and Supabase's CAPTCHA setting are on. If only the Supabase side is on, every sign-up fails. Turn both on together or neither.
-5. Advisors → run **Security Advisor** and **Performance Advisor** and read what they say.
-6. **Make yourself the administrator** (run once; keep your email out of the repository):
+## 1. Backend (self-hosted Supabase)
+The full runbook is [SELF_HOSTING.md](SELF_HOSTING.md). Production settings that must match:
+1. Migrations `0001` to `0044` and `seed.sql`, in order, once each, then `audit_rls.sql` must end with `summary | OK`.
+2. GoTrue: `SITE_URL=https://app.fiiyou.online`; redirect URLs include `https://app.fiiyou.online` and `https://app.fiiyou.online/**` (keep localhost for local work).
+3. `ENABLE_EMAIL_SIGNUP=true`, `ENABLE_EMAIL_AUTOCONFIRM=false`. From migration `0043` a profile (and its place in Discover and Search) is only created when the confirmation link is opened, so with auto-confirm on every sign-up would be confirmed instantly.
+4. SMTP goes through Resend (`smtp.resend.com:465`). The custom templates in `supabase/templates/` are served to GoTrue by the `templates-server` container; without them the links use the wrong parameter.
+5. **Make yourself the administrator** (run once; keep your email out of the repository):
    `insert into public.admin_emails (email) values ('your-admin@email.com');`
-   Admin access requires signing in with that exact, **confirmed** email. An "Admin" tab then appears in the app. Use a strong unique password and two-factor authentication if your plan offers it. Verified badges are given from Admin → Users → Verify.
-7. Know your plan's limits (storage, database size, backups, pausing of inactive projects) and export your data now and then.
+   Admin access requires signing in with that exact, **confirmed** email. An "Admin" tab then appears in the app.
+6. Backups: `/srv/fiiyou/ops/backup.sh` runs daily; copy `/srv/backups` off the machine.
 
 ## 2. Vercel
 1. Vercel → Add New → Project → import this GitHub repository. Framework preset **Vite**, build command `npm run build`, output directory `dist` (these are the defaults).
 2. Settings → Environment Variables (Production, and Preview if you use previews):
-   - `VITE_SUPABASE_URL` = Project URL
-   - `VITE_SUPABASE_ANON_KEY` = publishable / anon key (public by design; Row Level Security protects the data). **Never** add a `service_role` or secret key here or anywhere in this repository.
+   - `VITE_SUPABASE_URL` = `https://api.fiiyou.online` (the self-hosted API, not a `*.supabase.co` host)
+   - `VITE_SUPABASE_ANON_KEY` = the `ANON_KEY` from `/srv/fiiyou/supabase/.env` (public by design; Row Level Security protects the data). **Never** add a `service_role` or secret key here or anywhere in this repository.
    - `SITE_URL` = `https://app.fiiyou.online` (https, no trailing slash). It builds `sitemap.xml`, `robots.txt` and the `og:image` tags. **The production build fails without it**, on purpose, so the `YOUR-DOMAIN` placeholder never goes live.
    - `VITE_VAPID_PUBLIC_KEY` = the public VAPID key (only if you set up push, see [PUSH_SETUP.md](PUSH_SETUP.md)).
 3. Settings → Domains: add `app.fiiyou.online` (the landing page on `fiiyou.online` is a separate project), then create the DNS records Vercel shows at your registrar. HTTPS is automatic.

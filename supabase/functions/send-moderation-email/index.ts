@@ -3,13 +3,15 @@
 // which sends anything still pending or failed, so a mail never waits for a person to notice, (3) you, with {"retry":true}, to resend everything stuck.
 // Both prove themselves with the x-webhook-secret header; anything else gets 403.
 //
-// Deploy: Supabase dashboard -> Edge Functions -> send-moderation-email -> edit -> paste this whole file -> Deploy updates. Keep "Verify JWT" OFF.
-// Secrets (dashboard -> Edge Functions -> Secrets), example with Resend:
+// Deploy: copy this file and templates.ts into /srv/fiiyou/supabase/volumes/functions/send-moderation-email/, then
+//   cd /srv/fiiyou/supabase && docker compose up -d --force-recreate --no-deps functions
+// FUNCTIONS_VERIFY_JWT must stay false: the function proves itself with x-webhook-secret.
+// Secrets come from /srv/fiiyou/supabase/.env, for example with Resend:
 //   SMTP_HOST=smtp.resend.com  SMTP_PORT=465  SMTP_USER=resend  SMTP_PASS=<Resend API key, sending access only>
 //   MAIL_FROM=noreply@fiiyou.online        (the address people see; must be on a domain verified at the provider)
 //   MOD_WEBHOOK_SECRET=<long random string>  SITE_URL=https://app.fiiyou.online  SUPPORT_EMAIL=contact@fiiyou.online
 // Any SMTP provider works. With a plain mailbox (Private Email, Gmail app password) leave MAIL_FROM unset: SMTP_USER is used as the sender.
-// (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided to Edge Functions automatically; never put the service key anywhere else.)
+// (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are supplied by the stack; never put the service key anywhere else.)
 //
 // SMTP over port 465 (implicit TLS) on purpose: as far as I know Supabase Edge Functions block outbound 25 and 587. Check the current docs.
 import { createClient } from 'npm:@supabase/supabase-js@2';

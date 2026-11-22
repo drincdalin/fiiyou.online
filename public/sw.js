@@ -9,7 +9,7 @@
         These copies are deleted when the person signs out (message 'fiiyou:clear-private').
       - everything else cross-origin (Supabase API, map tiles, YouTube...) is never touched or stored
    Bump VERSION to throw away every old cache. Lives in /public so it is served from the site root. */
-const VERSION = 'v2';
+const VERSION = 'v3';
 const SHELL = `fiiyou-shell-${VERSION}`;
 const ASSETS = `fiiyou-assets-${VERSION}`;
 const IMG = `fiiyou-img-${VERSION}`;      // private photos and fonts, by path

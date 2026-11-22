@@ -1,13 +1,20 @@
 // Supabase Edge Function `send-push`. Only caller: the database webhooks (public.notifications and public.messages, event Insert),
 // proven by the x-webhook-secret header. It sends a Web Push message to every device the receiving person turned notifications on for.
 // Anything without the right secret is refused with 403.
-// Deploy with:  supabase functions deploy send-push --no-verify-jwt
+// Deployed from /srv/fiiyou/supabase/volumes/functions/send-push/ with FUNCTIONS_VERIFY_JWT=false.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3.6.7';
 
 const env = (k: string) => (Deno.env.get(k) ?? '').trim();   // trim: a pasted trailing newline in a secret must not break auth
 const safeEqual = (a: string, b: string) => { const x = new TextEncoder().encode(a), y = new TextEncoder().encode(b); let d = x.length ^ y.length; for (let i = 0; i < Math.max(x.length, y.length); i++) d |= (x[i] ?? 0) ^ (y[i] ?? 0); return d === 0; };
 const admin = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'));
+
+// The function reaches the gateway over the internal network, but a phone must download the picture from the public host.
+const PUBLIC_URL = (env('SUPABASE_PUBLIC_URL') || env('SUPABASE_URL')).replace(/\/+$/, '');
+function publicUrl(u: string) {
+  try { const x = new URL(u), b = new URL(PUBLIC_URL); x.protocol = b.protocol; x.host = b.host; return x.toString(); }
+  catch { return u; }
+}
 
 // A bad or missing key must not stop the function from starting: it answers every call with a readable reason instead.
 let setupError = '';
@@ -39,7 +46,7 @@ const OWN_PROFILE = new Set(['wall_comment', 'photo_like']);
 /** A one-hour link to a private photo (the notification is shown within seconds, the phone downloads the picture then). undefined on any problem: the notification still goes out. */
 async function photoUrl(path?: string | null) {
   if (!path) return undefined;
-  try { const { data } = await admin.storage.from('media').createSignedUrl(path, 3600); return data?.signedUrl || undefined; } catch { return undefined; }
+  try { const { data } = await admin.storage.from('media').createSignedUrl(path, 3600); return data?.signedUrl ? publicUrl(data.signedUrl) : undefined; } catch { return undefined; }
 }
 
 /** Sends `payload` to every saved device of `userId`. Devices the push service says are gone (404 / 410) are forgotten. */

@@ -90,7 +90,7 @@ export async function deleteImage(path) {
 // cache header. Now the links are kept in localStorage and reused until they expire (24 h), so a picture is downloaded once per device per day instead of
 // once per visit. They are wiped on sign-out. A path that is already being signed is not asked for twice, a failed request is retried once quietly,
 // a failure is never cached, and a path that could not be signed comes back as null.
-const TTL = 86400, SAFETY = 900, STORE = 'fiiyou.signed.v1', MAX_KEPT = 600, cache = new Map(), flying = new Map();
+const TTL = 86400, SAFETY = 900, STORE = 'fiiyou.signed.v2', MAX_KEPT = 600, cache = new Map(), flying = new Map();
 try {   // load what an earlier visit already signed (links that are about to expire are left out)
   const saved = JSON.parse(localStorage.getItem(STORE) || '{}'); const now = Date.now();
   for (const [k, v] of Object.entries(saved)) if (v && typeof v.url === 'string' && v.exp > now) cache.set(k, v);
