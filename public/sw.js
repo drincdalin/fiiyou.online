@@ -9,7 +9,7 @@
         These copies are deleted when the person signs out (message 'fiiyou:clear-private').
       - everything else cross-origin (Supabase API, map tiles, YouTube...) is never touched or stored
    Bump VERSION to throw away every old cache. Lives in /public so it is served from the site root. */
-const VERSION = 'v3';
+const VERSION = 'v4';
 const SHELL = `fiiyou-shell-${VERSION}`;
 const ASSETS = `fiiyou-assets-${VERSION}`;
 const IMG = `fiiyou-img-${VERSION}`;      // private photos and fonts, by path
@@ -28,7 +28,7 @@ self.addEventListener('install', (e) => {
       await c.addAll([
         self.registration.scope,
         `${self.registration.scope}icon-192.png`,
-        `${self.registration.scope}badge.png`
+        `${self.registration.scope}badge-96.png`
       ]);
     } catch { /* ignore */ }
     await self.skipWaiting();
@@ -129,9 +129,9 @@ self.addEventListener('push', (event) => {
     const [icon, image] = await Promise.all([d.icon ? notificationPicture(d.icon, 150000) : undefined, d.image ? notificationPicture(d.image, 300000) : undefined]);
     await self.registration.showNotification(d.title || 'fiiyou', {
       body: d.body || '',
-      icon: icon || `${scope}badge.png`,       // profile/sender image fallback to badge.png
+      icon: icon || `${scope}icon-192.png`,   // profile/sender image fallback to the app mark
       image: image || https(d.image),         // post photo attachment
-      badge: `${scope}badge.png`,             // status bar / island notification icon
+      badge: `${scope}badge-96.png`,          // status bar / island notification icon (monochrome, 96px)
       tag: d.tag || undefined,                // same tag = replaces the older notification instead of stacking
       renotify: !!d.tag,
       data: { path: typeof d.path === 'string' ? d.path : '' },

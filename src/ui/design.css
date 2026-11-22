@@ -297,3 +297,13 @@ input[type=file]::file-selector-button { border-radius: var(--rad-s); }
 .post footer { display: flex; align-items: center; gap: 8px; }
 .post footer button.like, .post footer button.ghost { box-sizing: border-box; height: 44px; min-height: 0; padding: 0 16px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.9375rem; line-height: 1; }
 .post footer button.pshare { margin-left: auto; padding: 0 18px; }
+
+/* ---------- reduced motion: honour the OS setting everywhere, not only on the loader ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
