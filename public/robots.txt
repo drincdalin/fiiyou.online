@@ -1,0 +1,4 @@
+# fiiyou: everything except the landing page is behind a login, so there is nothing else to index.
+User-agent: *
+Allow: /
+Sitemap: https://YOUR-DOMAIN/sitemap.xml

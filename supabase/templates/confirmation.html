@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light"><title>Confirm your email</title></head>
+<body style="margin:0;padding:0;background:#f4f4f5;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:24px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border-radius:14px;padding:32px 28px;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#18181b;">
+        <tr><td style="font-size:22px;font-weight:800;letter-spacing:-0.02em;padding-bottom:18px;">fiiyou</td></tr>
+        <tr><td style="font-size:20px;font-weight:700;padding-bottom:10px;">Confirm your email</td></tr>
+        <tr><td style="font-size:16px;line-height:1.5;padding-bottom:22px;">Thanks for joining fiiyou. Press the button to confirm <b>{{ .Email }}</b> and finish creating your account. The link works for 24 hours.</td></tr>
+        <tr><td style="padding-bottom:22px;">
+          <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=signup" style="display:inline-block;background:#18181b;color:#ffffff;text-decoration:none;font-size:16px;font-weight:700;padding:13px 26px;border-radius:10px;">Confirm my email</a>
+        </td></tr>
+        <tr><td style="font-size:13px;line-height:1.5;color:#52525b;padding-bottom:6px;">Button not working? Copy this address into your browser:</td></tr>
+        <tr><td style="font-size:13px;line-height:1.5;word-break:break-all;padding-bottom:22px;"><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=signup" style="color:#2563eb;">{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=signup</a></td></tr>
+        <tr><td style="font-size:13px;line-height:1.5;color:#52525b;border-top:1px solid #e4e4e7;padding-top:16px;">You got this because someone signed up to fiiyou with this address. If that was not you, you can ignore this email and nothing will happen.</td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>

@@ -1,0 +1,212 @@
+/* ============================================================================================================================
+   Navigation + account panel. Loaded last in main.jsx; every rule is scoped to .nav / .menu / .menuscrim, so it wins over the older nav rules in
+   styles.css, design.css, ui-theme.css, more.css and polish.css without touching them. Theme tokens only (--g0..g4, --ink, --muted, --accent,
+   --on-accent, --red-fg, --hover, --shade), so a custom app theme re-colours all of it.
+
+   PHONE: a floating dock, 5 equal slots (Home, Map, Chat, People, Me; Admin/Mod joins for staff). ICONS ONLY: no text labels anywhere in the navigation
+   (every button keeps its aria-label + title, so screen readers and hover tooltips still name it). The page you are on gets an accent pill behind its icon. The last slot is YOU: your picture with the notification badge, and the panel
+   it opens (notifications first, your profile card directly under them, then Invite / Settings, then Sign out) sits right above that slot, dimmed
+   page behind it.
+   DESKTOP: a roomy top bar: wordmark left, a centred plate of icon tabs, your picture on the right with the same panel dropping down under it.
+   ============================================================================================================================ */
+
+/* Bottom safe-area inset, in ONE place. Every bottom-anchored thing (dock, toast, sheets, menus, music player) reads var(--sab) instead of env(safe-area-inset-bottom).
+   Why: some Android browsers / custom tabs report the system navigation bar as a safe-area inset even though the page is already laid out ABOVE that bar, so the
+   bar was counted twice and the floating dock hovered ~56px above the real bottom edge with page content showing under it. viewport.js adds html.droid on Android,
+   which sets the inset to 0 there. iOS keeps the real value (home indicator). */
+:root { --sab: env(safe-area-inset-bottom, 0px); }
+html.droid { --sab: 0px; }
+
+/* ---------- shared ---------- */
+/* icon-only navigation: should any old markup still render a text label, it is hidden */
+.nav .navlbl { display: none !important; }
+.nav .navlinks { display: flex; align-items: center; min-width: 0; }
+.nav .navlinks > button, .nav .more > .avbtn { position: relative; display: flex; align-items: center; justify-content: center; min-width: 0; margin: 0; color: var(--muted); background: none; border: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  transition: background .2s, color .2s, transform .15s var(--ease), box-shadow .2s, border-color .2s; }
+.nav .navlinks > button:active, .nav .more > .avbtn:active { transform: scale(.95); }
+.nav .navlinks > button:focus-visible, .nav .logo:focus-visible, .nav .more > .avbtn:focus-visible { outline: 2px solid var(--accent-fg, var(--accent)); outline-offset: 2px; }
+.nav .navlinks .navicw { position: relative; display: grid; place-items: center; flex: none; }
+/* ONE icon size for every slot. more.css used to scale chat x1.12, people x1.16 (x1.2 on hover) on top of a 1.4em glyph, which is why they overflowed
+   their pill. Now every glyph is the same box, no per-icon scaling; the optical difference is handled by the pill, not by the icon. */
+.nav .navlinks .navicw .navic { width: calc(var(--nav-ic, 24px) * var(--nav-ic-k, 1)); height: calc(var(--nav-ic, 24px) * var(--nav-ic-k, 1)); transform: none !important; transition: none; }
+.nav .navlinks > button:hover .navic, .nav .navlinks > button:active .navic { transform: none !important; }
+/* optical sizing: Phosphor glyphs do not fill their box equally (the chat bubble is a big circle, the people icon is wide but short, and the active
+   state is the heavier "fill" weight). Same box for every slot, but each glyph gets a small size nudge, via a variable (no transform, so nothing overflows). */
+.nav .navlinks > .nv-messages .navicw { --nav-ic-k: 1.12; }   /* measured: the bubble's ink is 208x208 of 256, the pin is 176x224 and the house 192x200. A circle looks smaller than a shape with corners at the same extent, so it is drawn 12% larger to read as the same size */
+.nav .navlinks > .nv-people .navicw   { --nav-ic-k: 1.12; }
+.nav .navlinks > .nv-map .navicw      { --nav-ic-k: 1; }
+.nav .navlinks > .nv-admin .navicw    { --nav-ic-k: .96; }
+.nav .navlinks .navicw .dotb { position: absolute; margin: 0; pointer-events: none; box-shadow: 0 0 0 2px var(--g1); }
+.nav .more > .avbtn .navicw { position: relative; display: block; flex: none; border-radius: 50%; }
+.nav .more > .avbtn .navicw .av { display: block; width: 100% !important; height: 100% !important; }
+.nav .more > .avbtn .avdot { position: absolute; top: -6px; right: -7px; z-index: 2; pointer-events: none; box-shadow: none; }
+
+/* ---------- the account panel: cards, not one big box ---------- */
+.nav .more .menu { display: flex; flex-direction: column; gap: 8px; box-sizing: border-box; padding: 0; background: none; border: 0; box-shadow: none; border-radius: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none;
+  animation: menu-in .18s var(--ease) both; outline: none; }
+.nav .more .menu::-webkit-scrollbar { display: none; }
+.nav .more .menu > .mcard { display: flex; flex-direction: column; flex: none; width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; margin: 0; padding: 0; overflow: hidden; text-align: left;
+  background: var(--g1); color: var(--ink); border: 1px solid var(--g3); border-radius: 20px; box-shadow: 0 12px 28px -20px color-mix(in srgb, var(--shade, #000) 95%, transparent); }
+.nav .more .menu > .mcard:focus-visible, .nav .more .menu .mact > button:focus-visible, .nav .more .menu .mnotif .nrow:focus-visible, .nav .more .menu .mnotif .nseeall:focus-visible { outline: 2px solid var(--accent-fg, var(--accent)); outline-offset: -2px; }
+@keyframes menu-in { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: none; } }
+
+/* notifications card */
+.nav .more .menu > .mnotif { padding: 0; }
+.nav .more .menu .mcardhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 16px 6px; }
+.nav .more .menu .mcardhead h2 { margin: 0; font-size: 0.75rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+.nav .more .menu .mnotif .nsec { display: block; min-width: 0; }
+.nav .more .menu .mnotif .nlist { display: flex; flex-direction: column; gap: 0; max-height: none; overflow: visible; margin: 0; padding: 0; list-style: none; }   /* no list inside a list: every line is shown whole, the panel itself scrolls on a short screen */
+.nav .more .menu .mnotif .nitem { position: relative; min-width: 0; width: 100%; }
+.nav .more .menu .mnotif .nlist { gap: 2px; padding: 0 0 4px; }
+.nav .more .menu .mnotif .nrow { display: flex; align-items: center; gap: 12px; width: calc(100% - 12px); min-width: 0; min-height: 58px; box-sizing: border-box; padding: 8px 10px; margin: 0 6px; border: 0; border-radius: 14px; background: none; color: var(--ink2); font-weight: 600; text-align: left; overflow: hidden; transition: background .15s, color .15s; }
+.nav .more .menu .mnotif .nrow:hover { background: var(--hover); color: var(--ink); }
+.nav .more .menu .mnotif .nrow.new { background: color-mix(in srgb, var(--accent) 9%, transparent); color: var(--ink); }
+.nav .more .menu .mnotif .nrow.new:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.nav .more .menu .mnotif .nrow.new::after { content: ""; flex: none; width: 8px; height: 8px; margin-left: 2px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }   /* a small warm dot says "new" without shouting */
+.nav .more .menu .mnotif .nav2 { flex: none; }
+.nav .more .menu .mnotif .nic { border-color: var(--g1); }
+.nav .more .menu .mnotif .ntxt { flex: 1 1 0; min-width: 0; gap: 3px; font-size: 0.9375rem; line-height: 1.28; overflow: hidden; }
+.nav .more .menu .mnotif .ntxt > span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; word-break: normal; }
+.nav .more .menu .mnotif .ntxt b { font-weight: 800; color: var(--ink); }
+.nav .more .menu .mnotif .ntxt small { font-size: 0.75rem; color: var(--muted); }
+.nav .more .menu .mnotif .nempty { margin: 0; padding: 10px 20px 22px; text-align: center; font-size: 0.875rem; line-height: 1.45; text-wrap: balance; }
+.nav .more .menu .mnotif .nseeall { display: flex; align-items: center; justify-content: center; gap: 6px; width: calc(100% - 12px); min-height: 42px; box-sizing: border-box; margin: 2px 6px 6px; padding: 9px 16px; border: 0; border-radius: 12px; background: none; color: var(--accent-fg, var(--accent)); font-size: 0.875rem; font-weight: 800; filter: none; cursor: pointer; transition: background .15s; }
+.nav .more .menu .mnotif .nseeall:hover { background: var(--hover); filter: none; }
+.nav .more .menu .mnotif .nseeall svg { transition: transform .18s var(--ease); }
+.nav .more .menu .mnotif .nseeall:hover svg { transform: translateX(3px); }
+
+/* profile card, directly under the notifications */
+.nav .more .menu > .mprof { flex-direction: row; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; font: inherit; transition: background .15s, border-color .15s; }
+.nav .more .menu > .mprof:hover { background: var(--hover); border-color: var(--g4); }
+.nav .more .menu > .mprof .mprofn { display: grid; flex: 1 1 0; min-width: 0; gap: 2px; line-height: 1.25; }
+.nav .more .menu > .mprof .mprofn b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1rem; font-weight: 800; }
+.nav .more .menu > .mprof .mprofn small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 0.875rem; }
+.nav .more .menu > .mprof > svg { flex: none; color: var(--muted); }
+
+/* actions + sign out */
+.nav .more .menu .mact > button, .nav .more .menu > .mout { flex-direction: row; display: flex; align-items: center; justify-content: flex-start; gap: 14px; width: 100%; min-height: 52px; box-sizing: border-box; margin: 0; padding: 13px 16px; border: 0; border-radius: 0; background: none; color: var(--ink2); font: inherit; font-size: 1rem; font-weight: 700; white-space: nowrap; text-align: left; cursor: pointer; transition: background .15s, color .15s; }
+.nav .more .menu .mact > button + button { border-top: 1px solid color-mix(in srgb, var(--g3) 70%, transparent); }
+.nav .more .menu .mact > button:hover, .nav .more .menu > .mout:hover { background: var(--hover); color: var(--ink); }
+.nav .more .menu .mact > button svg { flex: none; color: var(--muted); }
+.nav .more .menu > .mout { background: var(--g1); border: 1px solid var(--g3); border-radius: 20px; }   /* the shared row rule above clears these: sign out is a card of its own */
+.nav .more .menu > .mout, .nav .more .menu > .mout svg { color: var(--red-fg, #ff6b72); }
+.nav .more .menu > .mout:hover { background: color-mix(in srgb, var(--red, #ff6b6b) 14%, var(--g1)); color: var(--red-fg, #ff6b72); }
+
+/* the dimmed page behind the panel (closes it on tap) */
+.menuscrim { position: fixed; inset: 0; z-index: 39; background: color-mix(in srgb, var(--shade, #000) 62%, transparent); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); animation: scrim-in .18s ease both; touch-action: none; -webkit-tap-highlight-color: transparent; }
+@keyframes scrim-in { from { opacity: 0; } }
+
+/* ---------- desktop / tablet: top bar ---------- */
+@media (min-width: 701px) {
+  :root { --nav-h: 64px; }
+  .nav { height: var(--nav-h); display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; padding: 0 24px;
+    background: color-mix(in srgb, var(--g0) 80%, transparent); -webkit-backdrop-filter: blur(18px) saturate(1.5); backdrop-filter: blur(18px) saturate(1.5); border-bottom: 1px solid var(--g3); }
+  .nav > .logo { justify-self: start; padding: .3rem .2rem; font-size: 1.5rem; font-weight: 850; letter-spacing: -.035em; border-radius: var(--rad-s, 10px); }
+  .nav .navlinks { gap: 4px; padding: 4px; background: var(--g1); border: 1px solid var(--g3); border-radius: 18px; }
+  .nav .navlinks > button { width: 52px; height: 40px; padding: 0; border-radius: 13px; font-size: 1rem; }
+  .nav .navlinks > button:hover { background: var(--g2); color: var(--ink); }
+  .nav .navlinks > button.on, .nav .navlinks > button.on:hover { background: var(--accent); color: var(--on-accent); box-shadow: var(--lift); }
+  .nav .navlinks > button.on:hover { filter: brightness(1.08); }
+  .nav .navlinks .navicw { width: 26px; height: 26px; --nav-ic: 22px; }
+  .nav .navlinks .navicw .dotb { top: -7px; right: -10px; }
+  .nav .navlinks > button.on .navicw .dotb { box-shadow: 0 0 0 2px var(--accent); }
+
+  .nav .more { position: relative; justify-self: end; display: flex; }
+  .nav .more > .avbtn { width: 44px; height: 44px; box-sizing: border-box; padding: 3px; border: 2px solid var(--g3); border-radius: 50%; overflow: visible; }
+  .nav .more > .avbtn .navicw { width: 100%; height: 100%; }
+  .nav .more > .avbtn:hover, .nav .more > .avbtn.on { border-color: var(--accent-fg, var(--accent)); background: none; transform: none; }
+  .nav .more .menu { position: absolute; top: calc(100% + 16px); right: 0; bottom: auto; left: auto; width: min(368px, calc(100vw - 24px)); max-width: calc(100vw - 24px); max-height: calc(100dvh - var(--nav-h) - 32px); transform-origin: top right; }
+  .menuscrim { background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }   /* on a big screen it only catches the outside click */
+
+  /* The panel used to be three loose cards with see-through gaps, so the profile page showed between them and fought the text. Now it is ONE calm
+     surface (frosted, with a small pointer to your picture) and the notifications + your profile sit on it as two soft islands; Invite / Settings /
+     Sign out are plain rows straight on the surface, not three more boxes. */
+  .nav .more .menu { gap: 6px; padding: 8px; border-radius: 26px; background: color-mix(in srgb, var(--g0) 93%, transparent); border: 1px solid var(--g3);
+    -webkit-backdrop-filter: blur(26px) saturate(1.5); backdrop-filter: blur(26px) saturate(1.5);
+    box-shadow: 0 30px 64px -26px color-mix(in srgb, var(--shade, #000) 100%, transparent), 0 0 0 1px color-mix(in srgb, var(--accent) 7%, transparent), inset 0 1px 0 color-mix(in srgb, var(--ink) 6%, transparent); }
+  .nav .more:has(> .menu)::after { content: ""; position: absolute; z-index: 1; top: calc(100% + 9px); right: 15px; width: 14px; height: 14px; box-sizing: border-box; transform: rotate(45deg); border-radius: 4px 0 0 0;
+    background: color-mix(in srgb, var(--g0) 93%, transparent); border-left: 1px solid var(--g3); border-top: 1px solid var(--g3); pointer-events: none; animation: menu-in .18s var(--ease) both; }
+  .nav .more .menu > .mcard { border-radius: 19px; border-color: color-mix(in srgb, var(--g3) 55%, transparent); box-shadow: none; }
+  .nav .more .menu > .mnotif { background: var(--g1); }
+  .nav .more .menu .mcardhead { padding: 14px 18px 6px; }
+  .nav .more .menu .mcardhead h2 { font-size: 0.75rem; letter-spacing: .1em; }
+  .nav .more .menu .mnotif .nlist { max-height: min(340px, 42dvh); overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--g3) transparent; }
+  .nav .more .menu > .mprof { padding: 10px 14px; border-radius: 19px; }
+  .nav .more .menu > .mprof:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--g3)); }
+  .nav .more .menu > .mact, .nav .more .menu > .mout { background: none; border: 0; border-radius: 0; box-shadow: none; overflow: visible; margin: 0; padding: 0 0 0; }
+  .nav .more .menu > .mact { gap: 2px; margin-top: 2px; }
+  .nav .more .menu .mact > button, .nav .more .menu > .mout { width: 100%; min-height: 44px; padding: 10px 14px; gap: 14px; border-radius: 14px; font-size: 0.9375rem; }
+  .nav .more .menu .mact > button + button { border-top: 0; }
+  .nav .more .menu > .mout { background: none; border: 0; border-radius: 14px; margin-bottom: 2px; }
+  .nav .more .menu > .mout:hover { background: color-mix(in srgb, var(--red, #ff6b6b) 12%, transparent); }
+}
+
+/* ---------- phone: the dock ---------- */
+@media (max-width: 700px) {
+  :root { --nav-h: calc(68px + var(--sab, 0px)); }   /* the dock + the gap around it: pages, the map, the chat and the music dock all reserve this much */
+  html.kb { --nav-h: 0px; }
+  .nav { position: fixed; top: auto; left: 10px; right: 10px; bottom: calc(10px + var(--sab, 0px)); height: 58px; z-index: 40; display: flex; align-items: stretch; gap: 0; padding: 0 6px; box-sizing: border-box;
+    border: 1px solid color-mix(in srgb, var(--g3) 85%, transparent); border-radius: 26px; background: color-mix(in srgb, var(--g1) 93%, transparent); -webkit-backdrop-filter: blur(22px) saturate(1.6); backdrop-filter: blur(22px) saturate(1.6);
+    box-shadow: 0 16px 34px -16px color-mix(in srgb, var(--shade, #000) 100%, transparent), inset 0 1px 0 color-mix(in srgb, var(--ink) 7%, transparent); }
+  .nav > .logo { display: none; }
+  .nav .navlinks { flex: 4 1 0; min-width: 0; align-self: stretch; gap: 0; padding: 0; background: none; border: 0; border-radius: 0; }
+  .nav .navlinks > .nv-profile { display: none; }   /* the last slot is you: your picture opens your profile, notifications and settings */
+  .nav .navlinks > button, .nav .more > .avbtn { flex: 1 1 0; justify-content: center; height: 100%; padding: 0; border-radius: 20px; font-size: 0.9375rem; }
+  .nav .navlinks > button.on, .nav .navlinks > button.on:hover { background: none; box-shadow: none; color: var(--ink); }
+  /* icon box 30px (the glyph itself is about 80% of that, ~24px) inside a 60 x 40 pill: clearly readable, still with air around it inside the highlight */
+  .nav .navlinks .navicw { --nav-ic: 30px; width: 60px; max-width: calc(100% - 2px); height: 40px; border-radius: 20px; transition: background .22s var(--ease), color .22s, transform .2s var(--ease), box-shadow .22s; }
+  .nav .navlinks > button.on .navicw { background: var(--accent); color: var(--on-accent); box-shadow: none; }   /* solid pill, no ring, no glow */
+  .nav .navlinks > button:not(.on):hover .navicw { background: var(--g2); color: var(--ink); }
+  .nav .navlinks .navicw .dotb { top: -5px; right: -2px; left: auto; }
+  .nav .navlinks > button:active .navicw, .nav .more > .avbtn:active .navicw { transform: scale(.9); }
+
+  .nav .more { position: static; flex: 1 1 0; align-self: stretch; display: flex; min-width: 0; margin: 0; }   /* static: the panel lines up with the whole dock, not with one slot */
+  .nav .more > .avbtn { width: auto; border: 0; box-sizing: border-box; overflow: visible; }
+  .nav .more > .avbtn .navicw { width: 36px; height: 36px; box-shadow: 0 0 0 2px var(--g3); transition: box-shadow .2s, transform .2s var(--ease); }
+  .nav .more > .avbtn.on { color: var(--ink); background: none; }
+  .nav .more > .avbtn.on .navicw { box-shadow: 0 0 0 2px var(--accent); }
+  .nav .more > .avbtn .avdot { top: -6px; right: -9px; }
+
+  /* the panel: as wide as the dock, standing on top of it */
+  .nav .more .menu { position: absolute; top: auto; left: 0; right: 0; bottom: calc(100% + 10px); width: auto; min-width: 0; max-width: none; max-height: calc(100dvh - var(--nav-h) - 24px - env(safe-area-inset-top, 0px)); transform-origin: bottom center; }
+  .nav .more .menu .mnotif .nrow { min-height: 60px; }
+
+  /* things that float above the bottom of the screen sit just over the dock (the old rule added the bottom inset twice) */
+  .toast { bottom: calc(var(--nav-h) + 8px); }
+  /* things that stick to the TOP of the screen must not use the dock's height (it is at the bottom on a phone) */
+  .netbar { top: calc(8px + env(safe-area-inset-top, 0px)); }
+  .draftbar { top: calc(8px + env(safe-area-inset-top, 0px)); }
+}
+
+/* short screens: the panel shows 3 notification lines instead of 4, so the cards below it stay on screen */
+@media (max-width: 700px) and (max-height: 700px) { .nav .more .menu .mnotif .nitem:nth-child(n+4) { display: none; } }
+
+/* the idle music disc, parked inside the dock (MusicDock portals it here; with no music this stays empty and takes no room) */
+.nav .navmusic { --mp-acc: var(--accent); --mp-acc-fg: var(--accent-fg, var(--accent)); display: none; flex: none; position: relative; }
+.nav .navmusic:not(:empty) { display: grid; place-items: center; align-self: center; width: 44px; height: 44px; margin: 0 8px 0 4px; animation: mp-fade .35s both; }
+.nav .navmusic:not(:empty)::after { content: ""; position: absolute; right: -7px; top: 6px; bottom: 6px; width: 1px; background: var(--g3); }   /* a thin line between the disc and the slots next to it */
+.nav .navmusic .mp-dock-disc[data-alert] .mp-orb-ring .fg, .nav .navmusic .mp-dock-disc[data-alert] .mp-orb-ring .bg { stroke: var(--red-fg, #ff6b72); }
+.nav .navmusic .mp-dock-disc { position: relative; inset: auto; width: 42px; height: 42px; opacity: 1; pointer-events: auto; transition: none; }
+.nav .navmusic .mp-disc { inset: 5px; }
+@media (min-width: 701px) { .nav .navmusic { display: none !important; } }
+
+/* very small phones */
+@media (max-width: 380px) {
+  .nav { left: 6px; right: 6px; padding: 0 4px; }
+  .nav .navlinks .navicw { width: 52px; --nav-ic: 28px; }
+  .nav .navmusic:not(:empty) { width: 40px; height: 40px; margin: 0 6px 0 2px; }
+  .nav .navmusic .mp-dock-disc { width: 38px; height: 38px; }
+}
+
+/* landscape phones: a slimmer dock (the page you are on still gets its pill) */
+@media (max-width: 900px) and (max-height: 480px) and (orientation: landscape) {
+  :root { --nav-h: calc(62px + var(--sab, 0px)); }
+  .nav { height: 52px; border-radius: 22px; }
+  .nav .navlinks .navicw { height: 34px; --nav-ic: 25px; }
+  .nav .more .menu { max-height: calc(100dvh - var(--nav-h) - 16px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav .navlinks > button, .nav .navlinks .navicw, .nav .more > .avbtn, .nav .more > .avbtn .navicw { transition: none; }
+  .nav .more .menu, .menuscrim { animation: none; }
+}

@@ -1,0 +1,86 @@
+# Releasing fiiyou (Vercel + Supabase)
+
+The site is a static Vite build hosted on **Vercel**; data, auth and files live in **Supabase**. Setup below is one-time. After that every `git push` to `main` is built and deployed by Vercel, and GitHub Actions (`.github/workflows/ci.yml`) checks that the app builds and the database tests pass.
+
+## 0. Before anything else
+- `public/privacy.html` and `public/terms.html` use **contact@fiiyou.online** as the contact address. Make sure that mailbox exists (or forwards to your real inbox) before launch. A legal contact address that bounces is worse than none.
+- Add the region your Supabase project runs in to the "Where data is processed" paragraph of `privacy.html` if you want to be specific.
+- Have someone you trust read both pages, and update them whenever you change how data is handled.
+- Fonts (Ubuntu Sans, woff2) and their licence are already in `public/fonts/`.
+
+## 1. Supabase (production settings)
+1. SQL Editor: migrations `0001` to `0043` and `seed.sql` must all have been run, in order, once each. **`0040_outbox_admin.sql` was called `0036_outbox_admin.sql` until now** (two files shared the number 0036, which the Supabase CLI cannot record twice); its SQL is unchanged, so if you already ran it under the old name, do NOT run it again. The file `0036_moderation_emails.sql` keeps its name. Files `0015`–`0022` were renumbered in git so every file has its own version number; **their SQL is unchanged**. If you already ran them under their old names, the only new file to run is **`0023_media_read_scope.sql`**. Add `lat`/`lng` to your localities (the map skips localities without coordinates; verify the names in the seed while you are there).
+2. Authentication → URL Configuration: **Site URL** = `https://app.fiiyou.online`. **Redirect URLs**: add `https://app.fiiyou.online` and `https://app.fiiyou.online/**` (keep `http://localhost:5173` and `http://localhost:5173/**` for local work). Password-reset and confirmation links depend on this.
+   Also check Authentication → Sign In / Providers → Email: **Confirm email must be ON**. From migration `0043` a profile (and its place in Discover and Search) is only created when the confirmation link is opened, so with it off every sign-up would be confirmed instantly.
+3. Authentication → Email: turn **Confirm email** on. Set up your **own SMTP provider** before inviting people: Supabase's built-in sender is for testing and is heavily limited.
+4. Authentication → Attack protection / password settings: use the strongest options your plan offers. CAPTCHA (Turnstile) is optional and the forms do send its token, but it only works when BOTH `VITE_TURNSTILE_SITE_KEY` (Vercel) and Supabase's CAPTCHA setting are on. If only the Supabase side is on, every sign-up fails. Turn both on together or neither.
+5. Advisors → run **Security Advisor** and **Performance Advisor** and read what they say.
+6. **Make yourself the administrator** (run once; keep your email out of the repository):
+   `insert into public.admin_emails (email) values ('your-admin@email.com');`
+   Admin access requires signing in with that exact, **confirmed** email. An "Admin" tab then appears in the app. Use a strong unique password and two-factor authentication if your plan offers it. Verified badges are given from Admin → Users → Verify.
+7. Know your plan's limits (storage, database size, backups, pausing of inactive projects) and export your data now and then.
+
+## 2. Vercel
+1. Vercel → Add New → Project → import this GitHub repository. Framework preset **Vite**, build command `npm run build`, output directory `dist` (these are the defaults).
+2. Settings → Environment Variables (Production, and Preview if you use previews):
+   - `VITE_SUPABASE_URL` = Project URL
+   - `VITE_SUPABASE_ANON_KEY` = publishable / anon key (public by design; Row Level Security protects the data). **Never** add a `service_role` or secret key here or anywhere in this repository.
+   - `SITE_URL` = `https://app.fiiyou.online` (https, no trailing slash). It builds `sitemap.xml`, `robots.txt` and the `og:image` tags. **The production build fails without it**, on purpose, so the `YOUR-DOMAIN` placeholder never goes live.
+   - `VITE_VAPID_PUBLIC_KEY` = the public VAPID key (only if you set up push, see [PUSH_SETUP.md](PUSH_SETUP.md)).
+3. Settings → Domains: add `app.fiiyou.online` (the landing page on `fiiyou.online` is a separate project), then create the DNS records Vercel shows at your registrar. HTTPS is automatic.
+4. **Turn GitHub Pages off** (repo Settings → Pages → unpublish), so the old site cannot answer for the domain or cause confusion. The old Pages workflow and `CNAME` files were removed from the repo.
+5. Redeploy once after setting the variables (Deployments → ⋯ → Redeploy). Security headers (`frame-ancestors`, HSTS, `nosniff`, referrer and permissions policies) come from `vercel.json`.
+
+## 3. Search engines
+- `robots.txt` and `sitemap.xml` are generated at build time from `SITE_URL`. Only the landing page, privacy and terms are public (everything else needs a login), so those three URLs are all there is to index.
+- Add the site in Google Search Console and submit `https://app.fiiyou.online/sitemap.xml`.
+- Share the link in a chat app to check the preview card (`public/og-image.png`).
+
+## 4. Final checklist (do it on your phone too)
+- [ ] Sign up with a fresh email, confirm it, sign in.
+- [ ] "Forgot your password?" email arrives, the link opens the app on the new-password form, and saving works.
+- [ ] Customize → Save, upload an avatar, add a photo, add a place from search, post, comment, like.
+- [ ] Two accounts: friend request, accept, chat, report a post, block. After blocking, the blocked account can no longer load your photos.
+- [ ] A **friends-only** post with an image: a friend sees the image, a non-friend account does not.
+- [ ] Open `https://app.fiiyou.online/<some-username>` and `/post/<id>` directly (deep links) and refresh: no 404.
+- [ ] Install: Settings → Install the app (Chrome, Edge, Brave, Opera on desktop or Android), or Share → Add to Home Screen on iPhone. It opens in its own window.
+- [ ] Push (if enabled): turn it on, like something from the second account while the first app is in the background, tap the notification: it opens the right post/profile, also when the app was already open.
+- [ ] Export all my data, Export my theme, Import a theme.
+- [ ] Delete a test account (account menu) and confirm its files disappear from Storage after a while.
+- [ ] Open the site with the browser console open: no red errors, no blocked requests.
+- [ ] `https://app.fiiyou.online/sitemap.xml` shows your real domain, not `YOUR-DOMAIN`.
+
+## 5. Moderation (Admin tab)
+- **Reports:** every Report button sends an item to Admin → Reports with a preview. You can open the profile, delete the content (a post's image file is deleted too), delete the account (all of its files are removed first), mark it reviewed or dismiss it.
+- **Users:** search members, Verify / Unverify, delete an account.
+- **Storage:** "Scan for orphans" finds files in storage that nothing references any more and removes them. Deleting rows with SQL never frees storage; this does.
+- **Log:** every admin action is recorded.
+- Deleting accounts from the Supabase dashboard still works but leaves their files behind; use the Admin tab, or run the storage scan afterwards.
+
+## Updating the localities list (without losing anybody's place)
+People, posts, places and events point at a locality by its **id**, and those links are set to empty if a locality row is deleted. So never delete-and-reimport the table (and don't use the Table Editor's CSV import to replace it).
+1. Edit `supabase/data/localities.csv` (rows that already exist keep their `id`; new villages leave `id` empty).
+2. `node scripts/localities-csv-to-sql.mjs supabase/data/localities.csv > supabase/data/localities_refresh.sql`
+3. Paste `localities_refresh.sql` into the Supabase SQL editor and Run. It updates by `slug`, inserts the new ones, never deletes, never blanks a value, and rolls back by itself if the CSV is out of date or anybody would lose their locality. It is safe to run twice.
+4. Rows the data source could not match (blank `commune`/`county` in the CSV) keep their old coordinates: check those by eye.
+
+## Updating later
+Change code, `git push`, wait for the green CI check and the Vercel deploy. Database changes: add a new numbered migration file (next free number, one file per number), add it to `supabase/tests/run.sh`, run it once in the SQL Editor.
+
+
+## 0029 notes (search, scheduled posts, several photos, pinned messages)
+- Run `0029_search_schedule_pins_images.sql` in the SQL editor **before** deploying this version of the site. Single-photo posts keep working without it, everything new needs it.
+- **Scheduled posts** are published by the app (when it opens and every 5 minutes) and, if the `pg_cron` extension is available in your project, by a job the migration creates itself. Without pg_cron a post scheduled for 03:00 appears the next time anybody opens the app after 03:00. Enable it in Dashboard → Database → Extensions → `pg_cron`, then run the migration again.
+- **"typing…"** uses a private Realtime channel. The migration adds the two policies it needs on `realtime.messages`. If your project does not show the indicator, check Dashboard → Realtime → Settings (private channels) and that the policies `typing_receive` / `typing_send` exist. Nothing else depends on it.
+- **"Seen" in chat** is always on: the person who sent a message sees when it was read. Mention this in `privacy.html`.
+- After a deploy, bump `VERSION` in `public/sw.js` only if you want to throw away every cached copy; normal deploys do not need it (pages are loaded network-first, assets have content hashes).
+
+
+## Notes for this release
+- **Photos of posts with several images**: older versions of the app's cleanup ran `sweepOrphans` with a list that did not include a post's extra photos or the photos of scheduled posts, so after two hours those files were deleted from storage. That is fixed (the list now matches `admin_referenced_paths()`). Files already deleted cannot come back; such posts now show "Photo unavailable" instead of a spinner that never ends. Authors can delete and repost them.
+- **Install button** (Settings → Account): uses the browser's own install prompt where it exists (Chrome, Edge, Brave, Opera, Vivaldi, Samsung Internet). On iPhone and iPad it explains Share → Add to Home Screen. Installing needs HTTPS (or localhost), the manifest and the service worker, which are all in place.
+- **Push**: the "Send test" button and the `test` branch of `send-push` are gone. Redeploy the function once: `supabase functions deploy send-push --no-verify-jwt`.
+- **Run `0032_hardening.sql`, `0033_rls_lockdown.sql` and `0034_message_likes.sql`** (double-tap a chat message to like it; the app works without 0034, messages just cannot be liked), then `supabase/audit_rls.sql` (it must say `summary | OK`). See docs/SECURITY.md for everything that protects the site and what to switch on in the Vercel and Supabase dashboards (firewall rate-limit rule, Turnstile, SMTP).
+- **Push**: `supabase/push_webhooks.sql` creates both database webhooks at once; the function now has the `DIAG` and `TEST` owner checks (docs/PUSH_SETUP.md). Redeploy it: `supabase functions deploy send-push --no-verify-jwt`.
+- **New files at the project root**: `middleware.js` (request limit; needs `npm install`, it adds `@vercel/functions`). New static page: `/accessibility.html`.
+- **Caching**: the service worker now keeps downloaded private photos on the device by file path and opens the saved page after 3 s on a slow network; `index.html` ships a pre-rendered loading shell so the first paint needs no JavaScript.

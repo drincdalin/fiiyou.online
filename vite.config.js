@@ -1,0 +1,50 @@
+import { defineConfig, loadEnv } from 'vite';
+import react from '@vitejs/plugin-react';
+
+// base: '/' on Vercel / a custom domain (leave VITE_BASE unset). Only set VITE_BASE=/<repo>/ for a sub-path deploy.
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  let sb = 'https://*.supabase.co', ws = 'wss://*.supabase.co';
+  try { const u = new URL(env.VITE_SUPABASE_URL); sb = u.origin; ws = `wss://${u.host}`; } catch { /* keep wildcard */ }
+  const site = (env.SITE_URL || '').replace(/\/+$/, '');
+  // Production-only Content-Security-Policy, shipped as a <meta> tag.
+  // Scripts only from this site; no inline scripts; no plugins; network only to Supabase, OSM search, GitHub's public API (official account's profile only), YouTube (nocookie) embeds.
+  // Turnstile (optional CAPTCHA, only when VITE_TURNSTILE_SITE_KEY is set at build time) needs its script, frame and connection allowed, and nothing else changes.
+  const ts = env.VITE_TURNSTILE_SITE_KEY ? ' https://challenges.cloudflare.com' : '';
+  // YouTube music player: the IFrame API script (www.youtube.com, s.ytimg.com), cover art (i.ytimg.com) and the nocookie player frame. Nothing is requested until a visitor presses play (see src/lib/musicConfig.js).
+  const yt = ' https://www.youtube.com https://s.ytimg.com';
+  const csp = ["default-src 'self'", `script-src 'self'${yt}${ts}`, "style-src 'self' 'unsafe-inline'", `img-src 'self' data: blob: ${sb} https://tile.openstreetmap.org https://avatars.githubusercontent.com https://i.ytimg.com`,
+    "media-src 'self' blob: https:", "font-src 'self'", `connect-src 'self' ${sb} ${ws} https://nominatim.openstreetmap.org https://api.github.com${ts}`, `frame-src https://www.youtube-nocookie.com${ts}`,
+    "object-src 'none'", "base-uri 'self'", "form-action 'self'"].join('; ');
+  // No canonical / og:url here: index.html is served for every path (/map, /<username>, ...), so a fixed "/" would mark every page as a copy of the home page.
+  const seo = site ? `<meta property="og:image" content="${site}/og-image.png"><meta name="twitter:image" content="${site}/og-image.png">` : '';
+  const base = env.VITE_BASE || '/';
+  // The manifest, theme-color and icons (favicon, apple-touch-icon) are declared in index.html, so they are NOT injected again here.
+  // Only the "installed app" meta tags live here.
+  const appTags = [
+    { tag: 'meta', attrs: { name: 'mobile-web-app-capable', content: 'yes' }, injectTo: 'head' },
+    { tag: 'meta', attrs: { name: 'apple-mobile-web-app-capable', content: 'yes' }, injectTo: 'head' },
+    { tag: 'meta', attrs: { name: 'apple-mobile-web-app-title', content: 'fiiyou' }, injectTo: 'head' },
+  ];
+  return {
+    base,
+    plugins: [react(), {
+      name: 'fiiyou-html',
+      transformIndexHtml(html, ctx) {
+        const prod = !ctx.server;
+        return { html: html.replace('<!--CSP-->', prod ? `<meta http-equiv="Content-Security-Policy" content="${csp}">` : '').replace('<!--SEO-->', seo), tags: appTags };
+      },
+    }],
+    build: {
+      sourcemap: false, chunkSizeWarningLimit: 700,
+      // Vendor code changes far less often than the app, so it gets its own files: a new deploy only re-downloads the app chunk, and the browser fetches them in parallel.
+      // (Leaflet is NOT listed here on purpose: it stays inside the lazy map chunk, so it is only downloaded when someone opens the map.)
+      rollupOptions: { output: { manualChunks(id) {
+        if (!id.includes('node_modules')) return undefined;
+        if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'vendor-react';
+        if (id.includes('node_modules/@supabase/')) return 'vendor-supabase';
+        return undefined;
+      } } },
+    },
+  };
+});

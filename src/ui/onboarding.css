@@ -1,0 +1,123 @@
+/* onboarding: tap-first steps, live theme preview, brisk transitions. Colours all come from the theme variables, so a picked look repaints this card too. */
+/* The card is a fixed-height shell that always fits the screen: header on top, the step scrolls in the middle, the buttons stay pinned
+   at the bottom. Before, a tall step (themes) pushed Next below the fold on every phone and laptop. */
+.authwrap.obwrap { min-height: 100vh; min-height: 100dvh; box-sizing: border-box; align-items: center; padding: max(12px, env(safe-area-inset-top)) 12px max(12px, var(--sab, 0px)); }
+.obcard { display: flex; flex-direction: column; gap: 0; width: 100%; max-width: 460px; box-sizing: border-box; padding: 22px 20px 16px; max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow: hidden; }
+.obhead { flex: none; display: grid; gap: 12px; padding-bottom: 14px; }
+.obhead .authhead { display: grid; gap: 2px; }
+.obhead .brand { margin: 0; font-size: 1.6rem; line-height: 1.1; }
+.obhead .authlead { margin: 0; }
+.obcard h2 { margin: 0; font-size: var(--fs-2xl); letter-spacing: -.02em; outline: none; }
+.obfoot { flex: none; display: grid; gap: 10px; padding-top: 12px; }
+.obfoot .err { margin: 0; }
+@media (max-height: 700px) { .obhead .authlead { display: none; } .obhead { gap: 10px; padding-bottom: 10px; } .obcard { padding-top: 16px; } }
+.obprog { display: flex; align-items: center; gap: 12px; }
+.obdots { flex: 1; display: flex; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.obdots li { position: relative; flex: 1; height: 4px; border-radius: 99px; background: var(--g3); overflow: hidden; }
+.obdots li::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--accent); transform: scaleX(0); transform-origin: left; transition: transform var(--dur-3) var(--ease-out); }
+.obdots li.done::after, .obdots li.on::after { transform: scaleX(1); }
+.obdots li.done::after { background: var(--g4); }
+.obstepno { font-size: var(--fs-xs); color: var(--muted); font-variant-numeric: tabular-nums; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.obhint { margin: 0; font-size: var(--fs-sm); }
+.obnote { margin: 0; padding: .55rem .8rem; border: 1px solid var(--accent); border-radius: 14px; font-weight: 650; }
+
+/* step body: slides in from the side it came from */
+.obstep { flex: 1 1 auto; min-height: 0; display: grid; align-content: start; gap: 16px; overflow-y: auto; overscroll-behavior: contain; padding: 3px 3px 6px; margin: -3px -3px 0; scrollbar-width: thin; animation: obin var(--dur-3) var(--ease-out) backwards; }
+.obstep[data-dir="-1"] { animation-name: obin-back; }
+@keyframes obin { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+@keyframes obin-back { from { opacity: 0; transform: translateX(-14px); } to { opacity: 1; transform: none; } }
+
+/* chips */
+.obchips { display: flex; flex-wrap: wrap; gap: 8px; }
+.obchip { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--g4); background: var(--g1); color: var(--ink); font-size: var(--fs-md); font-weight: 600; line-height: 1;
+  transition: background-color var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out), transform var(--dur-1) var(--ease-out); }
+.obchip svg { flex: none; }
+.obchip:hover { border-color: var(--accent-fg); }
+.obchip:active { transform: scale(.96); }
+.obchip.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+@media (hover: none) { .obchip:hover:not(.on) { border-color: var(--g4); } }
+.obmore { justify-self: start; }
+
+/* theme cards: a compact 4 x 2 swatch grid, so all eight looks are visible at once without scrolling */
+.obvibes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.obvibe { position: relative; display: grid; gap: 5px; cursor: pointer; min-width: 0; }
+.obvibe input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; z-index: 1; }
+.obpv { display: grid; grid-template-rows: 9px 1fr; gap: 4px; aspect-ratio: 1 / .92; padding: 4px; border-radius: 12px; border: 2px solid var(--g3); overflow: hidden; box-sizing: border-box; transition: border-color var(--dur-1) var(--ease-out), transform var(--dur-1) var(--ease-out); }
+.obpv-bar { display: flex; align-items: center; gap: 3px; padding: 0 3px; border: 1px solid; border-radius: 4px; }
+.obpv-bar i { display: block; width: 8px; height: 3px; border-radius: 2px; flex: none; }
+.obpv-card { position: relative; display: grid; align-content: center; gap: 3px; padding: 4px 5px; border: 1px solid; min-width: 0; }
+.obpv-card i { display: block; height: 3px; border-radius: 2px; }
+.obpv-card b { position: absolute; right: 4px; bottom: 4px; width: 14px; height: 5px; border-radius: 99px; }
+.obvname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; font-size: var(--fs-xs); font-weight: 600; color: var(--muted); transition: color var(--dur-1) var(--ease-out); }
+.obvchk { position: absolute; top: 7px; right: 7px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); color: var(--on-accent); opacity: 0; transform: scale(.6); transition: opacity var(--dur-1) var(--ease-out), transform var(--dur-1) var(--ease-out); z-index: 0; }
+.obvchk svg { flex: none; }
+.obvibe:hover .obpv { border-color: var(--g4); }
+.obvibe:active .obpv { transform: scale(.96); }
+.obvibe input:checked ~ .obpv { border-color: var(--accent-fg); }
+.obvibe input:checked ~ .obvname { color: var(--ink); font-weight: 750; }
+.obvibe input:checked ~ .obvchk { opacity: 1; transform: none; }
+.obvibe input:focus-visible ~ .obpv { outline: 2px solid var(--accent-fg); outline-offset: 2px; }
+.obpicked { color: var(--ink); }
+@media (hover: none) { .obvibe:hover .obpv { border-color: var(--g3); } .obvibe input:checked ~ .obpv { border-color: var(--accent-fg); } }
+
+/* photo */
+.obavatar { display: grid; gap: 14px; justify-items: center; text-align: center; padding: 8px 0; }
+.obpick { position: relative; display: grid; place-items: center; border-radius: 50%; cursor: pointer; transition: transform var(--dur-1) var(--ease-out); }
+.obpick:active { transform: scale(.97); }
+.obpick input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; opacity: 0; cursor: pointer; z-index: 1; border-radius: 50%; }
+.obpick:focus-within { outline: 2px solid var(--accent-fg); outline-offset: 4px; }
+.obpick .av { border: 2px dashed var(--g4); }
+.obcam { position: absolute; right: 2px; bottom: 2px; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: var(--on-accent); border: 3px solid var(--g1); }
+.obcam svg { flex: none; }
+
+/* people */
+.oblist { display: grid; gap: 8px; }
+.oblist .row { display: flex; align-items: center; gap: 12px; padding: .5rem .7rem; background: var(--g1); border: 1px solid var(--g3); border-radius: 16px; }
+.obwho { display: grid; min-width: 0; flex: 1; } .obwho small { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.obsent { display: inline-flex; align-items: center; gap: 4px; color: var(--ink2); font-size: var(--fs-sm); font-weight: 650; }
+.oblist .primary.sm { min-width: 64px; }
+
+/* navigation: big primary action, small round back */
+.obnav { display: flex; align-items: center; gap: 8px; }
+.obnav .primary { flex: 1; }
+.obnav .obback { flex: none; width: 48px; min-height: 48px; padding: 0; }
+.obskip { justify-self: center; font-size: var(--fs-sm); }
+
+.obsearch { display: flex; align-items: center; gap: 8px; padding: 0 12px; background: var(--g1); border: 1px solid var(--g3); border-radius: 12px; transition: border-color .15s, box-shadow .15s; }
+.obsearch svg { flex: none; color: var(--muted); }
+.authcard .obsearch input, .authcard .obsearch input:hover, .authcard .obsearch input:focus { flex: 1; min-width: 0; background: none !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; outline: 0 !important; padding: .6rem 0; font-size: 1rem; }
+.obsearch:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--ring, color-mix(in srgb, var(--accent) 25%, transparent)); }
+.obsearch input::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
+
+.invite { position: relative; justify-items: stretch; } .invite .invx { position: absolute; top: 10px; right: 10px; padding: .25rem .5rem; }
+.invite .qr { width: min(240px, 100%); aspect-ratio: 1; justify-self: center; border-radius: 12px; }
+.invite input { text-align: center; } .invite .acts { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.invite .acts button { display: inline-flex; align-items: center; gap: 6px; }
+.draftbar { position: sticky; top: calc(var(--nav-h, 56px) + 8px); z-index: 60; display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  margin: 8px auto; max-width: min(720px, calc(100vw - 24px)); padding: .55rem .9rem; border-radius: 16px; background: var(--g1); border: 1px solid var(--accent); font-size: 0.875rem; font-weight: 600; }
+.draftbar .acts { display: flex; gap: 6px; }
+
+/* there is no navbar during onboarding, so the page must not reserve room for it (that made the whole screen scroll for nothing) */
+body:has(.obwrap) { padding-bottom: 0; }
+
+/* ---------- the screen never scrolls ----------
+   The page itself is locked while onboarding is open. Only the middle of the card (the step: themes, chips, people) scrolls.
+   On a phone the card IS the screen: full width, full height, no frame, header and buttons pinned. */
+html:has(.obwrap), body:has(.obwrap) { overflow: hidden; overscroll-behavior: none; height: 100%; }
+.authwrap.obwrap { position: fixed; top: 0; left: 0; right: 0; height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
+.obstep { padding-bottom: 22px; -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent); }
+@media (max-width: 600px) {
+  .authwrap.obwrap { padding: 0; align-items: stretch; }
+  .authwrap.obwrap .obcard { max-width: none; width: 100%; height: 100%; max-height: none; border: 0; border-radius: 0; box-shadow: none; background: transparent;
+    padding: max(18px, env(safe-area-inset-top)) 20px max(14px, var(--sab, 0px)); }
+}
+@media (min-width: 601px) { .authwrap.obwrap .obcard { height: min(660px, calc(100vh - 24px)); height: min(660px, calc(100dvh - 24px)); } }   /* same size on every step, nothing jumps */
+/* phones: the card is the whole screen, so the looks get bigger previews (2 across). If the screen is short, this list scrolls, not the page */
+@media (max-width: 600px) {
+  .obvibes { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 12px; }
+  .obpv { aspect-ratio: 1 / .68; grid-template-rows: 15px 1fr; gap: 6px; padding: 7px; border-radius: 14px; }
+  .obpv-bar { padding: 0 5px; gap: 4px; border-radius: 6px; } .obpv-bar i { width: 12px; height: 4px; }
+  .obpv-card { gap: 5px; padding: 8px 10px; } .obpv-card i { height: 4px; } .obpv-card b { right: 8px; bottom: 7px; width: 24px; height: 8px; }
+  .obvname { font-size: var(--fs-sm); } .obvchk { top: 11px; right: 11px; width: 22px; height: 22px; }
+}

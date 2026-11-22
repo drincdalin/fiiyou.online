@@ -1,0 +1,299 @@
+/* ======================================================================
+   design.css: one design language for the whole app.
+   Taken from the customizer: near-black surfaces, 2px borders, square-ish
+   12-18px radii (no pills), a hard 3px "lift" under every button, heavy
+   type weights, and the user's accent as the only colour.
+   Loaded after styles.css. It only touches colour, border, radius, shadow
+   and weight, so the layout and phone rules in styles.css stay in charge.
+   ====================================================================== */
+
+:root {
+  /* colours (--g0..--g4, --ink, --muted, --hover, shadows) are derived from the theme in ui-theme.css */
+  --rad-s: 10px; --rad-m: 12px; --rad-l: 14px; --rad-xl: 18px;
+  --header-h: var(--nav-h); /* the customizer sits right under the nav */
+}
+
+/* ---------- base ---------- */
+body { font-weight: 600; background: var(--g0); }
+small, .muted { font-weight: 550; }
+::selection { background: var(--accent); color: var(--on-accent); }
+* { scrollbar-width: thin; scrollbar-color: var(--g4) transparent; }
+input[type=checkbox], input[type=radio], input[type=range] { accent-color: var(--accent); }
+.view { animation: d-fade .2s ease backwards; }
+@keyframes d-fade { from { opacity: 0; } }
+.ptitle { font-weight: 850; letter-spacing: -.02em; }
+.panel h3, .sheet h3, .post h3 { font-weight: 800; }
+.empty { font-weight: 600; }
+.boot { font-weight: 650; }
+
+/* ---------- navigation ---------- */
+.nav { background: var(--g1); backdrop-filter: none; border-bottom: 2px solid var(--g3); }
+.nav .logo { font-weight: 850; font-size: 1.25rem; letter-spacing: normal; }
+.nav .logo:hover { transform: none; }
+.navlinks { background: var(--g0); border: 2px solid var(--g3); border-radius: var(--rad-l); padding: 4px; gap: 4px; }
+.navlinks button { border-radius: var(--rad-s); }
+.navlinks button:hover { background: var(--g2); }
+.navlinks button.on { box-shadow: var(--lift); }
+.navlinks .dotb { border-radius: 7px; }
+.nav .more > .avbtn { border: 2px solid var(--g3); }
+.menu { background: var(--g1); border: 2px solid var(--g3); border-radius: var(--rad-l); box-shadow: var(--lift-lg); padding: 4px; gap: 2px; }
+.menu button { display: flex; align-items: center; gap: 10px; border-radius: var(--rad-s); font-weight: 750; }
+.menu button:hover { background: var(--hover); }
+.menu .danger:hover { background: color-mix(in srgb, var(--red) 18%, transparent); }
+@media (max-width: 700px) { .nav { border-bottom: 0; border-top: 2px solid var(--g3); } }
+
+/* ---------- buttons ---------- */
+.primary, .ghost { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border-radius: var(--rad-m); box-shadow: var(--lift); }
+.primary { border: 2px solid var(--edge); font-weight: 850; letter-spacing: .01em; }
+.primary:hover { transform: none; filter: brightness(1.08); }
+.ghost { border: 2px solid var(--g4); background: var(--g2); font-weight: 800; }
+.ghost:hover { background: var(--hover); border-color: var(--muted); }
+.primary:active:not(:disabled), .ghost:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 color-mix(in srgb, var(--shade) 60%, transparent); }
+.ghost:disabled { opacity: .45; }
+.sm { font-weight: 800; }
+.link { font-weight: inherit; }
+
+/* on a visitor's themed profile the owner's theme decides: flat, thin, no lift */
+.page .primary, .page .ghost { box-shadow: none; border-width: 1px; }
+.page .ghost { background: transparent; }
+.page .primary:active:not(:disabled), .page .ghost:active:not(:disabled) { transform: none; }
+
+/* ---------- fields ---------- */
+input, select, textarea { background: var(--g0); border: 2px solid var(--g3); border-radius: var(--rad-m); font-weight: 600; }
+input::placeholder, textarea::placeholder { color: var(--muted); font-weight: 550; }
+input:hover, select:hover, textarea:hover { border-color: var(--g4); }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--ring); }
+.page input:focus { box-shadow: none; }
+.filebtn { border: 2px solid var(--g4); border-radius: var(--rad-m); background: var(--g2); box-shadow: var(--lift); font-weight: 800; display: inline-flex; align-items: center; gap: 7px; }
+.filebtn:hover { background: var(--hover); border-color: var(--muted); }
+input[type=file] { border: 2px dashed var(--g4); border-radius: var(--rad-m); }
+input[type=file]::file-selector-button { border-radius: var(--rad-s); }
+
+/* ---------- surfaces ---------- */
+.panel, .post, .clist, .cthread, .lbfoot, .snap.panel { background: var(--g1); border: 2px solid var(--g3); border-radius: var(--rad-xl); }
+.post:hover { border-color: var(--g4); }
+.plain .row { border: 2px solid var(--g3); border-radius: var(--rad-l); background: var(--g1); }
+.plain .row:hover { transform: none; border-color: var(--g4); background: var(--g2); }
+.authcard { border: 2px solid var(--g3); border-radius: var(--rad-xl); box-shadow: var(--lift-lg); }
+.brand { font-weight: 850; }
+.sheet { background: var(--g1); border-left: 2px solid var(--g3); }
+.modal .mform, .modal .panel { box-shadow: var(--lift-lg); }
+.err, .okmsg { border-radius: var(--rad-m); font-weight: 700; }
+
+/* ---------- tabs, badges, counters ---------- */
+.tabs button { display: inline-flex; align-items: center; gap: 7px; border: 2px solid var(--g3); border-radius: var(--rad-m); background: var(--g1); font-weight: 800; }
+.tabs button:hover { border-color: var(--muted); background: var(--g2); }
+.tabs .on, .tabs button.on { border-color: var(--edge); box-shadow: var(--lift); }
+.count, .badge, .dotb { border-radius: 8px; }
+.badge { font-weight: 800; }
+.stats4 div { border: 2px solid var(--g3); border-radius: var(--rad-l); background: var(--g1); }
+.stats4 .hot { border-color: var(--yellow); }
+.stats3 button, .stats3 span, .snapstats li button, .snapstats li span { border-radius: var(--rad-m); background: var(--g2); }
+.stats3 b { font-weight: 850; }
+.newp .av { border-radius: var(--rad-m); }
+.newp button:hover { transform: none; }
+
+/* ---------- posts, events, comments ---------- */
+.who b { font-weight: 800; }
+.evmeta, .chipline { display: inline-flex; align-items: center; gap: 6px; width: fit-content; }
+.evmeta { border: 2px solid var(--g3); border-radius: 8px; background: var(--g2); }
+.chipline { font-weight: 650; }
+.pimg { border: 2px solid var(--g3); border-radius: var(--rad-l); }
+.like { display: inline-flex; align-items: center; gap: 6px; border: 2px solid var(--g4); border-radius: var(--rad-m); background: var(--g2); font-weight: 800; box-shadow: var(--lift); }
+.like:hover { background: var(--hover); }
+.like.on { border-color: var(--edge); }
+.like:active { transform: translateY(2px); box-shadow: 0 1px 0 color-mix(in srgb, var(--shade) 60%, transparent); }
+.comments { border-top: 2px solid var(--g3); }
+.cm b { font-weight: 800; }
+.post .pa .ghost, .post footer .ghost { box-shadow: none; }
+.composer textarea { border: 2px solid transparent; border-radius: var(--rad-m); }
+.composer textarea:focus { border-color: var(--accent); }
+
+/* ---------- photos and lightbox ---------- */
+.gtile { border-radius: var(--rad-m); }
+.gtile span { display: inline-flex; align-items: center; gap: 4px; border-radius: 8px; font-weight: 800; }
+.lbimg { border: 2px solid var(--g3); border-radius: var(--rad-l); }
+.lbx { border-radius: var(--rad-m); width: 40px; height: 40px; padding: 0; display: grid; place-items: center; background: var(--g1); }
+.arrow { border: 2px solid var(--g4); border-radius: var(--rad-m); background: var(--g1); display: grid; place-items: center; box-shadow: var(--lift); }
+.arrow:hover { background: var(--hover); border-color: var(--muted); }
+
+/* ---------- chat ---------- */
+.crow2 { border: 2px solid transparent; border-radius: var(--rad-l); }
+.crow2:hover { background: var(--g2); }
+.crow2.on { background: var(--g2); border-color: var(--g4); }
+.bub { border-radius: var(--rad-l) var(--rad-l) var(--rad-l) 4px; font-weight: 600; }
+.bub.mine { border-radius: var(--rad-l) var(--rad-l) 4px var(--rad-l); }
+.dsep { border: 2px solid var(--g3); border-radius: 8px; background: var(--g1); font-weight: 700; }
+.cthread header, .cthread .inline { border-color: var(--g3); border-width: 2px; }
+.cthread .inline input { border-radius: var(--rad-m); background: var(--g0); border: 2px solid var(--g3); }
+.cthread .inline input:focus { border-color: var(--accent); }
+
+/* ---------- map ---------- */
+.mapbar > button, .msearch { background: var(--g1); border: 2px solid var(--g3); border-radius: var(--rad-m); box-shadow: var(--lift); font-weight: 800; }
+.mapbar > button:hover { background: var(--hover); border-color: var(--muted); }
+.mapbar > button.on { border-color: var(--edge); }
+/* toolbar buttons keep their size; only the search pill is allowed to shrink, so nothing overlaps */
+.mapbar > button { flex: none; white-space: nowrap; }
+/* the search field must not draw its own box inside the pill (the global input:focus ring was leaking in); the pill itself shows focus */
+.msearch input, .msearch input:hover, .msearch input:focus { border: 0 !important; box-shadow: none !important; background: none !important; outline: 0; border-radius: 0; }
+.msearch:focus-within { border-color: var(--accent); box-shadow: var(--lift), 0 0 0 4px var(--ring); }
+.msearch .primary { box-shadow: none; border-radius: var(--rad-s); flex: none; }
+.sresults, .cand { background: var(--g1); border: 2px solid var(--g3); border-radius: var(--rad-l); box-shadow: var(--lift-lg); }
+.maphint { background: var(--g1); border: 2px solid var(--g3); border-radius: var(--rad-m); font-weight: 750; }
+.leaflet-bar { border: 2px solid var(--g3) !important; border-radius: var(--rad-m) !important; overflow: hidden; box-shadow: var(--lift); }
+.leaflet-bar a { background: var(--g1) !important; border-color: var(--g3) !important; }
+.leaflet-bar a:hover { background: var(--hover) !important; }
+.mkp { border-radius: 50% 50% 50% 4px; border-width: 3px; }
+.mkf, .mk .mkf { width: 30px !important; height: 30px !important; min-width: 30px; max-width: none !important; max-height: none !important; aspect-ratio: 1 / 1 !important; border-radius: 50% !important; border-width: 3px; box-sizing: border-box; object-fit: cover; }
+
+/* ---------- toast ---------- */
+.toast { border: 2px solid var(--edge); border-radius: var(--rad-m); box-shadow: var(--lift-lg); font-weight: 800; }
+
+/* ---------- admin ---------- */
+.aprev { border: 2px solid var(--g3); border-radius: var(--rad-l); background: var(--g0); }
+.athumb { border-radius: var(--rad-s); }
+.alog p { border-bottom: 2px solid var(--g2); padding-bottom: .25rem; }
+
+/* ---------- profile editing: leave room for the 400px customizer ---------- */
+/* styles.css makes the panel 360px wide, so the page margin (400px) left a 40px dead strip: make the panel match */
+@media (min-width: 701px) { .customizer:not(.collapsed) { width: 400px; } }
+.page.editing { margin-right: 400px; }
+.page.editing.collapsed { margin-right: 0; }
+@media (max-width: 860px) { .page.editing { margin-right: 0; } }
+@media (max-width: 700px) { .page.editing { padding-bottom: 62vh; padding-bottom: min(70dvh, 660px); } }
+
+/* ---------- dialogs: the in-app card that replaces window.confirm / window.alert (see dialog.jsx) ---------- */
+.dlg { z-index: 900; background: var(--scrim); }
+.dlgcard { width: min(420px, 100%); display: grid; gap: 14px; padding: 20px; box-shadow: var(--lift-lg); animation: d-pop .18s ease backwards; }
+@keyframes d-pop { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+.dlghead { display: flex; align-items: center; gap: 10px; }
+.dlghead h3 { margin: 0; font-size: 1rem; font-weight: 850; letter-spacing: -.01em; }
+.dlgic { flex: none; width: 34px; height: 34px; display: grid; place-items: center; border-radius: var(--rad-m); background: var(--g2); border: 2px solid var(--g3); color: var(--accent-fg, var(--accent)); }
+.dlgcard.danger .dlgic { color: var(--red); border-color: color-mix(in srgb, var(--red) 45%, var(--g3)); background: color-mix(in srgb, var(--red) 14%, var(--g1)); }
+.dlgmsg { margin: 0; color: var(--ink); font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; white-space: pre-wrap; }
+.dlgacts { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.primary.dangerbtn { background: var(--red); border-color: var(--red); color: var(--on-red); }
+.primary.dangerbtn:hover { filter: brightness(1.1); }
+@media (max-width: 700px) { .dlgacts { flex-wrap: nowrap; } .dlgacts > button { flex: 1; } }
+
+/* ---------- chat: unread conversations (WhatsApp style) ---------- */
+.crow2.unread .cl1 b { color: var(--ink); font-weight: 850; }
+.crow2.unread .cl1 small { color: var(--accent-fg, var(--accent)); font-weight: 800; }
+.crow2.unread .prev { color: var(--ink); font-weight: 750; }
+.crow2.unread .dotb { background: var(--accent); color: var(--on-accent); }
+
+/* ---------- chat: conversation design ---------- */
+.msgs { gap: 2px; padding: 18px 20px; }
+.dsep { margin: 14px 0 8px; font-size: 0.75rem; letter-spacing: .02em; }
+.brow { gap: 8px; max-width: 78%; }
+.brow.first { margin-top: 10px; }
+.dsep + .brow.first { margin-top: 0; }
+.avsp { width: 26px; flex: none; }
+
+/* bubbles: soft corners, only the last one of a run gets the pointed corner */
+.brow .bub { border-radius: 18px; padding: .5rem .8rem .35rem; font-size: 1rem; line-height: 1.4; min-width: 0; }
+.bub:not(.mine) { background: var(--g2); }
+.brow.tail:not(.mine) .bub { border-bottom-left-radius: 6px; }
+.brow.tail.mine .bub { border-bottom-right-radius: 6px; }
+.bub small { margin-top: 3px; font-size: 0.6875rem; opacity: .8; }   /* was .6: message times were hard to read */
+
+/* reply button next to a bubble */
+.replybtn { flex: none; align-self: center; width: 30px; height: 30px; padding: 0; display: grid; place-items: center; background: var(--g2); border: 2px solid var(--g3); border-radius: var(--rad-m); color: var(--muted); opacity: 0; transition: opacity .15s, color .15s, border-color .15s; }
+.replybtn:hover { color: var(--ink); border-color: var(--g4); }
+.brow:hover .replybtn, .replybtn:focus-visible { opacity: 1; }
+@media (hover: none) { .replybtn { opacity: .75; } }
+
+/* a reply: small label + the quoted message as a dimmed bubble tucked under the real one (Instagram style) */
+.bcol { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; max-width: 100%; }
+.brow.mine .bcol { align-items: flex-end; }
+.bcol .bub { position: relative; z-index: 1; max-width: 100%; }
+.rq { display: flex; flex-direction: column; align-items: inherit; gap: 4px; max-width: 100%; padding: 0; margin: 4px 0 0; background: none; border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.rqlab { display: inline-flex; align-items: center; gap: 5px; padding: 0 .35rem; font-size: 0.75rem; font-weight: 750; color: var(--muted); }
+.rqtxt { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; max-width: 100%; padding: .5rem .85rem 1.15rem; margin-bottom: -.85rem; background: var(--g1); border: 2px solid var(--g3); border-radius: 18px; color: var(--muted); font-size: 0.875rem; font-weight: 550; line-height: 1.35; transition: border-color .15s, color .15s; }
+.rq:hover .rqtxt { border-color: var(--g4); color: var(--ink); }
+.rq:hover .rqlab { color: var(--ink); }
+.brow.flash .bub { animation: d-flash 1.2s ease; }
+@keyframes d-flash { 0%, 55% { box-shadow: 0 0 0 3px var(--accent); } 100% { box-shadow: 0 0 0 3px transparent; } }
+
+/* "replying to" strip above the input */
+.replybar { display: flex; align-items: center; gap: 10px; margin: 10px 12px 0; padding: .5rem .5rem .5rem .8rem; background: var(--g2); border: 2px solid var(--g3); border-radius: var(--rad-l); }
+.replybar .ric { flex: none; color: var(--accent-fg, var(--accent)); }
+.replybar > div { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.replybar b { font-size: 0.8125rem; font-weight: 800; color: var(--accent-fg, var(--accent)); }
+.replybar span { font-size: 0.875rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.replybar button { flex: none; width: 30px; height: 30px; padding: 0; display: grid; place-items: center; background: none; border: 0; border-radius: var(--rad-s); color: var(--muted); }
+.replybar button:hover { background: var(--hover); color: var(--ink); }
+.replybar + .inline { border-top: 0; padding-top: 8px; }
+
+/* message input + send */
+.cthread .inline { align-items: center; gap: 8px; }
+.cthread .inline input { border-radius: var(--rad-l); padding: .7rem 1rem; background: var(--g2); border: 2px solid transparent; }
+.cthread .inline input:focus { border-color: var(--g4); box-shadow: none; }
+.cthread .inline .sendbtn { flex: none; width: 46px; height: 46px; min-height: 0; padding: 0; border-radius: var(--rad-l); }
+
+/* Notifications: a badge on the avatar + the list lives inside the account menu */
+.nav .more { position: relative; }
+.nav .more > .avbtn { position: relative; }
+.avdot { position: absolute; top: -4px; right: -4px; z-index: 2; pointer-events: none; display: grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; box-sizing: border-box; border: 2px solid var(--g1); border-radius: 10px; font-size: 0.6875rem; font-style: normal; font-weight: 850; line-height: 1; background: var(--accent); color: var(--on-accent); }
+.menu { width: min(340px, calc(100vw - 24px)); }
+.nsec { display: flex; flex-direction: column; }
+.nhead { display: flex; align-items: center; gap: 8px; margin: 0; padding: 6px 10px 6px; font-size: 0.8125rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.nlist { list-style: none; margin: 0; padding: 0; max-height: min(320px, 42vh); overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 2px; }
+.menu .nrow { align-items: center; gap: 10px; width: 100%; min-height: 56px; padding: 7px 10px; font-weight: 600; text-align: left; }
+.menu .nrow.new { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.menu .nrow.new:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.nav2 { position: relative; flex: none; }
+.nic { position: absolute; right: -4px; bottom: -4px; width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%; background: var(--accent); color: var(--on-accent); border: 2px solid var(--g1); }
+.ntxt { display: flex; flex-direction: column; gap: 2px; min-width: 0; line-height: 1.3; overflow-wrap: anywhere; font-size: 0.9375rem; }
+.ntxt small { color: var(--muted); }
+.pushhint { margin: 0; padding: 8px 12px; font-size: 0.8125rem; line-height: 1.4; }
+.nempty { text-align: center; padding: 14px 12px 18px; margin: 0; font-size: 0.875rem; }
+@media (max-width: 700px) { .menu { max-height: calc(100dvh - var(--nav-h) - 24px); overflow-y: auto; } .nlist { max-height: 38vh; } }
+
+/* Likes list: bottom sheet on phones, small card on desktop */
+.likesheet { display: flex; align-items: center; justify-content: center; padding: 16px; }
+.likepanel { width: 100%; max-width: 400px; max-height: min(70vh, 520px); display: flex; flex-direction: column; padding: 0; overflow: hidden; animation: sheetin .18s ease-out; transition: transform .2s ease; }
+.likehead { position: relative; display: flex; align-items: center; justify-content: center; padding: 18px 16px 12px; touch-action: none; }
+.likehead h3 { margin: 0; font-size: 1rem; }
+.likehead h3 small { margin-left: 8px; font-weight: 500; opacity: .6; }
+.likehead .grab { display: none; }
+.likex { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; padding: 0; display: grid; place-items: center; box-shadow: none; }
+.likelist { list-style: none; margin: 0; padding: 0 8px 8px; overflow-y: auto; overscroll-behavior: contain; }
+.likerow { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 8px; background: none; border: 0; box-shadow: none; border-radius: 12px; color: inherit; text-align: left; cursor: pointer; }
+.likerow:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
+.likerow span { display: flex; flex-direction: column; min-width: 0; }
+.likerow b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.likerow small { opacity: .65; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.likemsg { text-align: center; padding: 24px 16px 32px; margin: 0; }
+@keyframes sheetin { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@media (max-width: 700px) {
+  .likesheet { align-items: flex-end; padding: 0; }
+  .likepanel { max-width: none; max-height: 72dvh; border-radius: 20px 20px 0 0; border-bottom: 0; padding-bottom: var(--sab, 0px); animation: sheetup .22s ease-out; }
+  .likehead { padding-top: 22px; }
+  .likehead .grab { display: block; position: absolute; top: 8px; left: 50%; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: currentColor; opacity: .3; }
+  .likerow { min-height: 64px; }
+}
+@keyframes sheetup { from { transform: translateY(100%); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .likepanel { animation: none; transition: none; } }
+
+/* Post header menu: dropdown on desktop, bottom action sheet on phones */
+.pmenuwrap { position: relative; margin-left: auto; flex: none; }
+.pmore { width: 40px; height: 40px; padding: 0; display: grid; place-items: center; box-shadow: none; }
+.pmenuback { position: fixed; inset: 0; z-index: 1000; }
+.pmenu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 1001; min-width: 180px; padding: 6px; display: flex; flex-direction: column; background: var(--g1); border: 1px solid var(--g3); border-radius: 14px; box-shadow: var(--lift-lg); }
+.pmenu button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 14px; background: none; border: 0; box-shadow: none; border-radius: 10px; color: inherit; text-align: left; font-weight: 600; cursor: pointer; }
+.pmenu button:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
+.pmenu button.danger { color: var(--red-fg); }
+@media (max-width: 700px) {
+  .pmenuback { background: var(--scrim-lo); }
+  .pmenu { position: fixed; left: 12px; right: 12px; top: auto; bottom: calc(12px + var(--sab, 0px)); padding: 8px; border-radius: 18px; }
+  .pmenu button { min-height: 52px; font-size: 1rem; }
+  .post footer { gap: 8px; }
+  .post footer .pshare { margin-left: auto; }
+}
+/* comments / share: icon only on every screen size (the count stays next to the comment icon) */
+.post footer .lbl { display: none; }
+/* one footer for desktop and phone: same height for all three buttons, share pinned to the right */
+.post footer { display: flex; align-items: center; gap: 8px; }
+.post footer button.like, .post footer button.ghost { box-sizing: border-box; height: 44px; min-height: 0; padding: 0 16px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.9375rem; line-height: 1; }
+.post footer button.pshare { margin-left: auto; padding: 0 18px; }

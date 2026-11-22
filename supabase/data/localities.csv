@@ -1,0 +1,1543 @@
+id,slug,name,lat,lng,commune,county
+813,oradea,Oradea,47.0458,21.91833,Oradea,Bihor
+814,beius,Beiuș,46.66667,22.35,Beiuș,Bihor
+815,salonta,Salonta,46.8,21.65,Salonta,Bihor
+816,marghita,Marghita,47.35,22.33333,Marghita,Bihor
+817,alesd,Aleșd,47.05811,22.3995,Aleșd,Bihor
+818,sacueni,Săcueni,47.35,22.1,Săcueni,Bihor
+819,valea-lui-mihai,Valea lui Mihai,47.51667,22.15,Valea Lui Mihai,Bihor
+820,stei,Ștei,46.53333,22.45,Ștei,Bihor
+821,vascau,Vașcău,46.46667,22.46667,Vașcău,Bihor
+822,nucet,Nucet,46.48732,22.5585,Nucet,Bihor
+823,abramut,Abrămuț,47.31667,22.25,Abrămuț,Bihor
+824,crestur,Crestur,47.34943,22.23941,Abrămuț,Bihor
+825,fancica,Fâncica,47.32381,22.23266,Abrămuț,Bihor
+826,petreu,Petreu,47.33738,22.29607,Abrămuț,Bihor
+827,astileu,Aștileu,47.03333,22.38333,Aștileu,Bihor
+828,calatea,Călățea,46.98752,22.40887,Aștileu,Bihor
+829,chistag,Chiștag,47.0466,22.35658,Aștileu,Bihor
+830,pecingina,Pecingina,47.0167,22.3833,,
+831,auseu,Aușeu,47.03333,22.5,Aușeu,Bihor
+832,capalnas,Căpâlnaș,47.0167,22.5,,
+833,gheghie,Gheghie,47.01819,22.51742,Aușeu,Bihor
+834,baile-felix,Băile Felix,46.98995,21.9821,Sânmartin,Bihor
+835,baile-1-mai,Băile 1 Mai,46.9961,21.9961,,
+836,sanmartin,Sânmartin,47.00726,21.97418,Sânmartin,Bihor
+837,biharia,Biharia,47.15,21.91667,Biharia,Bihor
+838,osorhei,Oșorhei,47.03333,22.05,Oșorhei,Bihor
+839,tileagd,Tileagd,47.06667,22.2,Tileagd,Bihor
+840,nojorid,Nojorid,46.98333,21.88333,Nojorid,Bihor
+841,girisu-de-cris,Girișu de Criș,47.06416,21.76108,Girișu de Criș,Bihor
+842,santaul-mic,Santăul Mic,47.14248,21.83322,Borș,Bihor
+843,paleu,Paleu,47.11531,21.95929,Paleu,Bihor
+844,santandrei,Sântandrei,47.06615,21.85352,Sântandrei,Bihor
+845,ceica,Ceica,46.85,22.18333,Ceica,Bihor
+846,cociuba-mare,Cociuba Mare,46.73333,22,Cociuba Mare,Bihor
+847,dobresti,Dobrești,46.85,22.3,Dobrești,Bihor
+848,holod,Holod,46.78333,22.13333,Holod,Bihor
+849,bratca,Bratca,46.93333,22.61667,Bratca,Bihor
+850,suncuius,Șuncuiuș,46.93333,22.53333,Șuncuiuș,Bihor
+851,vadu-crisului,Vadu Crișului,46.98333,22.51667,Vadu Crișului,Bihor
+852,rieni,Rieni,46.57485,22.44584,Rieni,Bihor
+853,pietroasa,Pietroasa,46.58333,22.55,Pietroasa,Bihor
+854,buntesti,Buntești,46.61667,22.46667,Buntești,Bihor
+855,remetea,Remetea,46.73333,22.35,Remetea,Bihor
+856,cabesti,Căbești,46.76667,22.36667,Căbești,Bihor
+857,rosia,Roșia,46.8,22.4,Roșia,Bihor
+858,tarcaia,Tărcaia,46.63333,22.36667,Tărcaia,Bihor
+859,finsi,Finși,46.6333,22.3167,,
+860,ucuris,Ucuriș,46.63716,21.95763,Olcea,Bihor
+861,olcea,Olcea,46.68333,21.98333,Olcea,Bihor
+862,betesti,Betești,46.7167,22,,
+863,soimi,Șoimi,46.68333,22.11667,Șoimi,Bihor
+864,pocola,Pocola,46.68333,22.28333,Pocola,Bihor
+865,sannicolau-roman,Sânnicolau Român,46.96101,21.71466,Sânnicolau-Român,Bihor
+866,cefa,Cefa,46.91667,21.73333,Cefa,Bihor
+867,inand,Inand,46.89453,21.75053,Cefa,Bihor
+868,magesti,Măgești,47.01667,22.45,Măgești,Bihor
+869,lugasu-de-jos,Lugașu de Jos,47.06667,22.35,Lugașu De Jos,Bihor
+870,urvis-de-bihor,Urviș de Bihor,47.0833,22.3833,,
+871,tetchea,Tetchea,47.04594,22.32485,Țețchea,Bihor
+872,telechiu,Telechiu,47.05538,22.27466,Țețchea,Bihor
+873,subpiatra,Subpiatră,47.02538,22.30727,Țețchea,Bihor
+874,hotar,Hotar,47.01967,22.28515,Țețchea,Bihor
+875,aschileu,Așchileu,46.9833,22.2667,,
+876,beznea,Beznea,46.95967,22.61954,Bratca,Bihor
+877,luncsoara,Luncșoara,47.03663,22.54213,Aușeu,Bihor
+878,borod,Borod,46.98333,22.63333,Borod,Bihor
+879,cetea,Cetea,47.01681,22.57816,Borod,Bihor
+880,alba-iulia,Alba Iulia,46.06667,23.58333,Alba Iulia,Alba
+881,aiud,Aiud,46.31006,23.72128,Aiud,Alba
+882,blaj,Blaj,46.17508,23.91578,Blaj,Alba
+883,sebes,Sebeș,45.95646,23.571,Sebeș,Alba
+884,cugir,Cugir,45.83651,23.36998,Cugir,Alba
+885,ocna-mures,Ocna Mureș,46.38333,23.85,Ocna Mureș,Alba
+886,zlatna,Zlatna,46.10633,23.23162,Zlatna,Alba
+887,campeni,Câmpeni,46.36667,23.05,Câmpeni,Alba
+888,teius,Teiuș,46.2,23.68333,Teiuș,Alba
+889,baia-de-aries,Baia de Arieș,46.38045,23.28115,Baia de Arieș,Alba
+890,abrud,Abrud,46.27406,23.06339,abrud,Alba
+891,arieseni,Arieșeni,46.47641,22.75741,Arieșeni,Alba
+892,biertan,Biertan,46.1361,24.5217,,
+893,ighiu,Ighiu,46.15,23.51667,Ighiu,Alba
+894,pianu,Pianu,45.8942,23.4831,,
+895,rosia-montana,Roșia Montană,46.30669,23.13373,Roșia Montană,Alba
+896,sugag,Șugag,45.76667,23.63333,Șugag,Alba
+897,sasciori,Săsciori,45.86667,23.58333,Săsciori,Alba
+898,unirea,Unirea,46.40387,23.81314,Unirea,Alba
+899,vintu-de-jos,Vințu de Jos,45.99462,23.48612,Vințu de Jos,Alba
+900,galda-de-jos,Galda de Jos,46.18333,23.61667,Galda de Jos,Alba
+901,santimbru,Sântimbru,46.13333,23.65,Sântimbru,Alba
+902,cricau,Cricău,46.18333,23.56667,Cricău,Alba
+903,metes,Meteș,46.1,23.41667,Meteș,Alba
+904,loman,Loman,45.85772,23.55319,Săsciori,Alba
+905,capalna,Căpâlna,45.84632,23.60419,Săsciori,Alba
+906,petresti,Petrești,45.92102,23.56083,Sebeș,Alba
+907,arad,Arad,46.18333,21.31667,Arad,Arad
+908,ineu,Ineu,46.43372,21.84048,Ineu,Arad
+909,lipova,Lipova,46.09085,21.69628,Lipova,Arad
+910,chisineu-cris,Chișineu-Criș,46.52509,21.51844,Chișineu-Criș,Arad
+911,nadlac,Nădlac,46.16667,20.75,Nădlac,Arad
+912,pancota,Pâncota,46.33333,21.7,Pâncota,Arad
+,abram,Abram,47.31667,22.38333,Abram,Bihor
+,achimetesti,Achimețești,46.38501,22.80442,Avram Iancu,Alba
+,aciuta,Aciuța,46.2883,22.45199,Pleșcuța,Arad
+,acmariu,Acmariu,45.96598,23.36337,Blândiana,Alba
+,adea,Adea,46.55511,21.58433,Sintea Mare,Arad
+,adoni,Adoni,47.43239,22.17582,Tarcea,Bihor
+,agrisu-mare,Agrișu Mare,46.27243,21.75558,Târnova,Arad
+,agrisu-mic,Agrișu Mic,46.52757,22.05326,Hășmaș,Arad
+,aiudul-de-sus,Aiudul de Sus,46.31653,23.69053,Aiud,Alba
+,albac,Albac,46.45246,22.95164,Albac,Alba
+,albesti,Albești,46.77085,22.25076,Răbăgani,Bihor
+,albis,Albiș,47.39024,22.24528,Buduslău,Bihor
+,aldesti,Aldești,46.39463,22.0417,Bârsa,Arad
+,alecus,Alecuș,46.29128,23.99794,Șona,Alba
+,almas,Almaș,46.28333,22.23333,Almaș,Arad
+,almasu-de-mijloc,Almașu de Mijloc,46.06693,23.10654,Almașu Mare,Alba
+,almasu-mare-balc,Almașu Mare (Balc),47.32817,22.53285,Balc,Bihor
+,almasu-mare,Almașu Mare,46.11014,23.11721,Almașu Mare,Alba
+,almasu-mic-balc,Almașu Mic (Balc),47.31728,22.51032,Balc,Bihor
+,almasu-mic-sarbi,Almașu Mic (Sârbi),47.17131,22.13518,Sârbi,Bihor
+,alparea,Alparea,47.03054,22.04812,Oșorhei,Bihor
+,alunis,Aluniș,46.09351,21.48926,Frumușeni,Arad
+,ambru,Ambru,46.38333,23.28333,Baia de Arieș,Alba
+,ampoita,Ampoița,46.11761,23.45011,Meteș,Alba
+,andrei-saguna,Andrei Șaguna,46.2881,21.39175,Zimandu Nou,Arad
+,anghelesti,Anghelești,46.24552,23.09805,Bucium,Alba
+,ant,Ant,46.66635,21.46755,Avram Iancu,Bihor
+,apateu-nojorid,Apateu (Nojorid),46.97217,21.92408,Nojorid,Bihor
+,apateu,Apateu,46.61667,21.78333,Apateu,Arad
+,arada,Arada,46.5,22.95,Horea,Alba
+,araneag,Arăneag,46.25294,21.77798,Târnova,Arad
+,archis,Archiș,46.48333,22.05,Archiș,Arad
+,aronesti,Aronești,46.43648,23.12666,Bistra,Alba
+,arpasel,Arpășel,46.73863,21.71968,Batăr,Bihor
+,asinip,Asinip,46.29771,23.88896,Lopadea Nouă,Alba
+,ateas,Ateaș,46.91792,21.61769,Cefa,Bihor
+,avram-iancu-cermei,Avram Iancu (Cermei),46.54052,21.91823,Cermei,Arad
+,avram-iancu,Avram Iancu,46.38333,22.78333,Avram Iancu,Alba
+,avram-iancu-2,Avram Iancu,46.66944,21.52417,Avram Iancu,Bihor
+,avram-iancu-varfurile,Avram Iancu (Vârfurile),46.35217,22.454,Vârfurile,Arad
+,avramesti-arieseni,Avrămești (Arieșeni),46.47978,22.74553,Arieșeni,Alba
+,avramesti-avram-iancu,Avrămești (Avram Iancu),46.39143,22.82383,Avram Iancu,Alba
+,baba,Baba,46.50256,22.96523,Horea,Alba
+,bacau-de-mijloc,Bacău de Mijloc,45.97723,22.09809,Bata,Arad
+,baia,Baia,46.09075,22.17463,Vărădia de Mureș,Arad
+,balc,Balc,47.28333,22.53333,Balc,Bihor
+,balomiru-de-camp,Balomiru de Câmp,45.93878,23.36109,Șibot,Alba
+,baratca,Barațca,46.1072,21.63227,Păuliș,Arad
+,bata,Bata,46.01667,22.03333,Bata,Arad
+,batar,Batăr,46.7,21.81667,Batăr,Bihor
+,bacainti,Băcăinți,45.94218,23.28322,Șibot,Alba
+,bacesti,Băcești,46.38333,22.93333,Vidra,Alba
+,badai,Bădăi,46.40849,22.75576,Avram Iancu,Alba
+,bagau,Băgău,46.31047,23.79399,Lopadea Nouă,Alba
+,bai,Băi,46.33636,22.91594,Vidra,Alba
+,balaia,Bălaia,47.10809,22.17198,Tileagd,Bihor
+,balcaciu,Bălcaciu,46.19122,24.06139,Jidvei,Alba
+,baleni,Băleni,46.60933,22.3993,Lazuri de Beiuș,Bihor
+,balesti,Bălești,46.42879,23.09408,Bistra,Alba
+,balesti-catun,Bălești-Cătun,46.42027,23.09624,Bistra,Alba
+,balmosesti,Bălmoșești,46.30561,23.09409,Roșia Montană,Alba
+,balnaca,Bălnaca,46.94384,22.57206,Șuncuiuș,Bihor
+,balnaca-grosi,Bălnaca-Groși,46.91906,22.54911,Șuncuiuș,Bihor
+,banesti,Bănești,46.28891,22.60697,Hălmagiu,Arad
+,barabant,Bărăbanț,46.0993,23.58487,Alba Iulia,Alba
+,barasti,Bărăști,46.45,22.98333,Albac,Alba
+,barbesti,Bărbești,46.27599,23.33208,Mogoș,Alba
+,batuta,Bătuța,46.05025,22.05528,Bârzava,Arad
+,bazesti,Băzești,46.31785,23.01411,Sohodol,Alba
+,balc-cristioru-de-jos,Bâlc (Criștioru de Jos),46.40314,22.59456,Criștioru de Jos,Bihor
+,bardesti,Bârdești,46.36667,23.2,Lupșa,Alba
+,barlesti-scarisoara,Bârlești (Scărișoara),46.46667,22.85,Scărișoara,Alba
+,barlesti-bistra,Bârlești (Bistra),46.36382,23.12268,Bistra,Alba
+,barlesti-mogos,Bârlești (Mogoș),46.26667,23.28333,Mogoș,Alba
+,barlesti-bistra-2,Bârlești (Bistra),46.35909,23.12728,Bistra,Alba
+,barlesti-catun,Bârlești-Cătun,46.28708,23.37988,Mogoș,Alba
+,barsa,Bârsa,46.38333,22.06667,Bârsa,Arad
+,barsana,Bârsana,45.76667,23.63333,Șugag,Alba
+,barzan,Bârzan,46.35989,23.23505,Lupșa,Alba
+,barzava,Bârzava,46.11667,21.98333,Bârzava,Arad
+,barzesti,Bârzești,46.48333,22.13333,Archiș,Arad
+,barzogani,Bârzogani,46.3,23.33333,Mogoș,Alba
+,beiusele,Beiușele,46.71828,22.45117,Curățele,Bihor
+,beldiu,Beldiu,46.23663,23.71677,Teiuș,Alba
+,belejeni,Belejeni,46.62498,22.43095,Drăgănești,Bihor
+,belfir,Belfir,46.73751,21.9497,Tinca,Bihor
+,beliu,Beliu,46.48333,21.98333,Beliu,Arad
+,belotint,Belotinț,46.0767,21.93839,Conop,Arad
+,benesti,Benești,46.53129,22.00345,Beliu,Arad
+,benic,Benic,46.21312,23.59143,Galda de Jos,Alba
+,berechiu-sannicolau-roman,Berechiu (Sânnicolau-Român),46.94958,21.73254,Sânnicolau-Român,Bihor
+,berechiu-apateu,Berechiu (Apateu),46.63914,21.84659,Apateu,Arad
+,berghin,Berghin,46.07782,23.73742,Berghin,Alba
+,berindia,Berindia,46.32102,22.16005,Buteni,Arad
+,betfia,Betfia,46.9757,22.01696,Sânmartin,Bihor
+,beta,Beța,46.25361,23.81534,Lopadea Nouă,Alba
+,bicaci,Bicaci,46.90199,21.7879,Gepiu,Bihor
+,bicacel,Bicăcel,46.8539,22.09792,Lăzăreni,Bihor
+,bicesti,Bicești,46.3,23.53333,Râmeț,Alba
+,bidigesti,Bidigești,46.25993,23.01795,Ciuruleasa,Alba
+,biharia-garda-de-sus,Biharia (Gârda de Sus),46.42838,22.76923,Gârda de Sus,Alba
+,biia,Biia,46.23097,24.00461,Șona,Alba
+,bilanesti,Bilănești,46.33552,23.00693,Sohodol,Alba
+,birchis,Birchiș,45.96667,22.16667,Birchiș,Arad
+,birtin,Birtin,46.98997,22.4977,Vadu Crișului,Bihor
+,bisericani,Bisericani,46.29088,23.16048,Bucium,Alba
+,bistra-popesti,Bistra (Popești),47.25478,22.42295,Popești,Bihor
+,bistra,Bistra,46.3782,23.10081,Bistra,Alba
+,blandiana,Blândiana,45.97943,23.38543,Blândiana,Alba
+,blidaresti,Blidărești,46.1,23.56667,Alba Iulia,Alba
+,blidesti,Blidești,46.3,23.13333,Roșia Montană,Alba
+,bobaresti-vidra,Bobărești (Vidra),46.36729,22.99566,Vidra,Alba
+,bobaresti-sohodol,Bobărești (Sohodol),46.34215,22.98748,Sohodol,Alba
+,boborasti,Boborăști,46.38333,22.98333,Vadu Moților,Alba
+,bocesti,Bocești,46.28422,23.34706,Mogoș,Alba
+,bochia,Bochia,46.54509,22.00732,Beliu,Arad
+,bocsig,Bocsig,46.41667,21.95,Bocsig,Arad
+,bocsitura,Bocșitura,45.76667,23.43333,Cugir,Alba
+,bodesti-vadu-motilor,Bodești (Vadu Moților),46.41177,22.99,Vadu Moților,Alba
+,bodesti-halmagiu,Bodești (Hălmagiu),46.29166,22.57983,Hălmagiu,Arad
+,bodresti,Bodrești,46.27345,22.97239,Ciuruleasa,Alba
+,bodrogu-nou,Bodrogu Nou,46.1288,21.19911,Zădăreni,Arad
+,bodrogu-vechi,Bodrogu Vechi,46.13851,21.17559,Pecica,Arad
+,bogdanesti-vidra,Bogdănești (Vidra),46.36471,22.98985,Vidra,Alba
+,bogdanesti-mogos,Bogdănești (Mogoș),46.29179,23.34812,Mogoș,Alba
+,bogdanesti-valea-lunga,Bogdănești (Valea Lungă),46.15,24.16667,Valea Lungă,Alba
+,bogei,Bogei,47.2655,22.36079,Tăuteu,Bihor
+,boglesti,Boglești,46.25719,23.01247,Ciuruleasa,Alba
+,boianu-mare,Boianu Mare,47.38333,22.53333,Boianu Mare,Bihor
+,boiu,Boiu,46.68608,21.61069,Ciumeghiu,Bihor
+,boldesti,Boldești,46.34267,22.83788,Avram Iancu,Alba
+,bolovanesti,Bolovănești,45.9997,23.25506,Ceru-Băcăinți,Alba
+,boncesti,Boncești,46.36683,23.0827,Câmpeni,Alba
+,bontesti,Bonțești,46.27471,22.30572,Gurahonț,Arad
+,bordei,Bordei,46.25,23.2,Bucium,Alba
+,bordesti-gaesti,Bordești-Găești,46.36667,22.91667,Vidra,Alba
+,bordestii-poieni,Bordeștii Poieni,46.3519,22.92692,Vidra,Alba
+,borlesti,Borlești,46.40969,23.00638,Câmpeni,Alba
+,borozel,Borozel,47.00597,22.56215,Borod,Bihor
+,bors,Borș,47.11667,21.81667,Borș,Bihor
+,borsa,Borșa,47.02403,22.18101,Săcădat,Bihor
+,borumlaca,Borumlaca,47.21594,22.47935,Suplacu de Barcău,Bihor
+,borz,Borz,46.6747,22.18851,Șoimi,Bihor
+,botean,Botean,47.10144,22.14369,Ineu,Bihor
+,botesti-campeni,Botești (Câmpeni),46.38411,23.00632,Câmpeni,Alba
+,botesti-zlatna,Botești (Zlatna),46.1809,23.1509,Zlatna,Alba
+,botesti-scarisoara,Botești (Scărișoara),46.45307,22.88461,Scărișoara,Alba
+,botfei,Botfei,46.55037,22.06442,Hășmaș,Arad
+,botani,Boțani,46.28582,23.43654,Râmeț,Alba
+,boz,Boz,45.94829,23.80395,Doștat,Alba
+,brazii,Brazii,46.23333,22.33333,Brazii,Arad
+,bradeana,Brădeana,46.32602,22.98602,Sohodol,Alba
+,bradesti,Brădești,46.3324,23.46889,Râmeț,Alba
+,bradet-buntesti,Brădet (Buntești),46.58302,22.53213,Buntești,Bihor
+,bradet-almasu-mare,Brădet (Almașu Mare),46.10418,23.09515,Almașu Mare,Alba
+,bratesti,Brătești,46.75922,22.19949,Răbăgani,Bihor
+,brazesti,Brăzești,46.3985,23.3199,Baia de Arieș,Alba
+,briheni,Briheni,46.49974,22.40435,Lunca,Bihor
+,brusturei,Brusturei,46.3,23.53333,Râmeț,Alba
+,brusturi,Brusturi,47.15,22.25,Brusturi,Bihor
+,brusturi-finis,Brusturi (Finiș),46.56773,22.23992,Finiș,Bihor
+,brusturi-halmagiu,Brusturi (Hălmagiu),46.35,22.58333,Hălmagiu,Arad
+,bruznic,Bruznic,45.98128,21.89225,Ususău,Arad
+,bubesti,Bubești,46.50004,22.706,Arieșeni,Alba
+,buceava-soimus,Buceava-Șoimuș,46.20314,22.3421,Brazii,Arad
+,bucerdea-vinoasa,Bucerdea Vinoasă,46.16328,23.52904,Ighiu,Alba
+,bucerdea-granoasa,Bucerdea-Grânoasă,46.2,23.83333,Bucerdea-Grânoasă,Alba
+,bucium-ceica,Bucium (Ceica),46.87954,22.15357,Ceica,Bihor
+,bucium,Bucium,46.26402,23.1791,Bucium,Alba
+,bucium-2,Bucium,46.23333,23.21667,Bucium,Alba
+,bucium-sat,Bucium-Sat,46.26084,23.121,Bucium,Alba
+,bucuroaia,Bucuroaia,46.9292,22.18337,Copăcel,Bihor
+,bucuru,Bucuru,45.78879,23.39851,Cugir,Alba
+,budaiesti,Budăiești,46.45,22.96667,Albac,Alba
+,budeni,Budeni,46.18931,23.12711,Zlatna,Alba
+,budesti-arieseni,Budești (Arieșeni),46.46667,22.76667,Arieșeni,Alba
+,budesti-vidra,Budești (Vidra),46.36667,22.86667,Vidra,Alba
+,budesti-plescuta,Budești (Pleșcuța),46.26004,22.44581,Pleșcuța,Arad
+,budoi,Budoi,47.20802,22.35958,Popești,Bihor
+,budureasa,Budureasa,46.67403,22.5006,Budureasa,Bihor
+,buduslau,Buduslău,47.4,22.26667,Buduslău,Bihor
+,buhani,Buhani,46.40682,22.20585,Dezna,Arad
+,bulbuc,Bulbuc,46.02107,23.29454,Ceru-Băcăinți,Alba
+,bulci,Bulci,46.004,22.10679,Bata,Arad
+,bulz,Bulz,46.91667,22.68333,Bulz,Bihor
+,buninginea,Buninginea,46.22657,23.03837,Ciuruleasa,Alba
+,bunta,Bunta,46.27712,23.11509,Roșia Montană,Alba
+,burda,Burda,46.69518,22.47921,Budureasa,Bihor
+,burzesti,Burzești,46.4019,22.94959,Vadu Moților,Alba
+,burzonesti,Burzonești,46.36893,23.00808,Sohodol,Alba
+,burzuc,Burzuc,47.15552,22.17096,Sârbi,Bihor
+,butani,Butani,47.01636,22.437,Măgești,Bihor
+,buteni,Buteni,46.31667,22.11667,Buteni,Arad
+,butesti-horea,Butești (Horea),46.50949,22.94362,Horea,Alba
+,butesti-mogos,Butești (Mogoș),46.29755,23.34899,Mogoș,Alba
+,butura,Butura,46.15,23.88333,Blaj,Alba
+,cacuciu-nou,Cacuciu Nou,47.02618,22.47521,Măgești,Bihor
+,cacuciu-vechi,Cacuciu Vechi,47.0234,22.49216,Aușeu,Bihor
+,cadea,Cadea,47.31185,22.06225,Săcueni,Bihor
+,calea-mare,Calea Mare,46.91014,22.0681,Lăzăreni,Bihor
+,camna,Camna,46.31169,21.94831,Șilindia,Arad
+,caporal-alexa,Caporal Alexa,46.33793,21.58316,Sântana,Arad
+,capu-dealului,Capu Dealului,46.00043,24.00114,Cenade,Alba
+,carpen,Carpen,45.96631,23.70872,Șpring,Alba
+,carpenii-de-sus,Carpenii de Sus,45.99277,23.70768,Șpring,Alba
+,casa-de-piatra,Casa de Piatră,46.53514,22.78413,Arieșeni,Alba
+,cauaceu,Cauaceu,47.16666,21.94411,Biharia,Bihor
+,calacea,Călacea,46.67687,21.93292,Olcea,Bihor
+,calatani,Călătani,47.04685,22.19581,Tileagd,Bihor
+,calene,Călene,45.83284,23.43746,Cugir,Alba
+,calugareni,Călugăreni,46.12699,21.18548,Felnac,Arad
+,calugaresti,Călugărești,46.39906,22.78544,Avram Iancu,Alba
+,calugari,Călugări,46.42371,22.47846,Cărpinet,Bihor
+,capalna-2,Căpâlna,46.73333,22.1,Căpâlna,Bihor
+,capalna-de-jos,Căpâlna de Jos,46.24,24.11304,Jidvei,Alba
+,capalnas-birchis,Căpâlnaș (Birchiș),45.96667,22.21667,Birchiș,Arad
+,caprioara,Căprioara,45.98123,22.2798,Săvârșin,Arad
+,capruta,Căpruța,46.08886,22.02672,Bârzava,Arad
+,captalan,Căptălan,46.40939,23.94307,Noșlac,Alba
+,capud,Căpud,46.20604,23.72827,Teiuș,Alba
+,carand,Cărand,46.45,22.08333,Cărand,Arad
+,carandeni,Cărăndeni,46.85665,22.0862,Lăzăreni,Bihor
+,caranzel,Cărănzel,46.83062,22.04065,Lăzăreni,Bihor
+,carasau,Cărăsău,46.70688,22.05401,Cociuba Mare,Bihor
+,carpinet,Cărpinet,46.45,22.48333,Cărpinet,Bihor
+,carpinis-rosia-montana,Cărpiniș (Roșia Montană),46.31698,23.05885,Roșia Montană,Alba
+,carpinis-garbova,Cărpiniș (Gârbova),45.83163,23.66114,Gârbova,Alba
+,casoaia,Căsoaia,46.38799,22.76073,Avram Iancu,Alba
+,casesti,Cășești,46.28333,23.28333,Mogoș,Alba
+,cauasd,Căuașd,46.79095,21.82026,Tulca,Bihor
+,calnic,Câlnic,45.88333,23.66667,Câlnic,Alba
+,camp,Câmp,46.46954,22.44405,Vașcău,Bihor
+,camp-moti,Câmp-Moți,46.46122,22.41141,Vașcău,Bihor
+,campani,Câmpani,46.51415,22.52186,Câmpani,Bihor
+,campani-de-pomezeu,Câmpani de Pomezeu,46.80039,22.31785,Pomezeu,Bihor
+,campenesti,Câmpenești,46.38333,23.28333,Baia de Arieș,Alba
+,campu-goblii,Câmpu Goblii,45.99894,23.44959,Vințu de Jos,Alba
+,candesti,Cândești,46.38333,22.8,Avram Iancu,Alba
+,carasti,Cârăști,46.38333,22.83333,Avram Iancu,Alba
+,cartulesti,Cârțulești,46.38333,22.8,Avram Iancu,Alba
+,ceisoara,Ceișoara,46.85672,22.20265,Ceica,Bihor
+,cenade,Cenade,46.05,24.01667,Cenade,Alba
+,cenalos,Cenaloș,47.24426,22.15779,Sâniob,Bihor
+,cerbu,Cerbu,46.24694,23.10696,Bucium,Alba
+,cergau-mare,Cergău Mare,46.09869,23.92284,Cergău,Alba
+,cergau-mic,Cergău Mic,46.08438,23.94039,Cergău,Alba
+,cermei,Cermei,46.55,21.85,Cermei,Arad
+,certege,Certege,46.41418,23.02654,Câmpeni,Alba
+,ceru-bacainti,Ceru-Băcăinți,45.98333,23.25,Ceru-Băcăinți,Alba
+,cetariu,Cetariu,47.13333,22.01667,Cetariu,Bihor
+,cetatea-de-balta,Cetatea de Baltă,46.24794,24.17244,Cetatea de Baltă,Alba
+,cetea-galda-de-jos,Cetea (Galda de Jos),46.23771,23.58511,Galda de Jos,Alba
+,cheia,Cheia,46.3,23.45,Râmeț,Alba
+,cheile-cibului,Cheile Cibului,46.03708,23.18241,Almașu Mare,Alba
+,cheleteni,Cheleteni,46.44929,23.09673,Bistra,Alba
+,chelmac,Chelmac,46.0818,21.88463,Conop,Arad
+,cherechiu,Cherechiu,47.38333,22.13333,Cherechiu,Bihor
+,cherelus,Chereluș,46.4686,21.70706,Șicula,Arad
+,cheresig,Cheresig,47.03445,21.6913,Toboliu,Bihor
+,cheriu,Cheriu,47.01253,22.02198,Oșorhei,Bihor
+,chesint,Chesinț,46.04973,21.57944,Zăbrani,Arad
+,chesa,Cheșa,46.75104,22.02689,Cociuba Mare,Bihor
+,chesereu,Cheșereu,47.42779,22.11416,Cherechiu,Bihor
+,chet,Cheț,47.41943,22.33877,Marghita,Bihor
+,chier,Chier,46.34199,21.82488,Târnova,Arad
+,chijic,Chijic,46.99494,22.15635,Copăcel,Bihor
+,chioag,Chioag,47.17723,22.15338,Sârbi,Bihor
+,chiraleu,Chiraleu,47.30537,22.29845,Chișlaz,Bihor
+,chiribis,Chiribiș,47.31101,22.34184,Tăuteu,Bihor
+,chisindia,Chisindia,46.28333,22.1,Chisindia,Arad
+,chiscau,Chișcău,46.56667,22.55,Pietroasa,Bihor
+,chisirid,Chișirid,46.96894,21.88816,Nojorid,Bihor
+,chislaca,Chișlaca,46.55459,21.96205,Craiva,Arad
+,chislaz,Chișlaz,47.28333,22.23333,Chișlaz,Bihor
+,cib,Cib,46.06108,23.19023,Almașu Mare,Alba
+,cicau,Cicău,46.39997,23.67925,Mirăslău,Alba
+,cicard,Cicârd,46.27546,23.90671,Lopadea Nouă,Alba
+,cicir,Cicir,46.14559,21.47964,Vladimirescu,Arad
+,cihei,Cihei,46.99866,21.9529,Sânmartin,Bihor
+,cil,Cil,46.28371,22.26402,Almaș,Arad
+,cintei,Cintei,46.44434,21.56556,Zărand,Arad
+,cioara-de-sus,Cioara de Sus,46.3765,23.31515,Baia de Arieș,Alba
+,ciocaia,Ciocaia,47.3389,22.04575,Săcueni,Bihor
+,ciocasu,Ciocașu,46.03743,23.47293,Vințu de Jos,Alba
+,cionesti,Cionești,46.47221,22.98523,Albac,Alba
+,cistei,Cistei,46.18662,23.75364,Mihalț,Alba
+,cisteiu-de-mures,Cisteiu de Mureș,46.37749,23.81307,Ocna Mureș,Alba
+,ciuculesti,Ciuculești,46.26165,23.18557,Bucium,Alba
+,ciugud,Ciugud,46.05,23.61667,Ciugud,Alba
+,ciugudu-de-jos,Ciugudu de Jos,46.41872,23.74474,Unirea,Alba
+,ciugudu-de-sus,Ciugudu de Sus,46.42551,23.71231,Unirea,Alba
+,ciuguzel,Ciuguzel,46.28339,23.85874,Lopadea Nouă,Alba
+,ciuhoi,Ciuhoi,47.23333,22.11667,Sâniob,Bihor
+,ciuldesti,Ciuldești,46.39455,23.1084,Bistra,Alba
+,ciulesti,Ciulești,47.21943,22.19255,Spinuș,Bihor
+,ciumbrud,Ciumbrud,46.3081,23.76222,Aiud,Alba
+,ciumeghiu,Ciumeghiu,46.73333,21.58333,Ciumeghiu,Bihor
+,ciuntesti,Ciuntești,46.61667,22.05,Craiva,Arad
+,ciuruleasa,Ciuruleasa,46.25,23.03333,Ciuruleasa,Alba
+,ciutelec,Ciutelec,47.262,22.3869,Tăuteu,Bihor
+,cladova,Cladova,46.1358,21.6559,Păuliș,Arad
+,clisoasa,Clisoasa,45.98333,23.26667,Ceru-Băcăinți,Alba
+,clit,Clit,46.51433,22.0927,Hășmaș,Arad
+,coasta-hentii,Coasta Henții,46.31261,23.05858,Roșia Montană,Alba
+,coasta-mihaltului,Coasta Mihalțului,46.15,23.73333,Mihalț,Alba
+,coasta-vascului,Coasta Vâscului,46.41303,23.05379,Câmpeni,Alba
+,cobles,Cobleș,46.49391,22.73617,Arieșeni,Alba
+,cocesti,Cocești,46.36133,22.8123,Avram Iancu,Alba
+,cociuba,Cociuba,46.30918,22.18443,Dieci,Arad
+,cociuba-mica,Cociuba Mică,46.59838,22.5345,Pietroasa,Bihor
+,cocosesti,Cocoșești,46.37417,22.81198,Avram Iancu,Alba
+,codrisoru,Codrișoru,47.10355,22.52235,Aușeu,Bihor
+,codru,Codru,46.6332,22.14519,Șoimi,Bihor
+,cohani,Cohani,47.32132,22.4035,Abram,Bihor
+,cojocani,Cojocani,46.2829,23.36849,Mogoș,Alba
+,coleseni,Coleșeni,46.24667,23.13614,Bucium,Alba
+,colibi,Colibi,46.1119,23.78565,Ohaba,Alba
+,coltesti,Colțești,46.42306,23.56292,Râmetea,Alba
+,comanesti,Comănești,46.51007,22.04449,Hășmaș,Arad
+,conop,Conop,46.10186,21.8797,Conop,Arad
+,copand,Copand,46.42013,23.98116,Noșlac,Alba
+,copacel,Copăcel,46.98333,22.16667,Copăcel,Bihor
+,copaceni,Copăceni,46.77275,22.18987,Sâmbăta,Bihor
+,corbesti-ceica,Corbești (Ceica),46.88749,22.23666,Ceica,Bihor
+,corbesti-petris,Corbești (Petriș),46.07567,22.38859,Petriș,Arad
+,corboaia,Corboaia,47.36106,22.53103,Boianu Mare,Bihor
+,cordau,Cordău,46.95,21.98333,Sânmartin,Bihor
+,corna,Corna,46.28867,23.12542,Roșia Montană,Alba
+,cornisesti,Cornișești,46.82864,22.23524,Dobrești,Bihor
+,cornitel,Cornițel,46.98426,22.64344,Borod,Bihor
+,cornu,Cornu,46.22123,23.81515,Bucerdea-Grânoasă,Alba
+,coroi,Coroi,46.59185,21.95367,Craiva,Arad
+,coroiesti-vidra,Coroiești (Vidra),46.35752,22.81715,Vidra,Alba
+,coroiesti-avram-iancu,Coroiești (Avram Iancu),46.3563,22.81727,Avram Iancu,Alba
+,cortesti,Corțești,46.45,23.3,Poșaga,Alba
+,costesti-albac,Costești (Albac),46.48591,22.90667,Albac,Alba
+,costesti-poiana-vadului,Costești (Poiana Vadului),46.40589,22.85689,Poiana Vadului,Alba
+,cosdeni,Coșdeni,46.76954,22.2748,Pomezeu,Bihor
+,coslariu,Coșlariu,46.15813,23.68871,Sântimbru,Alba
+,coslariu-nou,Coșlariu Nou,46.17569,23.68206,Teiuș,Alba
+,cotiglet,Cotiglet,46.88963,22.20152,Ceica,Bihor
+,cotorasti,Cotorăști,46.33098,23.54606,Râmeț,Alba
+,cotoci,Coțoci,46.46667,22.85,Scărișoara,Alba
+,covasint,Covăsinț,46.2,21.6,Covăsinț,Arad
+,craciunelu-de-sus,Craciunelu de Sus,46.17223,24.18263,Cetatea de Baltă,Alba
+,craiva-cricau,Craiva (Cricău),46.18759,23.52622,Cricău,Alba
+,craiva,Craiva,46.58333,21.96667,Craiva,Arad
+,craciunelu-de-jos,Crăciunelu de Jos,46.173,23.833,Crăciunelu de Jos,Alba
+,crancesti,Crâncești,46.81764,22.25153,Dobrești,Bihor
+,cresuia,Cresuia,46.70906,22.48121,Curățele,Bihor
+,cretesti,Crețești,46.35793,23.10589,Bistra,Alba
+,cristesti-halmagiu,Cristești (Hălmagiu),46.30135,22.59608,Hălmagiu,Arad
+,cristesti-mogos,Cristești (Mogoș),46.27966,23.30439,Mogoș,Alba
+,crisana,Crișana,46.61667,21.51667,Zerind,Arad
+,criseni,Crișeni,46.04154,23.49032,Vințu de Jos,Alba
+,cristioru-de-jos,Criștioru de Jos,46.41937,22.53457,Criștioru de Jos,Bihor
+,cristioru-de-sus,Criștioru de Sus,46.41698,22.57413,Criștioru de Jos,Bihor
+,crocna,Crocna,46.32714,22.29517,Dieci,Arad
+,cruceni,Cruceni,46.06912,21.33595,Șagu,Arad
+,cubulcut,Cubulcut,47.3227,22.18648,Săcueni,Bihor
+,cucuceni,Cucuceni,46.56527,22.42461,Rieni,Bihor
+,cucuta,Cucuta,45.98938,23.25751,Ceru-Băcăinți,Alba
+,cuias,Cuiaș,45.99844,22.29236,Săvârșin,Arad
+,cuied,Cuied,46.33832,22.02164,Buteni,Arad
+,cuiesd,Cuieșd,47.11143,22.29485,Brusturi,Bihor
+,culdesti,Culdești,46.38076,22.95207,Vidra,Alba
+,cunta,Cunța,45.92506,23.7228,Șpring,Alba
+,curaturi,Curături,46.33056,23.06391,Roșia Montană,Alba
+,curatele,Curățele,46.7,22.41667,Curățele,Bihor
+,curmatura,Curmătură,46.33681,23.21419,Lupșa,Alba
+,curmetea,Curmetea,46.3,23.53333,Râmeț,Alba
+,curpeni,Curpeni,45.98457,23.28246,Ceru-Băcăinți,Alba
+,curtici,Curtici,46.35,21.3,Curtici,Arad
+,curtuiseni,Curtuișeni,47.54633,22.20263,Curtuișeni,Bihor
+,cusuius,Cusuiuș,46.56667,22.41667,Rieni,Bihor
+,cut,Cut,45.93972,23.66719,Cut,Alba
+,cuvesdia,Cuveșdia,45.95232,21.68171,Șiștarovăț,Arad
+,cuvin,Cuvin,46.17001,21.5936,Ghioroc,Arad
+,cuzap,Cuzap,47.20288,22.41523,Popești,Bihor
+,daia-romana,Daia Română,46.01667,23.66667,Daia Română,Alba
+,damis,Damiș,46.86751,22.55312,Bratca,Bihor
+,dandut,Dănduț,46.35735,23.08983,Câmpeni,Alba
+,danilesti,Dănilești,46.38333,22.91667,Vidra,Alba
+,daroaia,Dăroaia,46.30472,23.05125,Roșia Montană,Alba
+,dambureni,Dâmbureni,46.41428,23.071,Bistra,Alba
+,darlesti,Dârlești,46.51733,22.92412,Horea,Alba
+,deal,Deal,45.8591,23.62747,Câlnic,Alba
+,dealu-bajului,Dealu Bajului,46.45557,22.77079,Arieșeni,Alba
+,dealu-bistrii,Dealu Bistrii,46.36535,23.07395,Câmpeni,Alba
+,dealu-capsei,Dealu Capsei,46.40515,23.0677,Câmpeni,Alba
+,dealu-caselor,Dealu Caselor,46.3804,23.38726,Sălciua,Alba
+,dealu-crisului,Dealu Crișului,46.33698,22.84115,Avram Iancu,Alba
+,dealu-doamnei,Dealu Doamnei,46.3,23.53333,Râmeț,Alba
+,dealu-dostatului,Dealu Doștatului,45.96488,23.85267,Doștat,Alba
+,dealu-ferului,Dealu Ferului,46.00137,23.43935,Vințu de Jos,Alba
+,dealu-frumos-garda-de-sus,Dealu Frumos (Gârda de Sus),46.48802,22.82991,Gârda de Sus,Alba
+,dealu-frumos-vadu-motilor,Dealu Frumos (Vadu Moților),46.42281,22.97331,Vadu Moților,Alba
+,dealu-geoagiului,Dealu Geoagiului,46.28049,23.43129,Întregalde,Alba
+,dealu-goiesti,Dealu Goiești,46.39324,22.92026,Vidra,Alba
+,dealu-lamasoi,Dealu Lămășoi,46.4861,22.98639,Albac,Alba
+,dealu-mare,Dealu Mare,46.25,23.2,Bucium,Alba
+,dealu-muntelui,Dealu Muntelui,46.38655,23.11909,Bistra,Alba
+,dealu-ordancusii,Dealu Ordâncușii,46.51667,22.85,Scărișoara,Alba
+,dealu-poenii,Dealu Poenii,46.1,23.41667,Meteș,Alba
+,dealu-roatei,Dealu Roatei,46.12307,23.15419,Zlatna,Alba
+,decea,Decea,46.3834,23.76442,Mirăslău,Alba
+,delani,Delani,46.69349,22.34039,Beiuș,Bihor
+,deleni,Deleni,46.4,23.41667,Sălciua,Alba
+,deleni-obarsie,Deleni-Obârșie,46.1,23.85,Blaj,Alba
+,deoncesti,Deoncești,46.30067,23.001,Sohodol,Alba
+,derna,Derna,47.2,22.3,Derna,Bihor
+,dernisoara,Dernișoara,47.22067,22.25304,Derna,Bihor
+,deve,Deve,46.46193,22.93559,Albac,Alba
+,dezna,Dezna,46.4,22.25,Dezna,Arad
+,dicanesti,Dicănești,46.89521,22.10018,Drăgești,Bihor
+,dieci,Dieci,46.31667,22.25,Dieci,Arad
+,dijir,Dijir,47.34903,22.46352,Abram,Bihor
+,dilimani,Dilimani,46.35582,23.01309,Sohodol,Alba
+,diosig,Diosig,47.3,22,Diosig,Bihor
+,dobra,Dobra,45.76913,23.64218,Șugag,Alba
+,dobresti-garda-de-sus,Dobrești (Gârda de Sus),46.46964,22.821,Gârda de Sus,Alba
+,dobresti-scarisoara,Dobrești (Scărișoara),46.46841,22.81983,Scărișoara,Alba
+,dobricionesti,Dobricionești,46.99492,22.47796,Măgești,Bihor
+,dobrot,Dobrot,46.1739,23.13966,Zlatna,Alba
+,dogaresti,Dogărești,46.27004,23.12859,Bucium,Alba
+,dolea-suplacu-de-barcau,Dolea (Suplacu de Barcău),47.27519,22.48769,Suplacu de Barcău,Bihor
+,dolea-vidra,Dolea (Vidra),46.36667,22.96667,Vidra,Alba
+,dolesti,Dolești,46.36897,22.83951,Avram Iancu,Alba
+,donceni,Donceni,46.39162,22.17691,Sebiș,Arad
+,doptau,Doptău,46.26462,23.92704,Șona,Alba
+,dorgos,Dorgoș,46.05,21.83333,Ususău,Arad
+,dorobanti,Dorobanți,46.35022,21.24441,Dorobanți,Arad
+,dos,Dos,46.36983,22.96062,Vidra,Alba
+,dosu-luncii,Dosu Luncii,46.36518,22.90791,Vidra,Alba
+,dosu-vasesti,Dosu Văsești,46.36783,22.86564,Vidra,Alba
+,dostat,Doștat,45.96667,23.85,Doștat,Alba
+,drasov,Drașov,45.93826,23.74323,Șpring,Alba
+,draut,Drauț,46.26048,21.80924,Târnova,Arad
+,draganesti,Drăgănești,46.61667,22.38333,Drăgănești,Bihor
+,draganesti-sibot,Drăgănești (Șibot),45.95,23.28333,Șibot,Alba
+,dragesti,Drăgești,46.88333,22.13333,Drăgești,Bihor
+,dragoesti,Drăgoești,46.36667,22.96667,Vidra,Alba
+,dragoiesti-lunca,Drăgoiești-Luncă,46.3661,22.98148,Vidra,Alba
+,dragoteni,Drăgoteni,46.73254,22.30877,Remetea,Bihor
+,drambar,Drâmbar,46.07633,23.62644,Ciugud,Alba
+,drevedeni,Drevedeni,46.28333,23.28333,Mogoș,Alba
+,dric,Dric,46.40455,23.04534,Câmpeni,Alba
+,dud,Dud,46.29861,21.85755,Târnova,Arad
+,duduieni,Duduieni,46.40098,22.86278,Poiana Vadului,Alba
+,dulcele,Dulcele,46.35486,22.36714,Gurahonț,Arad
+,dumacesti,Dumăcești,46.39406,22.79726,Avram Iancu,Alba
+,dumbrava-holod,Dumbrava (Holod),46.78563,22.06979,Holod,Bihor
+,dumbrava-unirea,Dumbrava (Unirea),46.43566,23.77257,Unirea,Alba
+,dumbrava-plescuta,Dumbrava (Pleșcuța),46.27791,22.43169,Pleșcuța,Arad
+,dumbrava-zlatna,Dumbrava (Zlatna),46.13905,23.19712,Zlatna,Alba
+,dumbrava-sasciori,Dumbrava (Săsciori),45.88295,23.60499,Săsciori,Alba
+,dumbravani,Dumbrăvani,46.58634,22.50138,Buntești,Bihor
+,dumbravita-holod,Dumbrăvița (Holod),46.79418,22.1541,Holod,Bihor
+,dumbravita-barzava,Dumbrăvița (Bârzava),46.0954,22.08311,Bârzava,Arad
+,dumbravita-ceru-bacainti,Dumbrăvița (Ceru-Băcăinți),45.98288,23.26628,Ceru-Băcăinți,Alba
+,dumbravita-de-codru,Dumbrăvița de Codru,46.65,22.18333,Șoimi,Bihor
+,dumesti,Dumești,46.3721,23.43411,Sălciua,Alba
+,dumitra,Dumitra,46.09672,23.68295,Sântimbru,Alba
+,dupa-deal-ponor,Dupa Deal (Ponor),46.31421,23.4362,Ponor,Alba
+,dupa-deal-baia-de-aries,După Deal (Baia de Arieș),46.41667,23.31667,Baia de Arieș,Alba
+,dupa-deal-lupsa,După Deal (Lupșa),46.33607,23.16296,Lupșa,Alba
+,dupa-plese,După Pleșe,46.43287,22.95026,Scărișoara,Alba
+,durasti,Durăști,46.43959,23.10213,Bistra,Alba
+,dusesti,Dușești,46.83697,22.1789,Ceica,Bihor
+,fata,Fața,46.46317,22.96211,Albac,Alba
+,fata-abrudului,Fața Abrudului,46.34891,23.05908,Câmpeni,Alba
+,fata-cristesei,Fața Cristesei,46.49189,22.76349,Arieșeni,Alba
+,fata-lapusului,Fața Lăpușului,46.4692,22.77628,Arieșeni,Alba
+,fata-pietrii,Fața Pietrii,46.2974,23.52953,Stremț,Alba
+,fata-lazesti,Fața-Lăzești,46.43037,22.85668,Scărișoara,Alba
+,faget,Făget,46.15309,24.16569,Valea Lungă,Alba
+,fagetu-de-jos,Făgetu de Jos,46.40313,22.90729,Poiana Vadului,Alba
+,fagetu-de-sus,Făgetu de Sus,46.39683,22.83797,Poiana Vadului,Alba
+,farau,Fărău,46.33333,24.01667,Fărău,Alba
+,fanate,Fânațe,46.5,22.53333,Câmpani,Bihor
+,fantanele,Fântânele,46.1237,21.3842,Fântânele,Arad
+,fantanele-ceru-bacainti,Fântânele (Ceru-Băcăinți),46.02894,23.26873,Ceru-Băcăinți,Alba
+,fasca,Fâșca,46.98333,22.33333,Vârciorog,Bihor
+,fegernic,Fegernic,47.20367,22.12858,Sârbi,Bihor
+,fegernicu-nou,Fegernicu Nou,47.22036,22.10227,Sârbi,Bihor
+,feisa,Feisa,46.22608,24.14492,Jidvei,Alba
+,felcheriu,Felcheriu,46.99618,22.07906,Oșorhei,Bihor
+,felnac,Felnac,46.11667,21.15,Felnac,Arad
+,feneris,Feneriș,46.71203,22.28821,Pocola,Bihor
+,fenes,Feneș,46.10431,23.29511,Zlatna,Alba
+,fenis,Feniș,46.2967,22.33365,Gurahonț,Arad
+,feresti,Ferești,46.24152,23.10606,Bucium,Alba
+,ferice,Ferice,46.63671,22.5258,Buntești,Bihor
+,fericet,Fericet,46.48725,22.94068,Horea,Alba
+,feteni,Fețeni,45.80544,23.34643,Cugir,Alba
+,ficaresti,Ficărești,46.38356,22.96193,Vidra,Alba
+,finis,Finiș,46.63333,22.31667,Finiș,Bihor
+,firiteaz,Firiteaz,46.02059,21.37255,Șagu,Arad
+,fiscut,Fiscut,46.03058,21.39625,Șagu,Arad
+,fistaresti,Fistărești,46.38333,22.8,Avram Iancu,Alba
+,fizis,Fiziș,46.65529,22.2835,Finiș,Bihor
+,flitesti,Flitești,46.11393,23.87094,Blaj,Alba
+,floresti-scarisoara,Florești (Scărișoara),46.44155,22.89769,Scărișoara,Alba
+,floresti-campeni,Florești (Câmpeni),46.39059,23.0197,Câmpeni,Alba
+,floresti-ramet,Florești (Râmeț),46.33699,23.49658,Râmeț,Alba
+,floresti-bucium,Florești (Bucium),46.28766,23.14642,Bucium,Alba
+,foglas,Foglaș,47.25,22.53333,Suplacu de Barcău,Bihor
+,fonau,Fonău,46.81738,21.97414,Husasău de Tinca,Bihor
+,forau,Forău,46.7107,22.20113,Uileacu de Beiuș,Bihor
+,forosig,Forosig,46.8183,22.10614,Holod,Bihor
+,frumuseni,Frumușeni,46.10252,21.46167,Frumușeni,Arad
+,fughiu,Fughiu,47.05689,22.04623,Oșorhei,Bihor
+,furduiesti-campeni,Furduiești (Câmpeni),46.33609,23.07947,Câmpeni,Alba
+,furduiesti-sohodol,Furduiești (Sohodol),46.31271,22.99104,Sohodol,Alba
+,gai,Gai,46.20989,21.27451,Arad,Arad
+,galati,Galați,46.08954,23.29298,Zlatna,Alba
+,galbena,Galbena,46.46667,22.76667,Arieșeni,Alba
+,galda-de-sus,Galda de Sus,46.22291,23.56395,Galda de Jos,Alba
+,galospetreu,Galoșpetreu,47.48345,22.2173,Tarcea,Bihor
+,galsa,Galșa,46.2881,21.65137,Șiria,Arad
+,galtiu,Galtiu,46.14175,23.66445,Sântimbru,Alba
+,gabud,Găbud,46.4093,24.01308,Noșlac,Alba
+,galaseni,Gălășeni,46.98534,22.42605,Măgești,Bihor
+,galesti,Gălești,46.38333,23.1,Bistra,Alba
+,ganesti,Gănești,46.39011,23.12991,Bistra,Alba
+,gambas,Gâmbaș,46.35,23.71667,Aiud,Alba
+,garbova,Gârbova,45.86667,23.73333,Gârbova,Alba
+,garbova-de-jos,Gârbova de Jos,46.25907,23.66958,Aiud,Alba
+,garbova-de-sus,Gârbova de Sus,46.2924,23.62369,Aiud,Alba
+,garbovita,Gârbovița,46.28333,23.63333,Aiud,Alba
+,garda-de-sus,Gârda de Sus,46.45,22.81667,Gârda de Sus,Alba
+,garda-barbulesti,Gârda-Bărbulești,46.32702,23.11532,Roșia Montană,Alba
+,garda-seaca,Gârda-Seacă,46.55,22.8,Gârda de Sus,Alba
+,garde,Gârde,46.38759,23.14292,Bistra,Alba
+,geamana,Geamăna,46.3282,23.21243,Lupșa,Alba
+,geoagiu-de-sus,Geoagiu de Sus,46.25453,23.59257,Stremț,Alba
+,geogel,Geogel,46.3097,23.3818,Ponor,Alba
+,geomal,Geomal,46.26144,23.62193,Stremț,Alba
+,gepis,Gepiș,46.84592,22.02049,Lăzăreni,Bihor
+,gepiu,Gepiu,46.93034,21.79016,Gepiu,Bihor
+,ghedulesti,Ghedulești,46.23545,23.07023,Ciuruleasa,Alba
+,ghenetea,Ghenetea,47.38898,22.3976,Marghita,Bihor
+,ghetari,Ghețari,46.5,22.81667,Gârda de Sus,Alba
+,ghida,Ghida,47.31112,22.45182,Balc,Bihor
+,ghighiseni,Ghighișeni,46.55141,22.43148,Rieni,Bihor
+,ghioncani,Ghioncani,46.24152,23.32857,Întregalde,Alba
+,ghiorac,Ghiorac,46.7134,21.68309,Ciumeghiu,Bihor
+,ghioracu-nou,Ghioracu Nou,46.7,21.68333,Ciumeghiu,Bihor
+,ghioroc,Ghioroc,46.15,21.58333,Ghioroc,Arad
+,ghirbom,Ghirbom,46.03476,23.72329,Berghin,Alba
+,ginta,Ginta,46.75342,22.08807,Căpâlna,Bihor
+,girisu-negru,Girișu Negru,46.72537,21.90682,Tinca,Bihor
+,giulesti,Giulești,46.54817,22.59052,Pietroasa,Bihor
+,giurcuesti,Giurcuești,46.23333,23.21667,Bucium,Alba
+,giurgiu,Giurgiu,46.5,22.95,Horea,Alba
+,giurgiut,Giurgiuț,46.5214,22.9501,Horea,Alba
+,gligoresti,Gligorești,46.38422,22.84508,Vidra,Alba
+,glod,Glod,46.06369,23.15896,Almașu Mare,Alba
+,glogovet,Glogoveț,46.14841,24.00888,Valea Lungă,Alba
+,goasele,Goașele,45.77786,23.46259,Cugir,Alba
+,goiesti,Goiești,46.37685,22.91998,Vidra,Alba
+,goila,Goila,46.77287,22.33975,Căbești,Bihor
+,gojeiesti,Gojeiești,46.38333,22.8,Avram Iancu,Alba
+,gorgan,Gorgan,46.09334,24.00722,Cenade,Alba
+,gradinari,Grădinari,46.63968,22.37472,Drăgănești,Bihor
+,graniceri,Grăniceri,46.51667,21.3,Grăniceri,Arad
+,groseni,Groșeni,46.49754,22.11833,Archiș,Arad
+,grosi-auseu,Groși (Aușeu),47.04525,22.47965,Aușeu,Bihor
+,grosi-ceru-bacainti,Groși (Ceru-Băcăinți),46.00588,23.24629,Ceru-Băcăinți,Alba
+,grosi-varfurile,Groși (Vârfurile),46.36667,22.55,Vârfurile,Arad
+,grosii-noi,Groșii Noi,46.11964,22.12082,Bârzava,Arad
+,gruilung,Gruilung,46.87907,22.10038,Lăzăreni,Bihor
+,gura-ariesului,Gura Arieșului,46.42968,23.95724,Lunca Mureșului,Alba
+,gura-cornei,Gura Cornei,46.26442,23.09463,abrud,Alba
+,gura-cutului,Gura Cuțului,46.03774,23.41104,Vințu de Jos,Alba
+,gura-izbitei,Gura Izbitei,46.24816,23.15876,Bucium,Alba
+,gura-rosiei,Gura Roșiei,46.30948,23.05729,Roșia Montană,Alba
+,gura-sohodol,Gura Sohodol,46.35463,23.03067,Sohodol,Alba
+,gura-vaii,Gura Văii,46.29269,22.39476,Pleșcuța,Arad
+,gurahont,Gurahonț,46.26667,22.35,Gurahonț,Arad
+,gurani,Gurani,46.59518,22.5455,Pietroasa,Bihor
+,gurba,Gurba,46.46756,21.78789,Șicula,Arad
+,gurbediu,Gurbediu,46.79379,21.8648,Tinca,Bihor
+,gurbesti-spinus,Gurbești (Spinuș),47.19445,22.22453,Spinuș,Bihor
+,gurbesti-cabesti,Gurbești (Căbești),46.75035,22.35994,Căbești,Bihor
+,gutri,Gutri,46.38333,23.28333,Baia de Arieș,Alba
+,haiducesti-garda-de-sus,Haiducești (Gârda de Sus),46.45,22.81667,Gârda de Sus,Alba
+,haiducesti-vidra,Haiducești (Vidra),46.39446,22.92945,Vidra,Alba
+,haieu,Haieu,46.99477,21.99821,Sânmartin,Bihor
+,hanes-mina,Haneș Mină,46.12398,23.09054,Almașu Mare,Alba
+,hategana,Hațegana,46.03563,23.44293,Vințu de Jos,Alba
+,hadarau,Hădărău,46.36402,23.20532,Lupșa,Alba
+,halalis,Hălăliș,46.01027,22.20558,Săvârșin,Arad
+,halmagiu,Hălmagiu,46.26667,22.58333,Hălmagiu,Arad
+,halmagel,Hălmăgel,46.26667,22.61667,Hălmăgel,Arad
+,hanasesti-garda-de-sus,Hănășești (Gârda de Sus),46.5,22.83333,Gârda de Sus,Alba
+,hanasesti-poiana-vadului,Hănășești (Poiana Vadului),46.39144,22.85341,Poiana Vadului,Alba
+,hapria,Hăpria,46.08002,23.66833,Ciugud,Alba
+,harasti,Hărăști,46.35,22.9,Vidra,Alba
+,hasmas,Hășmaș,46.5,22.08333,Hășmaș,Arad
+,haucesti,Hăucești,47.22813,22.20321,Chișlaz,Bihor
+,harsesti,Hârsești,46.53333,22.5,Câmpani,Bihor
+,heleresti,Helerești,46.35573,22.84277,Avram Iancu,Alba
+,helesti,Helești,46.2825,23.14369,Bucium,Alba
+,henig,Henig,46.10576,23.73089,Berghin,Alba
+,heresti,Herești,46.3678,22.83838,Vidra,Alba
+,heria,Heria,46.36474,23.98034,Fărău,Alba
+,hidis,Hidiș,46.7781,22.26099,Pomezeu,Bihor
+,hidisel,Hidișel,46.83444,22.25842,Dobrești,Bihor
+,hidiselu-de-jos,Hidișelu de Jos,46.95,22.06667,Hidișelu De Sus,Bihor
+,hidiselu-de-sus,Hidișelu de Sus,46.95,22.05,Hidișelu De Sus,Bihor
+,higiesti,Higiești,46.38333,22.8,Avram Iancu,Alba
+,hinchiris,Hinchiriș,46.5907,22.36502,Lazuri de Beiuș,Bihor
+,hoanca-vidra,Hoancă (Vidra),46.34398,22.91931,Vidra,Alba
+,hoanca-sohodol,Hoancă (Sohodol),46.34027,22.97866,Sohodol,Alba
+,hodai,Hodăi,46.08333,23.93333,Cergău,Alba
+,hodai-lupu,Hodăi-Lupu,46.08333,23.93333,Cergău,Alba
+,hodis-holod,Hodiș (Holod),46.80303,22.10618,Holod,Bihor
+,hodis-barsa,Hodiș (Bârsa),46.35816,22.028,Bârsa,Arad
+,hodisel,Hodișel,46.64615,22.06356,Olcea,Bihor
+,hodisesti,Hodișești,46.39651,23.08545,Bistra,Alba
+,hodobana,Hodobana,46.51772,22.77162,Arieșeni,Alba
+,hodos,Hodoș,47.22488,21.98495,Sălard,Bihor
+,holobani,Holobani,46.32035,23.23443,Lupșa,Alba
+,homorog,Homorog,46.83054,21.74559,Mădăraș,Bihor
+,hontisor,Honțișor,46.25354,22.33892,Brazii,Arad
+,hoparta,Hopârta,46.32134,23.87244,Hopârta,Alba
+,horea,Horea,46.50246,22.95034,Horea,Alba
+,horgesti,Horgești,46.36667,22.95,Vidra,Alba
+,horia,Horia,46.20847,21.46287,Vladimirescu,Arad
+,hotarel,Hotărel,46.53287,22.44052,Lunca,Bihor
+,hudricesti,Hudricești,46.38896,23.10206,Bistra,Alba
+,hunedoara-timisana,Hunedoara Timișană,46.03125,21.3211,Șagu,Arad
+,husasau-de-cris,Husasău de Criș,47.0855,22.06423,Ineu,Bihor
+,husasau-de-tinca,Husasău de Tinca,46.81667,21.91667,Husasău de Tinca,Bihor
+,huta,Huta,47.36776,22.57131,Boianu Mare,Bihor
+,huta-voivozi,Huta Voivozi,47.15598,22.48011,Șinteu,Bihor
+,huzaresti,Huzărești,46.44518,22.84478,Gârda de Sus,Alba
+,iacobesti,Iacobești,46.30789,23.06796,Roșia Montană,Alba
+,iacobini,Iacobini,46.23155,22.34197,Brazii,Arad
+,ianca,Ianca,47.28445,21.99174,Diosig,Bihor
+,ianosda,Ianoșda,46.83791,21.80778,Mădăraș,Bihor
+,ibru,Ibru,46.02113,23.3634,Blândiana,Alba
+,iclod,Iclod,46.21031,23.93893,Sâncel,Alba
+,iercoseni,Iercoșeni,46.34739,21.97928,Șilindia,Arad
+,iermata,Iermata,46.38394,21.77057,Seleuș,Arad
+,iermata-neagra,Iermata Neagră,46.638,21.4988,Zerind,Arad
+,ighiel,Ighiel,46.1468,23.47968,Ighiu,Alba
+,ignatesti,Ignățești,46.30815,23.08246,Roșia Montană,Alba
+,ignesti,Ignești,46.4,22.16667,Ignești,Arad
+,iliesti,Iliești,46.27376,23.38713,Întregalde,Alba
+,ilteu,Ilteu,46.01448,22.36659,Petriș,Arad
+,incesti-ceica,Incești (Ceica),46.84236,22.12948,Ceica,Bihor
+,incesti-posaga,Incești (Poșaga),46.45821,23.28898,Poșaga,Alba
+,incesti-avram-iancu,Incești (Avram Iancu),46.35824,22.85598,Avram Iancu,Alba
+,ineu-2,Ineu,47.08333,22.11667,Ineu,Bihor
+,inoc,Inoc,46.38545,23.7891,Unirea,Alba
+,intregalde,Intregalde,46.25,23.41667,Întregalde,Alba
+,inuri,Inuri,46.04454,23.45469,Vințu de Jos,Alba
+,ioanis,Ioaniș,46.67094,22.2759,Finiș,Bihor
+,ionesti,Ionești,46.239,22.5602,Hălmagiu,Arad
+,iosas,Iosaș,46.28358,22.33546,Gurahonț,Arad
+,iosasel,Iosășel,46.28333,22.35,Gurahonț,Arad
+,iratosu,Iratoșu,46.31667,21.2,Iratoșu,Arad
+,isca,Isca,46.1046,23.40623,Meteș,Alba
+,iteu,Iteu,47.35222,22.41862,Abram,Bihor
+,iteu-nou,Iteu Nou,47.3398,22.39175,Abram,Bihor
+,ivanis,Ivăniș,46.22679,23.39067,Întregalde,Alba
+,izbicioara,Izbicioara,46.24349,23.16648,Bucium,Alba
+,izbita,Izbita,46.2432,23.1426,Bucium,Alba
+,izbuc,Izbuc,46.44025,22.46803,Cărpinet,Bihor
+,izlaz,Izlaz,46.48338,22.72337,Arieșeni,Alba
+,izvoarele-viisoara,Izvoarele (Viișoara),47.40005,22.39694,Viișoara,Bihor
+,izvoarele-garda-de-sus,Izvoarele (Gârda de Sus),46.45927,22.8365,Gârda de Sus,Alba
+,izvoarele-livezile,Izvoarele (Livezile),46.40114,23.5367,Livezile,Alba
+,izvoarele-blaj,Izvoarele (Blaj),46.17011,23.90377,Blaj,Alba
+,izvoru-ampoiului,Izvoru Ampoiului,46.14695,23.17484,Zlatna,Alba
+,jeflesti,Jeflești,46.38061,22.8807,Vidra,Alba
+,jidostina,Jidoștina,45.71812,23.58515,Șugag,Alba
+,jidvei,Jidvei,46.21667,24.1,Jidvei,Alba
+,joia-mare,Joia Mare,46.30015,22.17957,Almaș,Arad
+,jojei,Jojei,46.34909,22.83344,Avram Iancu,Alba
+,joldisesti,Joldișești,46.31952,22.93821,Sohodol,Alba
+,josani-magesti,Josani (Măgești),47.00005,22.46382,Măgești,Bihor
+,josani-cabesti,Josani (Căbești),46.75456,22.35575,Căbești,Bihor
+,julita,Julița,46.03925,22.13576,Vărădia de Mureș,Arad
+,jurcuiesti,Jurcuiești,46.29448,23.1833,Bucium,Alba
+,la-patrut,La Pătruț,46.13333,24.05,Valea Lungă,Alba
+,labasint,Labașinț,45.96026,21.79031,Șiștarovăț,Arad
+,lacu-sarat,Lacu Sărat,46.80342,22.35528,Pomezeu,Bihor
+,lalasint,Lalașinț,46.07125,22.00929,Bârzava,Arad
+,lancram,Lancrăm,45.98708,23.55665,Sebeș,Alba
+,laz-dezna,Laz (Dezna),46.3703,22.25006,Dezna,Arad
+,laz-vintu-de-jos,Laz (Vințu de Jos),46.05204,23.41904,Vințu de Jos,Alba
+,laz-sasciori,Laz (Săsciori),45.8684,23.58122,Săsciori,Alba
+,lazuri-rosia,Lazuri (Roșia),46.79525,22.41306,Roșia,Bihor
+,lazuri-lupsa,Lazuri (Lupșa),46.34162,23.17393,Lupșa,Alba
+,lazuri-sohodol,Lazuri (Sohodol),46.36347,23.02359,Sohodol,Alba
+,lazuri-varfurile,Lazuri (Vârfurile),46.3428,22.55962,Vârfurile,Arad
+,lazuri-de-beius,Lazuri de Beiuș,46.58333,22.4,Lazuri de Beiuș,Bihor
+,lazareni,Lăzăreni,46.86667,22.06667,Lăzăreni,Bihor
+,lazesti-scarisoara,Lăzești (Scărișoara),46.46667,22.85,Scărișoara,Alba
+,lazesti-vadu-motilor,Lăzești (Vadu Moților),46.41977,22.93937,Vadu Moților,Alba
+,leasa,Leasa,46.27529,22.546,Hălmagiu,Arad
+,leheceni,Leheceni,46.44657,22.51638,Cărpinet,Bihor
+,lehesti,Lehești,46.30375,22.98386,Sohodol,Alba
+,lelesti,Lelești,46.62012,22.45709,Buntești,Bihor
+,leorint,Leorinț,46.25402,23.72548,Rădești,Alba
+,lespezea,Lespezea,46.47592,22.90094,Scărișoara,Alba
+,les,Leș,46.96497,21.84004,Nojorid,Bihor
+,lestioara,Leștioara,46.27379,22.56736,Hălmagiu,Arad
+,limba,Limba,46.03999,23.59769,Ciugud,Alba
+,lipaia,Lipaia,46.38367,23.07786,Bistra,Alba
+,livada,Livada,46.22284,21.38403,Livada,Arad
+,livada-beiusului,Livada Beiușului,46.65005,22.40073,Drăgănești,Bihor
+,livada-de-bihor,Livada de Bihor,47.01039,21.80836,Nojorid,Bihor
+,livezile,Livezile,46.35,23.63333,Livezile,Alba
+,lodroman,Lodroman,46.11792,24.0741,Valea Lungă,Alba
+,lopadea-noua,Lopadea Nouă,46.2909,23.81901,Lopadea Nouă,Alba
+,lopadea-veche,Lopadea Veche,46.37792,23.66381,Mirăslău,Alba
+,loranta,Loranta,47.14121,22.3257,Brusturi,Bihor
+,lorau,Lorău,46.91659,22.63139,Bratca,Bihor
+,lugasu-de-sus,Lugașu de Sus,47.07917,22.35605,Lugașu De Jos,Bihor
+,luguzau,Luguzău,46.33145,21.93541,Șilindia,Arad
+,luminesti,Luminești,46.32596,22.94201,Sohodol,Alba
+,lunca,Lunca,46.51667,22.46667,Lunca,Bihor
+,lunca-posaga,Lunca (Poșaga),46.43949,23.45949,Poșaga,Alba
+,lunca-lupsa,Lunca (Lupșa),46.37873,23.21865,Lupșa,Alba
+,lunca-vidra,Lunca (Vidra),46.37377,22.91018,Vidra,Alba
+,lunca-valea-lunga,Lunca (Valea Lungă),46.10526,24.07106,Valea Lungă,Alba
+,lunca-ampoitei,Lunca Ampoiței,46.13995,23.38518,Meteș,Alba
+,lunca-bisericii,Lunca Bisericii,46.36756,22.88049,Vidra,Alba
+,lunca-de-jos,Lunca de Jos,46.3716,22.8995,Vidra,Alba
+,lunca-de-sus,Lunca de Sus,46.36667,22.91667,Vidra,Alba
+,lunca-goiesti,Lunca Goiești,46.3758,22.91476,Vidra,Alba
+,lunca-larga-ocolis,Lunca Largă (Ocoliș),46.52515,23.42692,Ocoliș,Alba
+,lunca-larga-bistra,Lunca Largă (Bistra),46.37911,23.13188,Bistra,Alba
+,lunca-merilor,Lunca Merilor,46.36665,23.09771,Bistra,Alba
+,lunca-metesului,Lunca Meteșului,46.13965,23.36648,Meteș,Alba
+,lunca-muresului,Lunca Mureșului,46.43333,23.9,Lunca Mureșului,Alba
+,lunca-tarnavei,Lunca Târnavei,46.21841,23.98665,Șona,Alba
+,lunca-vesesti,Lunca Vesești,46.37808,22.94484,Vidra,Alba
+,luncasprie,Luncasprie,46.85,22.31667,Dobrești,Bihor
+,luncsoara-halmagel,Luncșoara (Hălmăgel),46.32113,22.62773,Hălmăgel,Arad
+,lupaiesti,Lupăiești,46.41072,22.91125,Poiana Vadului,Alba
+,lupesti,Lupești,46.06938,22.21888,Vărădia de Mureș,Arad
+,lupoaia,Lupoaia,46.80334,22.12711,Holod,Bihor
+,lupsa,Lupșa,46.36667,23.2,Lupșa,Alba
+,lupseni,Lupșeni,46.21875,23.54789,Galda de Jos,Alba
+,lupu,Lupu,46.09763,23.9744,Cergău,Alba
+,lupulesti,Lupulești,46.25338,23.19349,Bucium,Alba
+,macea,Macea,46.38333,21.3,Macea,Arad
+,mailat,Mailat,46.04189,21.10702,Vinga,Arad
+,margine,Margine,47.2947,22.42418,Abram,Bihor
+,martihaz,Marțihaz,46.87365,21.65018,Mădăraș,Bihor
+,matei,Maței,46.42846,22.88455,Scărișoara,Alba
+,macaresti,Măcărești,46.29341,23.39609,Ponor,Alba
+,madaras,Mădăraș,46.83333,21.68333,Mădăraș,Bihor
+,maderat,Măderat,46.29493,21.71137,Pâncota,Arad
+,madrigesti,Mădrigești,46.20395,22.30604,Brazii,Arad
+,maghierat,Măghierat,46.05298,23.81944,Ohaba,Alba
+,magina,Măgina,46.34062,23.6508,Aiud,Alba
+,magulicea,Măgulicea,46.33203,22.53403,Vârfurile,Arad
+,magura-pietroasa,Măgura (Pietroasa),46.55492,22.55467,Pietroasa,Bihor
+,magura-bucium,Măgura (Bucium),46.24679,23.14361,Bucium,Alba
+,magura-galda-de-jos,Măgura (Galda de Jos),46.23504,23.54142,Galda de Jos,Alba
+,mahaceni,Măhăceni,46.44766,23.74371,Unirea,Alba
+,mamaligani,Mămăligani,46.29326,23.27894,Mogoș,Alba
+,manarade,Mănărade,46.14158,23.96861,Blaj,Alba
+,manastire,Mănăstire,46.37942,23.17601,Lupșa,Alba
+,manastur,Mănăștur,46.00949,21.13362,Vinga,Arad
+,mancesti,Măncești,46.49386,22.95607,Horea,Alba
+,maraus,Mărăuș,46.58333,22.03333,Craiva,Arad
+,margineni,Mărgineni,45.91453,23.41548,Săliștea,Alba
+,marinesti,Mărinești,46.27057,23.39232,Întregalde,Alba
+,martesti,Mărtești,46.35867,22.86374,Avram Iancu,Alba
+,martinie,Mărtinie,45.79353,23.60918,Șugag,Alba
+,matacina,Mătăcina,46.03544,23.41997,Vințu de Jos,Alba
+,matisesti-horea,Mătișești (Horea),46.50889,22.9023,Horea,Alba
+,matisesti-ciuruleasa,Mătișești (Ciuruleasa),46.22903,23.017,Ciuruleasa,Alba
+,mandruloc,Mândruloc,46.14863,21.4657,Vladimirescu,Arad
+,manerau,Mânerău,46.41372,21.98838,Bocsig,Arad
+,margaia,Mârgaia,46.36667,23.2,Lupșa,Alba
+,masca,Mâsca,46.29615,21.67232,Șiria,Arad
+,medresti,Medrești,46.29567,22.95295,Sohodol,Alba
+,medves,Medveș,46.30582,24.06467,Fărău,Alba
+,mereteu,Mereteu,45.99219,23.427,Vințu de Jos,Alba
+,mermesti,Mermești,46.31051,22.56347,Vârfurile,Arad
+,mesentea,Mesentea,46.1933,23.60382,Galda de Jos,Alba
+,mescreac,Meșcreac,46.24238,23.74028,Rădești,Alba
+,meziad,Meziad,46.7409,22.42846,Remetea,Bihor
+,micesti,Micești,46.10141,23.55573,Alba Iulia,Alba
+,micoslaca,Micoșlaca,46.37012,23.79326,Ocna Mureș,Alba
+,micudia,Micudia,46.36667,23.2,Lupșa,Alba
+,mierag,Mierag,46.60433,22.3661,Tărcaia,Bihor
+,mierlau,Mierlău,46.9154,22.0157,Hidișelu De Sus,Bihor
+,miersig,Miersig,46.88635,21.84349,Husasău de Tinca,Bihor
+,mihai-bravu,Mihai Bravu,47.2578,21.93811,Roșiori,Bihor
+,mihalt,Mihalț,46.15,23.73333,Mihalț,Alba
+,mihaiesti,Mihăiești,46.35363,23.11251,Bistra,Alba
+,miheleu,Miheleu,46.82667,22.06488,Lăzăreni,Bihor
+,mihoesti,Mihoești,46.37018,23.02714,Câmpeni,Alba
+,milova,Milova,46.10594,21.80199,Conop,Arad
+,minead,Minead,46.41693,22.18723,Ignești,Arad
+,minis,Miniș,46.13629,21.60565,Ghioroc,Arad
+,minisel,Minișel,46.25795,21.99616,Tauț,Arad
+,minisu-de-sus,Minișu de Sus,46.28193,22.00912,Tauț,Arad
+,miraslau,Mirăslău,46.36667,23.71667,Mirăslău,Alba
+,misca-chislaz,Mișca (Chișlaz),47.26291,22.25914,Chișlaz,Bihor
+,misca,Mișca,46.6028,21.59998,Mișca,Arad
+,mitrutesti,Mitruțești,46.36667,23.2,Lupșa,Alba
+,mizies,Mizieș,46.66334,22.40025,Drăgănești,Bihor
+,mocrea,Mocrea,46.38762,21.8222,Ineu,Arad
+,modolesti-vidra,Modolești (Vidra),46.37771,22.87532,Vidra,Alba
+,modolesti-intregalde,Modolești (Întregalde),46.24984,23.42311,Întregalde,Alba
+,mogos,Mogoș,46.27554,23.28038,Mogoș,Alba
+,moneasa,Moneasa,46.45,22.25,Moneasa,Arad
+,monorostia,Monoroștia,46.10476,22.01378,Bârzava,Arad
+,moraresti-sohodol,Morărești (Sohodol),46.33709,23.02368,Sohodol,Alba
+,moraresti-ciuruleasa,Morărești (Ciuruleasa),46.22261,23.02395,Ciuruleasa,Alba
+,morcanesti,Morcănești,46.40938,22.91955,Poiana Vadului,Alba
+,moroda,Moroda,46.37013,21.76447,Seleuș,Arad
+,motorasti,Motorăști,46.37719,23.04273,Câmpeni,Alba
+,motesti,Moțești,46.56206,22.50923,Pietroasa,Bihor
+,motiori,Moțiori,46.61642,21.85241,Apateu,Arad
+,mugesti,Mugești,45.81617,23.45426,Cugir,Alba
+,munar,Munar,46.10295,21.01996,Secusigiu,Arad
+,muncelu,Muncelu,46.37485,23.25663,Baia de Arieș,Alba
+,munesti,Munești,46.29059,23.00828,Sohodol,Alba
+,muntari,Muntari,46.29334,23.15272,Bucium,Alba
+,munteni,Munteni,46.87793,22.69492,Bulz,Bihor
+,mununa,Munună,46.47057,22.83512,Gârda de Sus,Alba
+,mustesti,Mustești,46.23667,22.26543,Gurahonț,Arad
+,musca,Mușca,46.35666,23.17124,Lupșa,Alba
+,nadab,Nadab,46.48195,21.51178,Chișineu-Criș,Arad
+,nadas,Nadăș,46.2249,21.95036,Tauț,Arad
+,nadar,Nădar,47.20748,22.16793,Spinuș,Bihor
+,nadalbesti,Nădălbești,46.45411,22.19372,Ignești,Arad
+,nadastia,Nădăștia,46.08073,23.14802,Almașu Mare,Alba
+,namas,Nămaș,46.39903,23.12794,Bistra,Alba
+,napaiesti,Năpăiești,46.34983,23.01187,Sohodol,Alba
+,neagra,Neagra,46.43478,22.20864,Dezna,Arad
+,necrilesti,Necrilești,46.20982,23.36583,Întregalde,Alba
+,necsesti,Necșești,46.38882,22.98998,Vadu Moților,Alba
+,negesti,Negești,46.51282,22.85915,Scărișoara,Alba
+,negresti,Negrești,46.26877,23.31925,Mogoș,Alba
+,nelegesti,Nelegești,46.34393,23.00528,Sohodol,Alba
+,nermis,Nermiș,46.47252,22.08293,Archiș,Arad
+,neudorf,Neudorf,46.0696,21.61899,Zăbrani,Arad
+,nicolae-balcescu,Nicolae Bălcescu,46.03368,22.09533,Vărădia de Mureș,Arad
+,nicoresti,Nicorești,46.32271,23.01267,Sohodol,Alba
+,niculesti,Niculești,46.50476,22.95766,Horea,Alba
+,nimaiesti,Nimăiești,46.68294,22.39153,Curățele,Bihor
+,niuved,Niuved,47.2338,21.8953,Tămășeu,Bihor
+,noslac,Noșlac,46.4,23.93333,Noșlac,Alba
+,novacesti,Novăcești,46.42341,23.13784,Bistra,Alba
+,oarda,Oarda,46.03333,23.56667,Alba Iulia,Alba
+,oarda-de-sus,Oarda de Sus,46.01667,23.6,Alba Iulia,Alba
+,obarsia,Obârșia,46.14357,22.44347,Petriș,Arad
+,obarsia-tiurului,Obârșia Tiurului,46.11667,23.88333,Blaj,Alba
+,obreja,Obreja,46.17457,23.7655,Mihalț,Alba
+,oceale,Oceale,46.45,22.81667,Gârda de Sus,Alba
+,ocnisoara,Ocnișoara,46.25334,23.87705,Lopadea Nouă,Alba
+,ocolis,Ocoliș,46.48333,23.46667,Ocoliș,Alba
+,odverem,Odverem,46.25845,23.83844,Lopadea Nouă,Alba
+,odvos,Odvoș,46.11215,21.82396,Conop,Arad
+,ogesti,Ogești,46.80433,22.23805,Sâmbăta,Bihor
+,ohaba,Ohaba,46.06667,23.78333,Ohaba,Alba
+,oidesti,Oidești,46.37953,22.94,Vidra,Alba
+,oiejdea,Oiejdea,46.15798,23.63399,Galda de Jos,Alba
+,olari,Olari,46.38333,21.55,Olari,Arad
+,olosig,Olosig,47.35189,22.17879,Săcueni,Bihor
+,olteni,Olteni,46.34222,23.53008,Râmeț,Alba
+,oncesti,Oncești,46.30136,23.41638,Mogoș,Alba
+,opresti,Oprești,46.1,23.21667,Zlatna,Alba
+,orasti,Orăști,46.45005,23.33903,Poșaga,Alba
+,orgesti,Orgești,46.37654,22.80377,Avram Iancu,Alba
+,ormenis,Ormeniș,46.39673,23.71794,Mirăslău,Alba
+,ortiteag,Ortiteag,47.03216,22.44228,Măgești,Bihor
+,orvisele,Orvișele,47.13186,22.23021,Brusturi,Bihor
+,ostrov,Ostrov,45.97217,22.13424,Birchiș,Arad
+,osand,Oșand,46.84165,21.96321,Husasău de Tinca,Bihor
+,otomani,Otomani,47.4375,22.23771,Sălacea,Bihor
+,padina,Padina,46.15,23.88333,Blaj,Alba
+,padis,Padiș,46.59615,22.73234,Budureasa,Bihor
+,palota,Palota,47.06042,21.82228,Sântandrei,Bihor
+,parhida,Parhida,47.23437,21.8716,Tămășeu,Bihor
+,padure,Pădure,46.19634,23.88185,Bucerdea-Grânoasă,Alba
+,padurea,Pădurea,46.09841,23.48732,Meteș,Alba
+,padurea-neagra,Pădurea Neagră,47.16554,22.41323,Aleșd,Bihor
+,padureni,Pădureni,47.41867,22.46204,Viișoara,Bihor
+,pagaia,Păgaia,47.4074,22.50157,Boianu Mare,Bihor
+,pagida,Păgida,46.34073,23.74518,Aiud,Alba
+,paiuseni,Păiușeni,46.2493,22.09438,Chisindia,Arad
+,panade,Pănade,46.22486,23.95904,Sâncel,Alba
+,pantasesti,Păntășești,46.6174,22.40462,Drăgănești,Bihor
+,pantesti,Păntești,46.47707,22.77824,Arieșeni,Alba
+,parau-iovului,Părâu Iovului,46.1,23.58333,Alba Iulia,Alba
+,pastesti,Păștești,46.4054,22.83211,Poiana Vadului,Alba
+,patars,Pătârș,45.98333,21.85,Ususău,Arad
+,patrahaitesti,Pătrăhăițești,46.44629,22.74335,Arieșeni,Alba
+,patrangeni,Pătrângeni,46.08978,23.26097,Zlatna,Alba
+,patrutesti,Pătruțești,46.37419,22.85341,Avram Iancu,Alba
+,patusesti,Pătușești,46.5,22.95,Horea,Alba
+,paulesti,Păulești,47.17496,22.21965,Brusturi,Bihor
+,paulian,Păulian,46.33465,22.15597,Buteni,Arad
+,paulis,Păuliș,46.11667,21.58333,Păuliș,Arad
+,pausa,Păușa,46.94693,21.87086,Nojorid,Bihor
+,paclisa,Pâclișa,46.05,23.51667,Alba Iulia,Alba
+,panca,Pânca,46.22472,23.88799,Bucerdea-Grânoasă,Alba
+,parau-gruiului,Pârău Gruiului,46.13018,23.19119,Zlatna,Alba
+,parau-lui-mihai,Pârău lui Mihai,46.01265,23.48445,Vințu de Jos,Alba
+,parau-carbunari,Pârâu Cărbunari,46.36667,23.2,Lupșa,Alba
+,parnesti,Pârnești,46.06667,22.23333,Săvârșin,Arad
+,parvulesti,Pârvulești,46.38333,22.8,Avram Iancu,Alba
+,pecica,Pecica,46.16667,21.06667,Pecica,Arad
+,peles,Peleș,46.33629,22.98326,Sohodol,Alba
+,peregu-mare,Peregu Mare,46.23333,20.9,Peregu Mare,Arad
+,peregu-mic,Peregu Mic,46.25021,20.94885,Peregu Mare,Arad
+,perjesti,Perjești,46.34828,23.14595,Bistra,Alba
+,pescari,Pescari,46.29545,22.3115,Gurahonț,Arad
+,peste-valea-bistrii,Peste Valea Bistrii,46.43679,23.04185,Câmpeni,Alba
+,pestere,Peștere,47.02582,22.37882,Aștileu,Bihor
+,pestis,Peștiș,47.07252,22.41226,Aleșd,Bihor
+,petelei,Petelei,46.41846,22.83259,Poiana Vadului,Alba
+,petid,Petid,46.71843,22.07731,Cociuba Mare,Bihor
+,petrani,Petrani,46.68962,22.26998,Pocola,Bihor
+,petreasa-remetea,Petreasa (Remetea),46.71432,22.34817,Remetea,Bihor
+,petreasa-horea,Petreasa (Horea),46.53561,22.94277,Horea,Alba
+,petreni,Petreni,46.29456,23.1643,Bucium,Alba
+,petrici,Petrici,46.36667,23.2,Lupșa,Alba
+,petrileni,Petrileni,46.55545,22.44771,Rieni,Bihor
+,petrisat,Petrisat,46.19339,23.91897,Blaj,Alba
+,petris,Petriș,46.05,22.38333,Petriș,Arad
+,petelca,Pețelca,46.22192,23.73829,Teiuș,Alba
+,pianu-de-jos,Pianu de Jos,45.93528,23.48912,Pianu,Alba
+,pianu-de-sus,Pianu de Sus,45.9,23.48333,Pianu,Alba
+,piatra-dubii,Piatra Dubii,46.03333,23.45,Vințu de Jos,Alba
+,picleu,Picleu,47.1447,22.26058,Brusturi,Bihor
+,pilu,Pilu,46.56667,21.35,Pilu,Arad
+,pirita,Pirita,46.13636,23.16148,Zlatna,Alba
+,pitarcesti,Pitărcești,46.37044,23.0006,Vidra,Alba
+,pitiga,Pițiga,46.37289,23.16869,Lupșa,Alba
+,plai-garda-de-sus,Plai (Gârda de Sus),46.43999,22.82284,Gârda de Sus,Alba
+,plai-avram-iancu,Plai (Avram Iancu),46.39842,22.77406,Avram Iancu,Alba
+,plaiuri,Plaiuri,45.83691,23.5114,Pianu,Alba
+,plescuta,Pleșcuța,46.3,22.43333,Pleșcuța,Arad
+,plesesti,Pleșești,46.4474,22.933,Albac,Alba
+,plesi,Pleși,45.80401,23.58396,Săsciori,Alba
+,plisti,Pliști,46.48639,22.79958,Gârda de Sus,Alba
+,pocioveliste,Pocioveliște,46.70147,22.44033,Curățele,Bihor
+,poclusa-de-barcau,Poclușa de Barcău,47.2577,22.19811,Chișlaz,Bihor
+,poclusa-de-beius,Poclușa de Beiuș,46.65,22.06667,Olcea,Bihor
+,podgoria,Podgoria,47.05,22.03333,Oșorhei,Bihor
+,podu-lui-paul,Podu lui Paul,46.09978,23.24441,Zlatna,Alba
+,poduri,Poduri,46.35416,23.05318,Câmpeni,Alba
+,poduri-bricesti,Poduri-Bricești,46.41302,22.95628,Vadu Moților,Alba
+,poeni,Poeni,46.34702,22.90894,Vidra,Alba
+,poiana-tauteu,Poiana (Tăuteu),47.29652,22.35216,Tăuteu,Bihor
+,poiana-cristioru-de-jos,Poiana (Criștioru de Jos),46.4483,22.57998,Criștioru de Jos,Bihor
+,poiana-bistra,Poiana (Bistra),46.43958,23.10433,Bistra,Alba
+,poiana-varfurile,Poiana (Vârfurile),46.3605,22.44309,Vârfurile,Arad
+,poiana-sohodol,Poiana (Sohodol),46.29959,22.97205,Sohodol,Alba
+,poiana-bucium,Poiana (Bucium),46.29993,23.17025,Bucium,Alba
+,poiana-aiudului,Poiana Aiudului,46.36499,23.606,Livezile,Alba
+,poiana-ampoiului,Poiana Ampoiului,46.0889,23.39399,Meteș,Alba
+,poiana-galdei,Poiana Galdei,46.24178,23.53175,Galda de Jos,Alba
+,poiana-tasad,Poiana Tășad,46.95397,22.1712,Copăcel,Bihor
+,poiana-ursului,Poiana Ursului,46.07289,23.43791,Meteș,Alba
+,poiana-vadului,Poiana Vadului,46.4,22.88333,Poiana Vadului,Alba
+,poienari,Poienari,46.23392,22.59818,Hălmagiu,Arad
+,poieni-vidra,Poieni (Vidra),46.34626,22.90936,Vidra,Alba
+,poieni-bucium,Poieni (Bucium),46.25181,23.19867,Bucium,Alba
+,poieni-blandiana,Poieni (Blândiana),46.02127,23.34443,Blândiana,Alba
+,poienii-de-jos,Poienii de Jos,46.60841,22.50064,Buntești,Bihor
+,poienii-de-sus,Poienii de Sus,46.60802,22.51742,Buntești,Bihor
+,poienile-mogos,Poienile-Mogoș,46.28333,23.28333,Mogoș,Alba
+,poienita-arieseni,Poienița (Arieșeni),46.51497,22.72643,Arieșeni,Alba
+,poienita-vintu-de-jos,Poienița (Vințu de Jos),46.03219,23.45622,Vințu de Jos,Alba
+,poietari,Poietari,46.70768,22.30507,Pocola,Bihor
+,poiu,Poiu,46.38637,23.09535,Bistra,Alba
+,pomezeu,Pomezeu,46.78333,22.28333,Pomezeu,Bihor
+,ponoara,Ponoară,46.88561,22.65776,Bratca,Bihor
+,ponor,Ponor,46.33333,23.41667,Ponor,Alba
+,ponorel,Ponorel,46.36928,22.96748,Vidra,Alba
+,popesti,Popești,47.23333,22.41667,Popești,Bihor
+,popesti-intregalde,Popești (Întregalde),46.2578,23.39531,Întregalde,Alba
+,popestii-de-jos,Popeștii de Jos,46.39878,22.95696,Vadu Moților,Alba
+,popestii-de-sus,Popeștii de Sus,46.41449,22.93835,Vadu Moților,Alba
+,posaga-de-jos,Poșaga de Jos,46.43091,23.44034,Poșaga,Alba
+,posaga-de-sus,Poșaga de Sus,46.46667,23.38333,Poșaga,Alba
+,posogani,Poșogani,46.36454,23.1961,Lupșa,Alba
+,posoloaca,Poșoloaca,47.06265,22.24142,Tileagd,Bihor
+,potionci-scarisoara,Potionci (Scărișoara),46.46667,22.85,Scărișoara,Alba
+,potionci-albac,Potionci (Albac),46.4416,22.9284,Albac,Alba
+,prajesti,Prăjești,46.38333,22.15,Sebiș,Arad
+,preluca-horea,Preluca (Horea),46.51023,22.97681,Horea,Alba
+,preluca-scarisoara,Prelucă (Scărișoara),46.49469,22.85426,Scărișoara,Alba
+,presaca-ampoiului,Presaca Ampoiului,46.09681,23.32987,Meteș,Alba
+,prisaca,Prisaca,46.71109,22.22782,Uileacu de Beiuș,Bihor
+,pruni,Pruni,46.38333,23.28333,Baia de Arieș,Alba
+,prunisor,Prunișor,46.41927,22.1219,Sebiș,Arad
+,pufesti,Pufești,46.4,23.41667,Sălciua,Alba
+,puiuletesti,Puiulețești,46.37442,22.98614,Vidra,Alba
+,purcareti,Purcăreți,45.8303,23.48956,Pianu,Alba
+,puselesti,Pușelești,46.36109,22.86388,Avram Iancu,Alba
+,rachis,Rachiș,46.39486,23.6262,Mirăslău,Alba
+,rafilesti,Rafilești,46.36667,23.2,Lupșa,Alba
+,ravicesti,Ravicești,46.48427,22.77714,Arieșeni,Alba
+,rabagani,Răbăgani,46.75,22.23333,Răbăgani,Bihor
+,racas,Răcaș,46.874,22.33108,Dobrești,Bihor
+,racatau,Răcătău,46.03312,23.32557,Blândiana,Alba
+,rachita,Răchita,45.87533,23.51707,Săsciori,Alba
+,radesti,Rădești,46.26667,23.71667,Rădești,Alba
+,radesti-almas,Rădești (Almaș),46.27055,22.25151,Almaș,Arad
+,rahau,Răhău,45.90343,23.62264,Sebeș,Alba
+,raicani,Răicani,46.26626,23.49769,Galda de Jos,Alba
+,ranusa,Rănușa,46.43096,22.25463,Moneasa,Arad
+,rapsig,Răpsig,46.42069,22.02106,Bocsig,Arad
+,ratitis,Rătitiș,46.40632,23.09124,Bistra,Alba
+,razboieni-cetate,Războieni-Cetate,46.41335,23.87158,Ocna Mureș,Alba
+,ramet,Râmeț,46.31457,23.52757,Râmeț,Alba
+,rapa,Râpa,46.78265,22.02446,Tinca,Bihor
+,reciu,Reciu,45.86619,23.67494,Gârbova,Alba
+,reghea,Reghea,47.37628,22.48705,Viișoara,Bihor
+,remetea-metes,Remetea (Meteș),46.12002,23.42781,Meteș,Alba
+,remeti,Remeți,46.85,22.66667,Bulz,Bihor
+,ret,Reț,45.76667,23.63333,Șugag,Alba
+,revetis,Revetiș,46.31338,22.19532,Dieci,Arad
+,rimetea,Rimetea,46.45,23.56667,Râmetea,Alba
+,robesti,Robești,46.29671,22.9943,Sohodol,Alba
+,rogoz-sambata,Rogoz (Sâmbăta),46.79225,22.17056,Sâmbăta,Bihor
+,rogoz-albac,Rogoz (Albac),46.42817,22.96152,Albac,Alba
+,rogoz-de-beliu,Rogoz de Beliu,46.60627,22.00502,Craiva,Arad
+,rohani,Rohani,46.74937,22.09545,Căpâlna,Bihor
+,roit,Roit,46.98183,21.70939,Sânnicolau-Român,Bihor
+,rontau,Rontău,47.00249,21.99835,Sânmartin,Bihor
+,rostoci,Rostoci,46.28562,22.39905,Pleșcuța,Arad
+,rosesti,Roșești,46.47765,22.93225,Albac,Alba
+,rosia-dieci,Roșia (Dieci),46.33757,22.19541,Dieci,Arad
+,rosia-de-secas,Roșia de Secaș,46.05,23.88333,Roșia de Secaș,Alba
+,rosia-noua,Roșia Nouă,46.10989,22.39616,Petriș,Arad
+,rosiori,Roșiori,47.25677,21.95209,Roșiori,Bihor
+,rotaresti,Rotărești,46.79639,22.23049,Sâmbăta,Bihor
+,rugea,Rugea,47.35509,22.499,Boianu Mare,Bihor
+,runc-ocolis,Runc (Ocoliș),46.50106,23.45343,Ocoliș,Alba
+,runc-scarisoara,Runc (Scărișoara),46.47983,22.88863,Scărișoara,Alba
+,runc-vidra,Runc (Vidra),46.37909,22.9944,Vidra,Alba
+,runc-zlatna,Runc (Zlatna),46.19225,23.22125,Zlatna,Alba
+,runcuri,Runcuri,46.41455,23.15581,Bistra,Alba
+,rusesti-albac,Rusești (Albac),46.48046,22.9608,Albac,Alba
+,rusesti-vidra,Rușești (Vidra),46.36667,22.91667,Vidra,Alba
+,rusi,Ruși,46.2126,23.10962,Zlatna,Alba
+,saca,Saca,46.66158,22.46955,Budureasa,Bihor
+,sacalasau,Sacalasău,47.1968,22.28625,Derna,Bihor
+,sacalasau-nou,Sacalasău Nou,47.18427,22.32813,Derna,Bihor
+,sagagea,Sagagea,46.48673,23.31446,Poșaga,Alba
+,saliste-de-pomezeu,Saliște de Pomezeu,46.74736,22.29073,Răbăgani,Bihor
+,santaul-mare,Santăul Mare,47.16743,21.83978,Borș,Bihor
+,sarcau,Sarcău,47.21083,22.15271,Sârbi,Bihor
+,sartas,Sartăș,46.39176,23.29737,Baia de Arieș,Alba
+,satu-barba,Satu Barbă,47.29987,22.44636,Abram,Bihor
+,satu-mare,Satu Mare,46.06628,20.95826,Secusigiu,Arad
+,satu-mic,Satu Mic,46.34932,21.89549,Șilindia,Arad
+,satu-nou-misca,Satu Nou (Mișca),46.62268,21.7028,Mișca,Arad
+,satu-nou-tamaseu,Satu Nou (Tămășeu),47.2,21.91667,Tămășeu,Bihor
+,sabolciu,Săbolciu,47.07442,22.15262,Săcădat,Bihor
+,sacadat,Săcădat,47.03333,22.15,Săcădat,Bihor
+,salacea,Sălacea,47.46667,22.31667,Sălacea,Bihor
+,salard,Sălard,47.21667,22.05,Sălard,Bihor
+,salagesti,Sălăgești,46.40066,23.08213,Bistra,Alba
+,salajeni,Sălăjeni,46.36769,22.18819,Sebiș,Arad
+,salciua-de-jos,Sălciua de Jos,46.3987,23.42132,Sălciua,Alba
+,salciua-de-sus,Sălciua de Sus,46.4,23.41667,Sălciua,Alba
+,saldabagiu-de-barcau,Săldăbagiu de Barcău,47.30098,22.46352,Balc,Bihor
+,saldabagiu-de-munte,Săldăbagiu de Munte,47.0897,21.97552,Paleu,Bihor
+,saldabagiu-mic,Săldăbagiu Mic,46.73869,22.15405,Căpâlna,Bihor
+,saliste,Săliște,47.18827,22.23497,Spinuș,Bihor
+,saliste-de-beius,Săliște de Beiuș,46.65,22.45,Budureasa,Bihor
+,saliste-de-vascau,Săliște de Vașcău,46.43307,22.53914,Criștioru de Jos,Bihor
+,salistea,Săliștea,45.90744,23.39789,Săliștea,Alba
+,salistea-deal,Săliștea-Deal,45.9,23.4,Săliștea,Alba
+,sarand,Sărand,46.99829,22.12095,Copăcel,Bihor
+,saracsau,Sărăcsău,45.94416,23.30884,Șibot,Alba
+,saratura,Sărătura,46.13333,23.81667,Crăciunelu de Jos,Alba
+,sarsig,Sărsig,47.23972,22.18718,Chișlaz,Bihor
+,saucani,Săucani,46.73391,22.26581,Răbăgani,Bihor
+,saud,Săud,46.61977,22.49564,Buntești,Bihor
+,savarsin,Săvârșin,46.01667,22.23333,Săvârșin,Arad
+,sambata,Sâmbăta,46.80173,22.20357,Sâmbăta,Bihor
+,sambateni,Sâmbăteni,46.1411,21.52689,Păuliș,Arad
+,sanbenedic,Sânbenedic,46.31446,24.04994,Fărău,Alba
+,sancel,Sâncel,46.2,23.95,Sâncel,Alba
+,sancrai,Sâncrai,46.29394,23.75209,Aiud,Alba
+,saniob,Sâniob,47.26461,22.12778,Sâniob,Bihor
+,sanlazar,Sânlazar,47.3,22.25,Chișlaz,Bihor
+,sanleani,Sânleani,46.21286,21.38506,Livada,Arad
+,sanmartin-macea,Sânmartin (Macea),46.41653,21.34821,Macea,Arad
+,sanmartin-de-beius,Sânmartin de Beiuș,46.6906,22.319,Pocola,Bihor
+,sanmiclaus,Sânmiclăuș,46.25,24.05,Șona,Alba
+,sannicolau-de-beius,Sânnicolau de Beiuș,46.68333,22.11667,Șoimi,Bihor
+,sannicolau-de-munte,Sânnicolau de Munte,47.30362,22.13671,Săcueni,Bihor
+,sanpaul,Sânpaul,46.25791,21.26864,Șofronea,Arad
+,sanpetru-german,Sânpetru German,46.11327,21.04932,Secusigiu,Arad
+,santana,Sântana,46.35,21.5,Sântana,Arad
+,santamarie,Sântămărie,46.24184,24.14688,Cetatea de Baltă,Alba
+,santelec,Sântelec,46.95822,22.06468,Hidișelu De Sus,Bihor
+,santimreu,Sântimreu,47.24877,22.0451,Sălard,Bihor
+,santion,Sântion,47.09634,21.8366,Borș,Bihor
+,sarbesti,Sârbesti,46.5,22.48333,Lunca,Bihor
+,sarbi,Sârbi,47.19315,22.12215,Sârbi,Bihor
+,sarbi-halmagel,Sârbi (Hălmăgel),46.28894,22.64248,Hălmăgel,Arad
+,scarisoara,Scărișoara,46.46667,22.85,Scărișoara,Alba
+,scoarta,Scoarța,46.43691,22.7687,Gârda de Sus,Alba
+,sebeslaz,Sebesláz,45.86959,23.57912,Săsciori,Alba
+,sebesel,Sebeșel,45.88771,23.56606,Săsciori,Alba
+,sebis,Sebiș,46.36667,22.11667,Sebiș,Arad
+,sebisesti,Sebișești,46.34757,22.99418,Sohodol,Alba
+,secaci,Secaci,46.57382,22.03895,Beliu,Arad
+,secas,Secaș,46.22894,22.30461,Brazii,Arad
+,secasel,Secășel,46.09504,23.80973,Ohaba,Alba
+,secusigiu,Secusigiu,46.08333,20.98333,Secusigiu,Arad
+,sederhat,Sederhat,46.21404,21.1569,Pecica,Arad
+,segaj,Segaj,46.38175,22.85982,Vidra,Alba
+,seghiste,Seghiște,46.53333,22.48333,Lunca,Bihor
+,seleus,Seleuș,46.38333,21.71667,Seleuș,Arad
+,seliste,Seliște,46.02958,22.3893,Petriș,Arad
+,selistea,Seliștea,46.4659,22.02651,Cărand,Arad
+,semlac,Semlac,46.11667,20.93333,Semlac,Arad
+,sfarcea,Sfârcea,46.21703,23.30869,Întregalde,Alba
+,sfarnas,Sfârnaș,47.23333,22.1,Sâniob,Bihor
+,sfoartea,Sfoartea,46.52457,22.846,Scărișoara,Alba
+,sicoiesti,Sicoiești,46.34395,22.97857,Sohodol,Alba
+,sighistel,Sighiștel,46.52004,22.544,Câmpani,Bihor
+,silivas,Silivaș,46.34148,23.87585,Hopârta,Alba
+,simulesti,Simulești,46.35406,23.32111,Baia de Arieș,Alba
+,sintea-mare,Sintea Mare,46.51667,21.6,Sintea Mare,Arad
+,sintea-mica,Sintea Mică,46.4139,21.60462,Olari,Arad
+,sitani,Sitani,46.81318,22.30229,Pomezeu,Bihor
+,sititelec,Sititelec,46.87672,21.90222,Husasău de Tinca,Bihor
+,slatina-de-cris,Slatina de Criș,46.43253,22.22832,Dezna,Arad
+,slatina-de-mures,Slatina de Mureș,46.15611,22.18444,Bârzava,Arad
+,snide,Snide,46.4496,22.78987,Gârda de Sus,Alba
+,socet,Socet,47.1627,22.49453,Șinteu,Bihor
+,socodor,Socodor,46.51667,21.43333,Socodor,Arad
+,sohodol-cabesti,Sohodol (Căbești),46.78101,22.42882,Căbești,Bihor
+,sohodol-albac,Sohodol (Albac),46.4711,22.94841,Albac,Alba
+,sohodol,Sohodol,46.35581,23.02923,Sohodol,Alba
+,soimus-remetea,Soimuș (Remetea),46.72045,22.329,Remetea,Bihor
+,spatac,Spătac,46.13859,23.94076,Blaj,Alba
+,spinus,Spinuș,47.2,22.2,Spinuș,Bihor
+,spinus-de-pomezeu,Spinuș de Pomezeu,46.78654,22.27255,Pomezeu,Bihor
+,stanesti,Stănești,46.41241,22.88172,Poiana Vadului,Alba
+,stauini,Stăuini,46.03356,23.49244,Vințu de Jos,Alba
+,stalnisoara,Stâlnișoara,46.23956,23.20374,Bucium,Alba
+,stana-de-mures,Stâna de Mureș,46.42509,23.99577,Noșlac,Alba
+,stana-de-vale,Stâna de Vale,46.66667,22.5,Budureasa,Bihor
+,stancesti,Stâncești,46.58333,22.51667,Buntești,Bihor
+,stejar,Stejar,46.03443,22.15536,Vărădia de Mureș,Arad
+,stoinesti,Stoinești,46.61667,22.01667,Craiva,Arad
+,stracos,Stracoș,46.91089,22.14493,Drăgești,Bihor
+,straja,Straja,46.06723,23.6863,Berghin,Alba
+,stremt,Stremț,46.21667,23.63333,Stremț,Alba
+,strungari,Strungari,45.85756,23.50353,Pianu,Alba
+,sturu,Sturu,46.46839,22.79505,Arieșeni,Alba
+,sub-piatra,Sub Piatră,46.36667,23.2,Lupșa,Alba
+,sucesti,Sucești,46.43716,22.79588,Gârda de Sus,Alba
+,sudrigiu,Sudrigiu,46.59292,22.43379,Rieni,Bihor
+,suiug,Suiug,47.32018,22.43219,Abram,Bihor
+,suplacu-de-barcau,Suplacu de Barcău,47.25729,22.53195,Suplacu de Barcău,Bihor
+,suplacu-de-tinca,Suplacu de Tinca,46.70638,22.11338,Căpâlna,Bihor
+,surdesti,Surdești,46.32301,23.00292,Sohodol,Alba
+,surduc,Surduc,46.97611,22.2016,Copăcel,Bihor
+,surducel,Surducel,46.92754,22.33369,Vârciorog,Bihor
+,susag,Susag,46.61102,21.91606,Craiva,Arad
+,susani,Susani,46.45,22.18333,Ignești,Arad
+,suseni,Suseni,46.09447,23.25331,Zlatna,Alba
+,sagu,Șagu,46.05,21.28333,Șagu,Arad
+,sard,Șard,46.12814,23.5352,Ighiu,Alba
+,sasa,Șasa,46.32457,23.20775,Lupșa,Alba
+,sauaieu,Șauaieu,46.93779,21.92473,Nojorid,Bihor
+,sebis-draganesti,Șebiș (Drăgănești),46.61908,22.43228,Drăgănești,Bihor
+,seitin,Șeitin,46.1,20.85,Șeitin,Arad
+,sepreus,Șepreuș,46.57125,21.73417,Șepreuș,Arad
+,serani,Șerani,47.03841,22.68098,Borod,Bihor
+,serbanesti,Șerbănești,46.36667,23.2,Lupșa,Alba
+,serghis,Șerghiș,46.9804,22.23998,Vârciorog,Bihor
+,seusa,Șeușa,46.05988,23.62784,Ciugud,Alba
+,siad,Șiad,46.60535,21.98925,Craiva,Arad
+,sibot,Șibot,45.95,23.33333,Șibot,Alba
+,siclau,Șiclău,46.49124,21.36834,Grăniceri,Arad
+,sicula,Șicula,46.43333,21.75,Șicula,Arad
+,silea,Șilea,46.32699,24.11393,Fărău,Alba
+,silindia,Șilindia,46.35,21.91667,Șilindia,Arad
+,silindru,Șilindru,47.43725,22.04683,Șimian,Bihor
+,simand,Șimand,46.43333,21.45,Șimand,Arad
+,simian,Șimian,47.48333,22.1,Șimian,Bihor
+,simian-2,Șimian,47.48547,22.0857,Șimian,Bihor
+,simocesti,Șimocești,46.31145,23.00169,Sohodol,Alba
+,sinteu,Șinteu,47.15,22.48333,Șinteu,Bihor
+,siria,Șiria,46.26667,21.63333,Șiria,Arad
+,sistarovat,Șiștarovăț,46.01667,21.73333,Șiștarovăț,Arad
+,sisterea,Șișterea,47.16066,22.07409,Cetariu,Bihor
+,soal,Șoal,46.33087,23.07041,Roșia Montană,Alba
+,sofronea,Șofronea,46.26667,21.3,Șofronea,Arad
+,soicesti,Șoicești,46.36332,22.82896,Avram Iancu,Alba
+,soimus-radesti,Șoimuș (Rădești),46.2279,23.78847,Rădești,Alba
+,somosches,Șomoșcheș,46.57416,21.84861,Cermei,Arad
+,sona,Șona,46.21667,24.01667,Șona,Alba
+,spalnaca,Șpălnaca,46.34123,23.90833,Hopârta,Alba
+,spring,Șpring,45.96667,23.78333,Șpring,Alba
+,stefanca,Ștefanca,46.36852,23.13076,Bistra,Alba
+,stei-arieseni,Ștei-Arieșeni,46.46854,22.75404,Arieșeni,Alba
+,stertesti,Ștertești,46.34842,22.84326,Avram Iancu,Alba
+,stiuleti,Știuleți,46.45433,22.91701,Scărișoara,Alba
+,sumud,Șumud,46.4,23.93333,Noșlac,Alba
+,sumugiu,Șumugiu,46.89019,21.97303,Hidișelu De Sus,Bihor
+,suncuis,Șuncuiș,46.67442,22.26611,Finiș,Bihor
+,sustiu,Șuștiu,46.50035,22.45786,Lunca,Bihor
+,susturogi,Șușturogi,47.14125,22.11206,Cetariu,Bihor
+,talpe,Talpe,46.65,22.41667,Drăgănești,Bihor
+,talpos,Talpoș,46.69124,21.80335,Batăr,Bihor
+,tamboresti,Tamborești,46.44507,22.95645,Albac,Alba
+,tarcea,Tarcea,47.45,22.18333,Tarcea,Bihor
+,taut,Tauț,46.28333,21.91667,Tauț,Arad
+,tagadau,Tăgădău,46.50688,21.99969,Beliu,Arad
+,talagiu,Tălagiu,46.2774,22.47352,Pleșcuța,Arad
+,talmaci,Tălmaci,46.6,21.88333,Craiva,Arad
+,tamasda,Tămașda,46.64453,21.55685,Avram Iancu,Bihor
+,tamaseu,Tămășeu,47.22116,21.9276,Tămășeu,Bihor
+,tamatei,Tămăței,46.38333,22.8,Avram Iancu,Alba
+,tarcaita,Tărcăița,46.58866,22.33503,Tărcaia,Bihor
+,tarian,Tărian,47.07281,21.77911,Girișu de Criș,Bihor
+,tartaria,Tărtăria,45.93356,23.41304,Săliștea,Alba
+,tasad,Tășad,46.93773,22.12516,Drăgești,Bihor
+,tatarlaua,Tătârlaua,46.20276,24.16668,Cetatea de Baltă,Alba
+,tau,Tău,46.07067,23.84219,Roșia de Secaș,Alba
+,tau-bistra,Tău Bistra,45.68347,23.58483,Șugag,Alba
+,tauni,Tăuni,46.15068,24.13164,Valea Lungă,Alba
+,taut-batar,Tăut (Batăr),46.7199,21.83845,Batăr,Bihor
+,tautelec,Tăutelec,47.15516,22.03217,Cetariu,Bihor
+,tauteu,Tăuteu,47.26667,22.33333,Tăuteu,Bihor
+,tauti,Tăuți,46.09606,23.46783,Meteș,Alba
+,targusor,Târgușor,47.38333,22.16667,Cherechiu,Bihor
+,tarnavita,Târnavița,46.25,22.65,Hălmăgel,Arad
+,tarnova,Târnova,46.31667,21.8,Târnova,Arad
+,tarsa,Târsa,46.38233,22.79808,Avram Iancu,Alba
+,tarsa-plai,Târsa-Plai,46.3927,22.77945,Avram Iancu,Alba
+,tecsesti,Tecșești,46.27455,23.47892,Întregalde,Alba
+,teiu,Teiu,46.50834,22.983,Horea,Alba
+,teleac-budureasa,Teleac (Budureasa),46.65,22.43333,Budureasa,Bihor
+,teleac-ciugud,Teleac (Ciugud),46.08704,23.62842,Ciugud,Alba
+,temesesti,Temeșești,46.0511,22.27318,Săvârșin,Arad
+,tibru,Tibru,46.19666,23.56406,Cricău,Alba
+,tilecus,Tilecuș,47.02244,22.21834,Tileagd,Bihor
+,tinaud,Tinăud,47.05285,22.43365,Aleșd,Bihor
+,tinca,Tinca,46.77529,21.933,Tinca,Bihor
+,tisa,Tisa,46.25855,22.54861,Hălmagiu,Arad
+,tisa-noua,Tisa Nouă,46.08228,21.37115,Fântânele,Arad
+,tiur,Tiur,46.16009,23.88927,Blaj,Alba
+,toboliu,Toboliu,47.04182,21.71946,Toboliu,Bihor
+,toc,Toc,46.01271,22.31905,Săvârșin,Arad
+,toci,Toci,46.29439,22.97945,Sohodol,Alba
+,tolacesti,Tolăcești,46.35265,23.14491,Bistra,Alba
+,tomesti-vadu-motilor,Tomești (Vadu Moților),46.4,22.96667,Vadu Moților,Alba
+,tomesti-mogos,Tomești (Mogoș),46.29935,23.36423,Mogoș,Alba
+,tomisesti,Tomișești,46.4,22.96667,Vadu Moților,Alba
+,tomnatec,Tomnatec,46.43484,23.0917,Bistra,Alba
+,tomnatic,Tomnatic,46.91077,22.45594,Șuncuiuș,Bihor
+,tonea,Tonea,45.80571,23.53366,Săsciori,Alba
+,topa-de-cris,Topa de Criș,47.00211,22.53342,Vadu Crișului,Bihor
+,topa-de-jos,Topa de Jos,46.84645,22.23382,Dobrești,Bihor
+,topa-de-sus,Topa de Sus,46.86497,22.25104,Dobrești,Bihor
+,topesti,Topești,46.87669,22.12737,Drăgești,Bihor
+,totoi,Totoi,46.11491,23.65759,Sântimbru,Alba
+,totoreni,Totoreni,46.61512,22.38564,Tărcaia,Bihor
+,totesti,Toțești,46.42527,22.9336,Vadu Moților,Alba
+,traian,Traian,46.43333,21.85,Ineu,Arad
+,trampoiele,Trâmpoiele,46.15,23.15,Zlatna,Alba
+,trancesti,Trâncești,46.47586,22.8593,Scărișoara,Alba
+,tria,Tria,47.23342,22.26581,Derna,Bihor
+,trifesti-horea,Trifești (Horea),46.52634,22.93088,Horea,Alba
+,trifesti-scarisoara,Trifești (Scărișoara),46.46667,22.85,Scărișoara,Alba
+,trifesti-lupsa,Trifești (Lupșa),46.32079,23.20123,Lupșa,Alba
+,trisoresti,Trișorești,46.41287,23.13306,Bistra,Alba
+,troas,Troaș,46.09344,22.29657,Săvârșin,Arad
+,tulca,Tulca,46.78333,21.78333,Tulca,Bihor
+,turcesti,Turcești,46.4,23.41667,Sălciua,Alba
+,turdas,Turdaș,46.3062,23.91841,Hopârta,Alba
+,turnu,Turnu,46.25764,21.12657,Pecica,Arad
+,tarina,Țarina,46.3133,23.12557,Roșia Montană,Alba
+,taranesti,Țărănești,46.40256,23.12022,Bistra,Alba
+,tarmure,Țărmure,46.24617,22.55914,Hălmagiu,Arad
+,tela,Țela,45.98723,22.06855,Bata,Arad
+,telna,Țelna,46.15902,23.50099,Ighiu,Alba
+,tifra,Țifra,46.25824,23.69457,Aiud,Alba
+,tiganestii-de-beius,Țigăneștii de Beiuș,46.62929,22.41534,Drăgănești,Bihor
+,tiganestii-de-cris,Țigăneștii de Criș,47.12732,22.28188,Brusturi,Bihor
+,tipar,Țipar,46.47563,21.63431,Sintea Mare,Arad
+,tohesti,Țohești,46.24905,22.61484,Hălmăgel,Arad
+,uileacu-de-beius,Uileacu de Beiuș,46.68532,22.22148,Uileacu de Beiuș,Bihor
+,uileacu-de-cris,Uileacu de Criș,47.08152,22.21415,Tileagd,Bihor
+,uileacu-de-munte,Uileacu de Munte,47.11786,21.99763,Paleu,Bihor
+,uioara-de-jos,Uioara de Jos,46.37087,23.83863,Ocna Mureș,Alba
+,ungurei,Ungurei,46.01659,23.82903,Roșia de Secaș,Alba
+,urdes,Urdeș,46.37106,22.94298,Vidra,Alba
+,ursad,Ursad,46.6816,22.09192,Șoimi,Bihor
+,urvind,Urvind,47.06749,22.28388,Lugașu De Jos,Bihor
+,urvis-de-beius,Urviș de Beiuș,46.69296,22.1586,Șoimi,Bihor
+,urvisu-de-beliu,Urvișu de Beliu,46.52822,22.08619,Hășmaș,Arad
+,ususau,Ususău,46.07063,21.81371,Ususău,Arad
+,vadu-motilor,Vadu Moților,46.4,22.96667,Vadu Moților,Alba
+,vaida,Vaida,47.25279,21.99477,Roșiori,Bihor
+,vale,Vale,46.25,23.2,Bucium,Alba
+,vale-in-jos,Vale în Jos,46.34219,23.43141,Ponor,Alba
+,valea-abruzel,Valea Abruzel,46.26385,23.1368,Bucium,Alba
+,valea-alba,Valea Albă,46.25411,23.20845,Bucium,Alba
+,valea-barlutesti,Valea Bârluțești,46.28333,23.28333,Mogoș,Alba
+,valea-barnii,Valea Bârnii,46.26667,23.33333,Mogoș,Alba
+,valea-barnii-vale,Valea Bârnii Vale,46.28333,23.28333,Mogoș,Alba
+,valea-bistrii,Valea Bistrii,46.38009,23.0686,Câmpeni,Alba
+,valea-bucurului,Valea Bucurului,46.32201,23.37049,Ponor,Alba
+,valea-caselor,Valea Caselor,46.39836,23.03362,Câmpeni,Alba
+,valea-cerbului,Valea Cerbului,46.24,23.11755,Bucium,Alba
+,valea-cerului,Valea Cerului,47.23789,22.4964,Suplacu de Barcău,Bihor
+,valea-ciuciului,Valea Ciuciului,46.40802,23.99439,Noșlac,Alba
+,valea-cocesti,Valea Cocești,46.29665,23.2887,Mogoș,Alba
+,valea-coma,Valea Coma,46.28333,23.28333,Mogoș,Alba
+,valea-crisului,Valea Crișului,46.95098,22.64372,Bratca,Bihor
+,valea-de-jos,Valea de Jos,46.57211,22.48626,Rieni,Bihor
+,valea-de-sus,Valea de Sus,46.55,22.53333,Câmpani,Bihor
+,valea-fagetului,Valea Făgetului,46.35369,23.51385,Râmeț,Alba
+,valea-giogesti,Valea Giogești,46.30778,23.28376,Mogoș,Alba
+,valea-goblii,Valea Goblii,45.99905,23.4653,Vințu de Jos,Alba
+,valea-holhorii,Valea Holhorii,46.31889,23.19926,Lupșa,Alba
+,valea-iadului,Valea Iadului,46.92163,22.65392,Bulz,Bihor
+,valea-inzelului,Valea Inzelului,46.33333,23.51667,Râmeț,Alba
+,valea-larga,Valea Largă,46.36637,23.40071,Sălciua,Alba
+,valea-lui-mihai-vintu-de-jos,Valea lui Mihai (Vințu de Jos),46.02619,23.46997,Vințu de Jos,Alba
+,valea-lui-paul,Valea lui Paul,46.11667,23.21667,Zlatna,Alba
+,valea-lunga-alba-romania,Valea Lungă Alba Romania,46.12592,24.04541,Valea Lungă,Alba
+,valea-lupsii,Valea Lupșii,46.38072,23.22753,Lupșa,Alba
+,valea-maciului,Valea Maciului,46.34085,22.82851,Avram Iancu,Alba
+,valea-mare-lupsa,Valea Mare (Lupșa),46.36667,23.2,Lupșa,Alba
+,valea-mare-gurahont,Valea Mare (Gurahonț),46.32094,22.36023,Gurahonț,Arad
+,valea-mare-ceru-bacainti,Valea Mare (Ceru-Băcăinți),46.02211,23.26071,Ceru-Băcăinți,Alba
+,valea-mare-savarsin,Valea Mare (Săvârșin),45.99004,22.23838,Săvârșin,Arad
+,valea-mare-de-codru,Valea Mare de Codru,46.80819,22.0806,Holod,Bihor
+,valea-mare-de-cris,Valea Mare de Criș,46.99302,22.5741,Borod,Bihor
+,valea-manastirii,Valea Mănăstirii,46.30146,23.52287,Râmeț,Alba
+,valea-mica,Valea Mică,46.07887,23.27841,Zlatna,Alba
+,valea-mlacii,Valea Mlacii,46.2353,23.25837,Mogoș,Alba
+,valea-morii,Valea Morii,46.35928,22.96219,Vidra,Alba
+,valea-negrilesii,Valea Negrilesii,46.23697,23.21706,Bucium,Alba
+,valea-poienii-bucium,Valea Poienii (Bucium),46.22521,23.14271,Bucium,Alba
+,valea-poienii-ramet,Valea Poienii (Râmeț),46.35257,23.47066,Râmeț,Alba
+,valea-sasului,Valea Sasului,46.28463,24.02867,Șona,Alba
+,valea-secaturii,Valea Secăturii,46.3,23.53333,Râmeț,Alba
+,valea-sesii-bucium,Valea Șesii (Bucium),46.27545,23.18019,Bucium,Alba
+,valea-sesii-lupsa,Valea Șesii (Lupșa),46.3773,23.23859,Lupșa,Alba
+,valea-tarnei,Valea Târnei,47.12517,22.53019,Șinteu,Bihor
+,valea-tupilor,Valea Țupilor,46.26334,23.26362,Mogoș,Alba
+,valea-utului,Valea Uțului,46.34965,22.82258,Avram Iancu,Alba
+,valea-uzei,Valea Uzei,46.31683,23.51315,Râmeț,Alba
+,valea-verde,Valea Verde,46.31118,22.94979,Sohodol,Alba
+,valea-vintului,Valea Vințului,46.01764,23.45588,Vințu de Jos,Alba
+,vama-seaca,Vama Seacă,46.34647,23.94196,Hopârta,Alba
+,vanvucesti,Vanvucești,46.47973,22.72206,Arieșeni,Alba
+,varasau,Varasău,47.16256,22.26813,Brusturi,Bihor
+,variasu-mare,Variașu Mare,46.27598,21.17281,Iratoșu,Arad
+,variasu-mic,Variașu Mic,46.29334,21.18277,Iratoșu,Arad
+,varnita,Varnița,46.02291,21.80835,Șiștarovăț,Arad
+,varviz,Varviz,47.22488,22.43855,Popești,Bihor
+,vasile-goldis,Vasile Goldiș,46.51667,21.93333,Beliu,Arad
+,vai,Văi,46.34871,23.21035,Lupșa,Alba
+,valani-de-pomezeu,Vălani de Pomezeu,46.78657,22.32506,Pomezeu,Bihor
+,valanii-de-beius,Vălanii de Beiuș,46.70148,22.24627,Uileacu de Beiuș,Bihor
+,valeni-bucium,Văleni (Bucium),46.27764,23.15639,Bucium,Alba
+,valeni-metes,Văleni (Meteș),46.09301,23.4273,Meteș,Alba
+,valisoara,Vălișoara,46.38736,23.56441,Livezile,Alba
+,varadia-de-mures,Vărădia de Mureș,46.01667,22.15,Vărădia de Mureș,Arad
+,varaseni,Vărășeni,46.76781,22.21318,Răbăgani,Bihor
+,varsand,Vărșand,46.6182,21.34455,Pilu,Arad
+,varzari,Vărzari,47.20206,22.4633,Popești,Bihor
+,vasesti,Văsești,46.37878,22.90383,Vidra,Alba
+,vasoaia,Văsoaia,46.25372,22.06364,Chisindia,Arad
+,vasad,Vășad,47.5186,22.2566,Curtuișeni,Bihor
+,valcaneasa,Vâlcăneasa,46.36615,22.93817,Vidra,Alba
+,valcea,Vâlcea,46.26622,23.16365,Bucium,Alba
+,valcelele,Vâlcelele,47.23028,22.48336,Suplacu de Barcău,Bihor
+,valcesti,Vâlcești,46.38685,22.87584,Vidra,Alba
+,valtori-vadu-motilor,Vâltori (Vadu Moților),46.4038,22.93945,Vadu Moților,Alba
+,valtori-zlatna,Vâltori (Zlatna),46.14472,23.21597,Zlatna,Alba
+,vanatori,Vânători,46.62456,21.67332,Mișca,Arad
+,varciorog,Vârciorog,46.96667,22.3,Vârciorog,Bihor
+,varfurile,Vârfurile,46.31667,22.51667,Vârfurile,Arad
+,varsi,Vârși,46.35485,23.07346,Câmpeni,Alba
+,varsi-rontu,Vârși-Rontu,46.33333,23.11667,Bistra,Alba
+,varsii-mari,Vârșii Mari,46.34435,23.13134,Bistra,Alba
+,varsii-mici,Vârșii Mici,46.34788,23.11512,Bistra,Alba
+,vartanesti,Vârtănești,46.37328,22.95157,Vidra,Alba
+,vartop-rosia-montana,Vârtop (Roșia Montană),46.32413,23.09225,Roșia Montană,Alba
+,vartop-nucet,Vârtop (Nucet),46.51411,22.67544,Nucet,Bihor
+,verdesti,Verdești,46.38226,22.79144,Avram Iancu,Alba
+,veseus,Veseuș,46.27456,24.14276,Jidvei,Alba
+,vidolm,Vidolm,46.48104,23.51515,Ocoliș,Alba
+,vidra,Vidra,46.36758,22.88811,Vidra,Alba
+,vidra-varfurile,Vidra (Vârfurile),46.32875,22.51221,Vârfurile,Arad
+,vidrisoara,Vidrișoara,46.34306,22.827,Avram Iancu,Alba
+,viezuri,Viezuri,46,23.3,Ceru-Băcăinți,Alba
+,viisoara,Viișoara,47.38333,22.45,Viișoara,Bihor
+,vinerea,Vinerea,45.88632,23.35289,Cugir,Alba
+,vinesti,Vinești,46.01667,22.21667,Săvârșin,Arad
+,vinga,Vinga,46.01667,21.2,Vinga,Arad
+,vingard,Vingard,46.01317,23.74696,Șpring,Alba
+,vintere,Vintere,46.76883,22.14652,Holod,Bihor
+,vinta,Vința,46.31639,23.22592,Lupșa,Alba
+,virismort,Virismort,45.96772,22.14557,Birchiș,Arad
+,vitcari,Vitcari,46.36667,22.91667,Vidra,Alba
+,vladimirescu,Vladimirescu,46.16628,21.40102,Vladimirescu,Arad
+,vladesti,Vlădești,46.30899,23.56063,Râmeț,Alba
+,vladosesti,Vlădoșești,46.34581,23.03089,Sohodol,Alba
+,voivodeni,Voivodeni,46.3989,22.03427,Bârsa,Arad
+,voivozi-simian,Voivozi (Șimian),47.46957,22.04033,Șimian,Bihor
+,voivozi-popesti,Voivozi (Popești),47.21562,22.39024,Popești,Bihor
+,vulcan,Vulcan,46.23979,22.9718,Ciuruleasa,Alba
+,vuleru,Vuleru,46.15,23.88333,Blaj,Alba
+,vurpar,Vurpăr,46,23.46667,Vințu de Jos,Alba
+,zabalt,Zăbalț,46.00818,21.9224,Ususău,Arad
+,zabrani,Zăbrani,46.06667,21.55,Zăbrani,Arad
+,zadareni,Zădăreni,46.13274,21.21821,Zădăreni,Arad
+,zagris,Zăgriș,46.22723,23.54159,Galda de Jos,Alba
+,zarand,Zărand,46.4,21.65,Zărand,Arad
+,zaries,Zărieș,46.18376,23.70711,Mihalț,Alba
+,zavoiu,Zăvoiu,46.82168,22.1968,Sâmbăta,Bihor
+,zanzesti,Zânzești,46.53335,22.95707,Horea,Alba
+,zece-hotare,Zece Hotare,46.89386,22.48349,Șuncuiuș,Bihor
+,zerind,Zerind,46.61667,21.51667,Zerind,Arad
+,zerindu-mic,Zerindu Mic,46.63062,21.638,Mișca,Arad
+,zimandcuz,Zimandcuz,46.25644,21.3818,Zimandu Nou,Arad
+,zimandu-nou,Zimandu Nou,46.28333,21.4,Zimandu Nou,Arad
+,zimbru,Zimbru,46.33602,22.38904,Gurahonț,Arad

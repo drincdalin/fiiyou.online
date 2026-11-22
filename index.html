@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+  <!--CSP-->
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <title>fiiyou · the internet belongs to you</title>
+  <meta name="description" content="The internet belongs to you. fiiyou is a customizable local social network: profiles you can style, music, photos, a friends map, events and chat. Private by design, no ads, no tracking." />
+  <meta name="theme-color" content="#000000" />
+  <meta name="color-scheme" content="dark" />
+
+  <!-- icons (files live in /public) -->
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="preload" href="/fonts/UbuntuSans.woff2" as="font" type="font/woff2" crossorigin />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="fiiyou" />
+  <meta property="og:title" content="fiiyou · the internet belongs to you" />
+  <meta property="og:description" content="The internet belongs to you. A customizable local social network with profiles, music, a friends map, events and chat. No ads, no tracking." />
+  <meta name="twitter:title" content="fiiyou · the internet belongs to you" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <style>
+    body { margin: 0; background: #080808; }   /* only body: an html background would stop the app's own page colour from filling the screen */
+    .fx-shell { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; color: #f4f4f4; }
+    .fx-word { font: 800 2.2rem/1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; letter-spacing: -.03em; animation: fxpulse 1.4s ease-in-out infinite; }
+    .fx-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    @keyframes fxpulse { 50% { opacity: .4; } }
+    @media (prefers-reduced-motion: reduce) { .fx-word { animation: none; } }
+  </style>
+  <noscript><style>.fx-shell { display: none; }</style></noscript>
+  <!--SEO-->
+</head>
+<body>
+  <!-- Pre-rendered shell: the first paint is this, from the HTML alone, before any JavaScript has loaded. React replaces it when the app starts. -->
+  <div id="root"><div class="fx-shell" role="status" aria-live="polite"><span class="fx-word">fiiyou</span><span class="fx-sr">Loading</span></div></div>
+  <noscript><p style="font:16px system-ui;color:#eee;text-align:center;margin-top:20vh">fiiyou needs JavaScript to run.</p></noscript>
+  <script type="module" src="/src/ui/main.jsx"></script>
+</body>
+</html>

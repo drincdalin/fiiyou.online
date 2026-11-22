@@ -1,0 +1,103 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { visiblePoll } from '../lib/poll.js';
+import { Bell, ArrowRight, Heart, ChatCircle, UserPlus, UsersThree, ArrowBendUpLeft, At } from '@phosphor-icons/react';
+import { social } from '../index.js';
+import { Avatar, ago, useImages } from './shared.jsx';
+import { Verified } from './parts.jsx';
+import { groupNotifications, ungroupNotifications, actorsLabel } from '../lib/notifGroups.js';
+import { NoticeSkeleton } from './states.jsx';
+
+// ---------------------------------------------------------------------------------------------
+// The only calls this file makes to your backend (see api/social.js, 0020_notifications.sql and 0025_wall_notifications.sql):
+//   social.listNotifications()        -> [{ id, type, created_at, read, post_id?, photo_id?, comment_id?, profile_username, actor: { username, display_name, avatar_path, is_official } }]
+//                                         profile_username = the RECIPIENT's own username (i.e. my profile), added in api/social.js
+//   types: post_like, photo_like, comment, wall_comment, friend_request, friend_accept,
+//          comment_like, reply, mention (in a post), comment_mention (in a comment)  <- 0028_comment_likes_replies_mentions.sql
+//   social.unreadNotifications()      -> number
+//   social.markNotificationsReadIds(ids) -> marks those notifications as read
+//   social.onNotification(meId, cb)   -> realtime hook, returns an unsubscribe function
+// In the account menu, notifications of the same kind on the SAME post / photo / comment are shown as one line ("Ana and 3 others liked your post").
+// The /notifications page (grouped={false}) shows every single notification on its own line, newest first, 50 at a time ("Show older").
+// Opening the list IS seeing it: everything shown is marked read straight away (no buttons to tap). Lines that were new when the list
+// opened keep their highlight until it is closed, so you can still tell what is new.
+// ---------------------------------------------------------------------------------------------
+const KINDS = {
+  post_like: [Heart, 'liked your post'],
+  photo_like: [Heart, 'liked your photo'],
+  comment: [ChatCircle, 'commented on your post'],
+  wall_comment: [ChatCircle, 'commented on your wall'],
+  friend_request: [UserPlus, 'sent you a friend request'],
+  friend_accept: [UsersThree, 'accepted your friend request'],
+  comment_like: [Heart, 'liked your comment'],
+  reply: [ArrowBendUpLeft, 'replied to your comment'],
+  mention: [At, 'mentioned you in a post'],
+  comment_mention: [At, 'mentioned you in a comment'],
+};
+
+// when one line stands for likes on several different things
+const PLURAL = { post_like: 'liked your posts', photo_like: 'liked your photos', comment_like: 'liked your comments' };
+
+/** Unread count for the badge, kept fresh by a 30 s poll + realtime. `tick` changes whenever a new one arrives. Call it in App. */
+export function useNotifCount(meId) {
+  const [n, setN] = useState(0); const [tick, setTick] = useState(0);
+  const refresh = useCallback(() => social.unreadNotifications().then((c) => setN(c || 0)).catch(() => {}), []);
+  useEffect(() => {
+    if (!meId) return undefined;
+    refresh(); const stop = visiblePoll(refresh, 300000);   // realtime does the real work; this is only a visible-tab safety net
+    const off = social.onNotification(meId, () => { refresh(); setTick((x) => x + 1); });
+    return () => { stop(); off?.(); };
+  }, [meId, refresh]);
+  return { n, setN, tick };
+}
+
+/** The list that sits inside the account menu (and on the /notifications page). Opening it marks what it shows as read. `onRead(remainingUnread)` keeps the badge in step. */
+export const PAGE_SIZE = 50;
+export function NotificationList({ go, notify, tick, onRead, limit, grouped = true }) {
+  const [rows, setRows] = useState(null);
+  const [fetchN, setFetchN] = useState(PAGE_SIZE);   // how many rows to ask the database for; "Show older" raises it (page only)
+  const fetchRef = useRef(PAGE_SIZE); fetchRef.current = fetchN;
+  const fresh = useRef(new Set());   // ids that were unread when they arrived here: they stay highlighted while this list is open
+  const load = useCallback(() => social.listNotifications(fetchRef.current).then((r) => {
+    const list = r || [];
+    // Seeing a list marks what it SHOWS as read, nothing more: the account panel shows the latest few lines, so the older unread ones stay unread
+    // (they used to be marked read unseen, and the badge dropped to 0 although there was more to look at).
+    const shownGroups = (grouped ? groupNotifications(list) : ungroupNotifications(list)); const seen = new Set((limit ? shownGroups.slice(0, limit) : shownGroups).flatMap((g) => g.ids));
+    const unseen = list.filter((x) => !x.read && seen.has(x.id)).map((x) => x.id);
+    unseen.forEach((id) => fresh.current.add(id));
+    setRows(list.map((x) => ({ ...x, read: !fresh.current.has(x.id) })));   // "read" here only drives the highlight
+    if (unseen.length) {   // only these ids, never ones that arrive a moment later
+      if (list.length < fetchRef.current && unseen.length >= list.filter((x) => !x.read).length) onRead(0);   // everything unread was on screen: the badge clears at once
+      Promise.resolve(social.markNotificationsReadIds(unseen)).catch(() => {}).then(() => social.unreadNotifications()).then((c) => onRead(c || 0)).catch(() => {});   // then the real number, whatever happened
+    }
+  }).catch(() => { setRows((x) => x || []); notify('Could not load notifications', 'err'); }), []);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, [tick, fetchN]);   // eslint-disable-line react-hooks/exhaustive-deps
+
+  const groups = useMemo(() => (grouped ? groupNotifications(rows || []) : ungroupNotifications(rows || [])), [rows, grouped]);
+  const img = useImages(groups.map((g) => g.latest.actor?.avatar_path));
+  const shown = limit ? groups.slice(0, limit) : groups;   // the account menu shows the latest few; the page shows all
+
+  // Post likes / post comments open the post. Wall comments and photo likes happened on MY profile, so they open my profile.
+  const visit = (g) => {
+    const r = g.latest;
+    if (r.post_id) go('post', r.post_id);
+    else if ((r.type === 'wall_comment' || r.type === 'photo_like') && r.profile_username) go('profile', r.profile_username);
+    else if (r.actor) go('profile', r.actor.username);
+  };
+
+  return (<section className="nsec npage" aria-label="Notifications">
+    {!rows ? <NoticeSkeleton /> : !groups.length ? <p className="muted nempty">Nothing yet. Likes, replies and mentions will show up here.</p>
+      : <ul className="nlist">{shown.map((g) => { const [Icon, single] = KINDS[g.type] || [Bell, 'did something']; const text = g.targetCount > 1 && PLURAL[g.type] ? PLURAL[g.type] : single; const r = g.latest; const count = g.rows.length; return (
+        <li key={g.key} className="nitem">
+          <button type="button" className={`nrow${g.unread ? ' new' : ''}`} onClick={() => visit(g)}>
+            <span className="nav2"><Avatar src={img[r.actor?.avatar_path]} size={36} name={r.actor?.display_name || r.actor?.username} /><i className="nic"><Icon size={10} weight="fill" aria-hidden="true" /></i></span>
+            <span className="ntxt"><span><b>{actorsLabel(g.actors)}</b>{g.actors.length === 1 && g.actors[0].official && <Verified />} {text}{count > g.actors.length && g.actors.length === 1 && g.targetCount <= 1 ? ` (${count})` : ''}</span><small>{ago(r.created_at)}</small></span></button>
+        </li>); })}</ul>}
+    {limit && (groups.length > limit || (rows?.length || 0) > shown.length) && <button type="button" className="nseeall" onClick={() => go('notifications')}>See all notifications<ArrowRight size={14} weight="bold" aria-hidden="true" /></button>}
+    {!limit && rows && rows.length >= fetchN && <button type="button" className="nseeall nmore" onClick={() => setFetchN((n) => n + PAGE_SIZE)}>Show older notifications</button>}
+  </section>);
+}
+
+/** The /notifications page. */
+export default function NotificationsView(props) {
+  return (<div className="plain view"><h2>Notifications</h2><div className="panel npanel"><NotificationList {...props} grouped={false} /></div></div>);
+}

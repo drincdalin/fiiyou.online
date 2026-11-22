@@ -1,0 +1,74 @@
+/* Chat message menu ("..." button, dropdown, inline editor, deleted/edited markers).
+   Do NOT define .msgmenuwrap / .msgmenu anywhere else (e.g. social-ui.css loads last and would override these).
+   Colors come from the app theme: --t-card, --t-border, --t-text, --muted, --red-fg. */
+
+/* "..." button: small, round, quiet; appears on hover/focus (always on touch screens) */
+.msgmenuwrap { position: relative; display: inline-flex; align-self: center; flex: none; }
+.msgmenuwrap button.msgmore {
+  width: 28px; height: 28px; min-width: 0; min-height: 0; padding: 0; margin: 0;
+  display: grid; place-items: center; align-self: center;
+  border: 0; border-radius: 50%; background: transparent; box-shadow: none;
+  color: var(--muted); cursor: pointer;
+}
+.msgmenuwrap button.msgmore:hover, .msgmenuwrap button.msgmore[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--t-text) 12%, transparent); color: var(--t-text);
+}
+.brow .msgmenuwrap { opacity: 0; transition: opacity .12s; }
+.brow:hover .msgmenuwrap, .brow:focus-within .msgmenuwrap, .brow .msgmenuwrap:has(.msgmenu) { opacity: 1; }
+@media (hover: none) { .brow .msgmenuwrap { opacity: 1; } }
+
+/* click-away layer + dropdown (both position:fixed so the scrolling message list can't clip them;
+   z-index sits above design.css's .pmenuback at 1000) */
+.pmenuback { position: fixed; inset: 0; z-index: 1000; background: transparent; }
+.msgmenu {
+  position: fixed; z-index: 1001; min-width: 150px; padding: 5px;
+  display: flex; flex-direction: column; gap: 2px;
+  background: var(--t-card); border: 1px solid var(--t-border); border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.45);
+}
+.msgmenu button {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 0; padding: 9px 12px; margin: 0;
+  border: 0; border-radius: 8px; background: transparent; box-shadow: none;
+  color: var(--t-text); font: inherit; font-size: 0.9375rem; text-align: left; cursor: pointer;
+}
+.msgmenu button:hover, .msgmenu button:focus-visible { background: color-mix(in srgb, var(--t-text) 10%, transparent); }
+.msgmenu button.danger { color: var(--red-fg, #ff6b72); }
+.msgmenu button.danger:hover, .msgmenu button.danger:focus-visible { background: color-mix(in srgb, var(--red, #d92d35) 16%, transparent); }
+
+/* inline editor inside the bubble (the bubble is the accent color, so the editor uses translucent dark-on-accent) */
+.bub.editing { min-width: min(280px, 70vw); }
+.msgedit textarea {
+  display: block; width: 100%; box-sizing: border-box; resize: none; padding: 8px 10px;
+  border: 1px solid rgba(0,0,0,.25); border-radius: 10px; background: rgba(0,0,0,.18);
+  color: inherit; font: inherit; line-height: 1.35;
+}
+.msgedit textarea:focus { outline: 2px solid rgba(0,0,0,.35); outline-offset: 0; }
+.msgedit .acts { display: flex; justify-content: flex-end; gap: 6px; margin-top: 6px; }
+.msgedit .acts button { display: inline-flex; align-items: center; gap: 4px; min-height: 0; padding: 5px 11px; font-size: 0.875rem; border-radius: 999px; cursor: pointer; }
+.msgedit .acts .primary { background: #1a1a1a; color: #fff; border: 0; }
+.msgedit .acts .ghost { background: transparent; color: inherit; border: 1px solid rgba(0,0,0,.3); }
+.msgedit .acts button:disabled { opacity: .5; cursor: default; }
+
+/* deleted + edited markers */
+.bub.msgdeleted { background: transparent !important; border: 1px dashed var(--t-border); color: var(--muted) !important; font-style: italic; }
+.bub.msgdeleted small { display: none; }
+.msgedited { font-size: 0.75em; opacity: .75; }
+
+
+/* ---------- phone action sheet (tap or press-and-hold a message) ---------- */
+.bub.tappable { cursor: pointer; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+.bub.tappable:active { filter: brightness(.92); }
+.msheetback { position: fixed; inset: 0; z-index: 1100; display: flex; align-items: flex-end; justify-content: center; background: rgba(0, 0, 0, .55); animation: msfade .18s ease; }
+.msheet { width: min(100%, 520px); max-height: 85dvh; overflow: auto; display: flex; flex-direction: column; gap: 2px; padding: 8px 10px calc(10px + var(--sab, 0px)); background: var(--t-card, var(--g1)); border: 1px solid var(--t-border, var(--g3)); border-bottom: 0; border-radius: 20px 20px 0 0; box-shadow: 0 -12px 40px rgba(0, 0, 0, .5); animation: msup .24s cubic-bezier(.2, .8, .2, 1); }
+.msgrab { align-self: center; width: 40px; height: 4px; margin: 2px 0 8px; border-radius: 99px; background: var(--g4, #555); }
+.msheetprev { margin: 0 6px 6px; padding: 0 0 10px; border-bottom: 1px solid var(--t-border, var(--g3)); color: var(--muted); font-size: 0.875rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.msheet button { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 52px; padding: 0 14px; margin: 0; border: 0; border-radius: 12px; background: transparent; box-shadow: none; color: var(--t-text, var(--ink)); font: inherit; font-size: 1rem; font-weight: 600; text-align: left; cursor: pointer; }
+.msheet button:active, .msheet button:focus-visible { background: color-mix(in srgb, var(--t-text, #fff) 10%, transparent); }
+.msheet button.danger { color: var(--red-fg, #ff6b72); }
+.msheet button.msheetcancel { justify-content: center; margin-top: 6px; background: var(--g2); font-weight: 700; }
+@keyframes msup { from { transform: translateY(100%); } }
+@keyframes msfade { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .msheet, .msheetback { animation: none; } }
+@media (min-width: 701px) { .msheetback { align-items: center; } .msheet { border-radius: 20px; border-bottom: 1px solid var(--t-border, var(--g3)); padding-bottom: 10px; } }
+.msheet:focus { outline: none; }
+@media (min-width: 701px) { .cthread header .back { display: none; } }   /* the conversation list is always beside the thread here, so "back" has nothing to go back to */
