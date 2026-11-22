@@ -151,7 +151,7 @@ export default function Onboarding({ me, inviter: rawInviter, onDone, notify }) 
           </div>
           {ownMood && <input value={mood} onChange={(e) => setMood(e.target.value)} maxLength={80} placeholder="What's up today?" aria-label="Your mood" autoFocus />}
         </div>
-        <p className="muted obhint">People nearby find you by locality. You decide whether you show up on the map.</p></>}
+        <p className="muted obhint">People nearby find you by locality. You are on the friends map by default; turn it off any time in Customize.</p></>}
 
       {step === 1 && <>
         <div className="obvibes" role="radiogroup" aria-label="Look and feel">{VIBES.map((p) => <VibeCard key={p.id} preset={p} checked={vibe === p.id} onPick={pickVibe} />)}</div>

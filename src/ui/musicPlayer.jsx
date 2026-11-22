@@ -119,9 +119,8 @@ function makeController({ R, clock, S, mountRef }) {
           if (i === s.cursor) { seekTo(0); const en = engineFor(kind); if (en) en.play(); break; }
           loadTrack(currentOf(dispatch({ type: 'goto', index: i, dir: 'next' })), true); break;
         }
-        case 'blocked':   // the browser refused to start with sound: open the real player so one tap on it (a genuine gesture) starts playback
+        case 'blocked':   // the browser refused to start with sound: keep our own UI and let the next tap be the gesture
           want(false); status('blocked');
-          if (kind === 'yt') { S.setExpanded(true); S.setVideoOpen(true); }
           break;
         default: break;
       }
@@ -154,6 +153,9 @@ function makeController({ R, clock, S, mountRef }) {
     seek: seekTo,
     seekBy: (d) => seekTo(clock.get().position + d),
     setVolume, setMuted, toggleMute: () => setMuted(!R.current.muted),
+    /** Last resort for a browser that will not start YouTube audio from our own play button: show the real video,
+     *  where the tap lands inside the player itself. Only ever called by an explicit "Open video" button. */
+    openVideo() { S.setExpanded(true); S.setVideoOpen(true); },
     /** Add to the end of the queue. With nothing playing it only selects the track (nothing loads until play). Returns how many were added. */
     enqueue(input) {
       const list = toTracks(input); if (!list.length) return 0; const first = R.current.q.cursor < 0;

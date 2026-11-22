@@ -198,7 +198,7 @@ function Sheet({ closing }) {
           </div>
 
           {p.status === 'error' && <div className="mp-note err" role="alert"><WarningCircle size="1.2em" weight="fill" /><span>{p.error && p.error.message}</span><button type="button" onClick={a.retry}>Try again</button></div>}
-          {p.status === 'blocked' && <div className="mp-note" role="status"><span>Your browser blocked autoplay. {video ? 'Tap the video to start.' : 'Press play to start.'}</span></div>}
+          {p.status === 'blocked' && <div className="mp-note" role="status"><span>Your browser blocked autoplay. {video ? 'Tap the video to start.' : 'Press play to start.'}</span>{!video && isYt && <button type="button" onClick={a.openVideo}>Open video</button>}</div>}
 
           <ProgressBlock disabled={p.status === 'error'} />
 

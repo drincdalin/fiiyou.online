@@ -113,7 +113,11 @@ html.mp-lock, html.mp-lock body { overflow: hidden; overscroll-behavior: none; }
   background: radial-gradient(circle, var(--g0) 0 4.5%, var(--ink) 4.5% 5.6%, rgba(0, 0, 0, .55) 5.6% 7.5%, transparent 7.7%), repeating-radial-gradient(circle, rgba(0, 0, 0, .3) 0 1px, transparent 1px 4px); }
 .mp-art[data-vinyl] .mp-art-img { border-radius: 50%; animation: mp-rot 18s linear infinite paused; }
 .mp-art[data-vinyl][data-playing="true"] .mp-art-img { animation-play-state: running; }
-.mp-art[data-vinyl] .mp-art-glow { border-radius: 50%; } .mp-art[data-vinyl] .mp-vinyl-fx { display: block; }
+/* a record is always round, even when the source cover is a rectangle or the layout would stretch the box */
+.mp-art[data-vinyl] { aspect-ratio: 1; }
+.mp-art[data-vinyl] .mp-art-img, .mp-art[data-vinyl] .mp-art-pic { aspect-ratio: 1; }
+.mp-art[data-vinyl] .mp-art-glow { inset: 0; border-radius: 50%; } .mp-art[data-vinyl] .mp-vinyl-fx { display: block; }
+.mp-dock-art, .mp-dock-disc, .mp-disc { aspect-ratio: 1; }
 
 .mp-info { min-width: 0; } .mp-title { margin: 0; font-size: 1.25rem; line-height: 1.2; font-weight: 850; letter-spacing: -.02em; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 .mp-artist { margin: 2px 0 0; color: var(--mp-dim); font-size: 0.9375rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
