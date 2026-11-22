@@ -17,13 +17,27 @@ async function orBanned(email, fn) {
 
 /** Username/display name are passed as metadata. The profile + starter cards are created by a DB trigger only once the email is confirmed (0043),
  *  so until then the account is invisible in the app: no profile, no Discover, no Search. */
+const redirectUrl = () => `${location.origin}${import.meta.env?.BASE_URL ?? '/'}`;
+
 export async function signUp({ email, password, username, displayName, invitedBy, captchaToken }) {
   if (await emailBanned(email)) throw new Error('banned');
   if (!(await usernameAvailable(username, email))) throw new Error('username_taken');
   return orBanned(email, async () => unwrap(await supabase.auth.signUp({
     email, password,
-    options: { ...(captchaToken ? { captchaToken } : {}), data: { username: username.toLowerCase(), display_name: displayName || username, ...(/^[a-z0-9_]{3,24}$/.test(invitedBy || '') ? { invited_by: invitedBy } : {}) } },
+    options: { ...(captchaToken ? { captchaToken } : {}), emailRedirectTo: redirectUrl(), data: { username: username.toLowerCase(), display_name: displayName || username, ...(/^[a-z0-9_]{3,24}$/.test(invitedBy || '') ? { invited_by: invitedBy } : {}) } },
   })));
+}
+
+/** Sends the confirmation email again (lost it, spam folder, link expired). Same rules as sign-up: banned emails are refused, a CAPTCHA token is needed when CAPTCHA is on. */
+export async function resendConfirmation(email, captchaToken) {
+  if (await emailBanned(email)) throw new Error('banned');
+  const { error } = await supabase.auth.resend({ type: 'signup', email, options: { ...(captchaToken ? { captchaToken } : {}), emailRedirectTo: redirectUrl() } });
+  if (error) throw error;
+}
+
+/** The button on /auth/confirm: exchanges the one-time token from an email link for a session. Confirming the email is what creates the profile (0043). */
+export async function confirmLink(tokenHash, type) {
+  return unwrap(await supabase.auth.verifyOtp({ token_hash: tokenHash, type })).session;
 }
 
 export async function signIn({ email, password, captchaToken }) {
@@ -33,7 +47,7 @@ export async function signIn({ email, password, captchaToken }) {
  *  the Terms. Never reveals whether the email has an account: an unknown address looks exactly like a sent link. */
 export async function signInWithMagicLink(email, captchaToken) {
   if (await emailBanned(email)) throw new Error('banned');
-  const { error } = await supabase.auth.signInWithOtp({ email, options: { ...(captchaToken ? { captchaToken } : {}), shouldCreateUser: false, emailRedirectTo: `${location.origin}${import.meta.env?.BASE_URL ?? '/'}` } });
+  const { error } = await supabase.auth.signInWithOtp({ email, options: { ...(captchaToken ? { captchaToken } : {}), shouldCreateUser: false, emailRedirectTo: redirectUrl() } });
   if (error && !/signups? not allowed|user not found/i.test(error.message || '')) throw error;
 }
 /** scope 'local' signs out this device only. The default ('global') revokes the user's sessions on every device. */
@@ -57,7 +71,7 @@ export async function deleteAccount() {
 
 /** Sends a reset link; the page that opens handles the PASSWORD_RECOVERY event (see App.jsx). Never reveals whether the email exists. */
 export async function resetPassword(email, captchaToken) {
-  const { error } = await supabase.auth.resetPasswordForEmail(email, { ...(captchaToken ? { captchaToken } : {}), redirectTo: `${location.origin}${import.meta.env?.BASE_URL ?? '/'}` });
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { ...(captchaToken ? { captchaToken } : {}), redirectTo: redirectUrl() });
   if (error && error.status !== 400) throw error;
 }
 export async function updatePassword(password) { return unwrap(await supabase.auth.updateUser({ password })); }

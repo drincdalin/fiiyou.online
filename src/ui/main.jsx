@@ -1,3 +1,4 @@
+import '../lib/authLink.js';   // FIRST: reads what an email link left in the address bar before supabase-js touches it
 import { createRoot } from 'react-dom/client';
 import App from './App.jsx';
 import { DialogHost, installDialogs } from './dialog.jsx';

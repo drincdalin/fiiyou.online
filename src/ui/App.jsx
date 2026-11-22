@@ -11,6 +11,7 @@ import { useDraftAutosave, DraftRestoreBar } from './draft.jsx';
 import { clearDraft } from '../lib/draftStore.js';
 import { visiblePoll, debounce } from '../lib/poll.js';
 import { getInvite, clearInvite } from '../lib/invite.js';
+import { getConfirmLink, clearConfirmLink, takeLinkError } from '../lib/authLink.js';
 import { themeStyle } from './theme.js';
 import { useCustomFont } from './fonts.js';
 import { applyAppTheme } from './appTheme.js';
@@ -38,15 +39,18 @@ const BASE = import.meta.env.BASE_URL;
 /** A signed-in session whose email is not confirmed is never treated as an account (the profile does not exist until confirmation, see 0043). */
 const isConfirmed = (s) => !!(s?.user?.email_confirmed_at || s?.user?.confirmed_at);
 
-function Auth() {
+function Auth({ notice = '' }) {
   const capRef = useRef(null); const [cap, setCap] = useState('');   // Turnstile token (only when VITE_TURNSTILE_SITE_KEY is set)
   const needCap = () => CAPTCHA_ON && !cap;
   const [invite] = useState(() => getInvite()); const [mode, setMode] = useState(invite ? 'up' : 'in'); const [f, setF] = useState({ email: '', password: '', username: '', displayName: '' }); const [agree, setAgree] = useState(false); const [banned, setBanned] = useState(false);
-  const [msg, setMsg] = useState(''); const [ok, setOk] = useState(false); const [busy, setBusy] = useState(false); const [sentTo, setSentTo] = useState(''); const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  const [msg, setMsg] = useState(notice); const [ok, setOk] = useState(false); const [busy, setBusy] = useState(false); const [sentTo, setSentTo] = useState(''); const [cool, setCool] = useState(0); const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const say = (m, good = false) => { setMsg(m); setOk(good); };
+  useEffect(() => { if (cool <= 0) return undefined; const t = setTimeout(() => setCool((c) => c - 1), 1000); return () => clearTimeout(t); }, [cool]);
   const go = async (e) => { e.preventDefault(); if (busy) return; say(''); if (mode === 'up' && isReserved(f.username)) return say('That username is reserved.'); if (needCap()) return say('Please finish the security check first.'); setBusy(true);
     try { if (mode === 'in') await auth.signIn({ ...f, captchaToken: cap }); else { const r = await auth.signUp({ ...f, invitedBy: invite, captchaToken: cap }); if (!r.session) setSentTo(f.email.trim()); } }
-    catch (er) { if (er.message === 'banned') setBanned(true); else say(er.message === 'username_taken' ? 'That username is taken.' : friendlyError(er)); } capRef.current?.reset(); setBusy(false); };
+    catch (er) { if (er.message === 'banned') setBanned(true); else if (mode === 'in' && /email not confirmed/i.test(er.message || '')) { setSentTo(f.email.trim()); say('Your email is not confirmed yet. Open the link we sent you, or send it again below.'); } else say(er.message === 'username_taken' ? 'That username is taken.' : friendlyError(er)); } capRef.current?.reset(); setBusy(false); };
+  const resend = async () => { if (busy || cool > 0) return; if (needCap()) return say('Please finish the security check first.'); setBusy(true);
+    try { await auth.resendConfirmation(sentTo, cap); say('Sent again. It can take a minute; check spam too.', true); setCool(60); } catch (er) { if (er.message === 'banned') setBanned(true); else say(friendlyError(er)); } capRef.current?.reset(); setBusy(false); };
   const forgot = async () => { if (!f.email) return say('Type your email first.'); if (needCap()) return say('Please finish the security check first.'); try { await auth.resetPassword(f.email, cap); say('If that email has an account, a reset link is on its way.', true); } catch (er) { say(friendlyError(er)); } capRef.current?.reset(); };
   const magic = async () => { if (!f.email) return say('Type your email first.'); if (needCap()) return say('Please finish the security check first.'); setBusy(true);
     try { await auth.signInWithMagicLink(f.email, cap); say('If that email has an account, a sign-in link is on its way.', true); } catch (er) { if (er.message === 'banned') setBanned(true); else say(friendlyError(er)); } capRef.current?.reset(); setBusy(false); };
@@ -58,7 +62,10 @@ function Auth() {
       <span className="sentic" aria-hidden="true"><EnvelopeSimple size={30} weight="bold" /></span>
       <h2 tabIndex={-1} ref={(el) => el?.focus({ preventScroll: true })}>Check your inbox</h2>
       <p>We sent a confirmation link to <b>{sentTo}</b>. Your account is created the moment you open it, then you can sign in.</p>
-      <p className="muted">Nothing there? Look in spam, or go back and check the address for typos.</p>
+      <p className="muted">Nothing there? Look in spam (mark it "not spam" so the link works), or check the address for typos. Already have an account with this email? Go back and sign in.</p>
+      <Captcha ref={capRef} onToken={setCap} onProblem={() => say('The security check could not load. Turn off your ad blocker for this site, or check your connection, then reload.')} />
+      {msg && <p className={ok ? 'okmsg' : 'err'} role="alert">{msg}</p>}
+      <button type="button" className="primary wide" disabled={busy || cool > 0 || needCap()} aria-busy={busy || undefined} onClick={resend}>{cool > 0 ? `Send again in ${cool}s` : 'Send the email again'}</button>
       <button type="button" className="ghost wide" onClick={() => { setSentTo(''); setMode('in'); say(''); }}>Back to sign in</button>
       <button type="button" className="link muted" onClick={() => { setSentTo(''); say(''); }}>Use a different email</button>
     </div></main>);
@@ -87,6 +94,31 @@ function Auth() {
       </form>
     </main>
   );
+}
+
+/** The page an email link opens (/auth/confirm?token_hash=...&type=...). The token is only spent when the person presses the button, so a mail
+ *  scanner that merely opens the link cannot use it up, and a second click never lands on a silent sign-in page. */
+function ConfirmLink({ link, onDone }) {
+  const [busy, setBusy] = useState(false); const [err, setErr] = useState('');
+  const kind = link.type === 'recovery' ? 'reset' : link.type === 'signup' ? 'signup' : 'signin';
+  const copy = { reset: ['Reset your password', 'Press the button, then choose a new password.', 'Continue'], signup: ['Confirm your email', 'Press the button to finish creating your account.', 'Confirm my email'], signin: ['Sign in to fiiyou', 'Press the button to sign in.', 'Sign in'] }[kind];
+  const run = async () => {
+    if (busy) return; setBusy(true); setErr('');
+    try { await auth.confirmLink(link.token_hash, link.type); clearConfirmLink(); onDone(kind === 'reset'); }
+    catch (er) { setErr(/expired|invalid|used|not found/i.test(er?.message || '') ? 'This link has expired or was already used. If you already confirmed your email, just sign in. If not, sign in and we will offer to send you a new link.' : friendlyError(er)); setBusy(false); }
+  };
+  const leave = () => { clearConfirmLink(); onDone(false); };
+  return (
+    <main className="authwrap"><div className="authcard authsent">
+      <header className="authhead"><h1 className="brand">fiiyou</h1></header>
+      <span className="sentic" aria-hidden="true"><EnvelopeSimple size={30} weight="bold" /></span>
+      <h2 tabIndex={-1} ref={(el) => el?.focus({ preventScroll: true })}>{err ? 'This link did not work' : copy[0]}</h2>
+      {err ? <p role="alert" className="err">{err}</p> : <p>{copy[1]}</p>}
+      {!err && kind === 'signup' && <p className="muted">Opened this from a mail app? If you land on the sign-in page afterwards, just sign in once in your browser.</p>}
+      {err ? <button type="button" className="primary wide" onClick={leave}>Go to sign in</button>
+        : <><button type="button" className="primary wide" aria-busy={busy || undefined} onClick={run}>{copy[2]}</button>
+          <button type="button" className="link muted" onClick={leave}>Not now</button></>}
+    </div></main>);
 }
 
 /** Shown when the email belongs to an account the operator banned (the database refuses it at sign-up, see spam_and_bans.sql). */
@@ -305,6 +337,7 @@ function toRoute(path) {
 export default function App() {
   const [session, setSession] = useState(undefined); const [me, setMe] = useState(null); const path = usePath(); const route = useMemo(() => toRoute(path), [path]);
   const [staffRole, setStaffRole] = useState(null); const [recovery, setRecovery] = useState(false);
+  const [pending, setPending] = useState(() => getConfirmLink()); const [linkNotice] = useState(() => takeLinkError());   // what an email link left in the address (see lib/authLink.js)
   const [menu, setMenu] = useState(false); const { n: nCount, setN: setNCount, tick: nTick } = useNotifCount(me?.id); const [toast, setToast] = useState(null); const [paused, setPaused] = useState(false); const [unread, setUnread] = useState(0);
   const refreshMe = useCallback(() => profiles.getMyProfile().then(setMe).catch(() => {}), []);
   const [meErr, setMeErr] = useState(null); const [inviteOpen, setInviteOpen] = useState(false);
@@ -382,9 +415,10 @@ export default function App() {
     const upd = () => { if (h1Ref.current) h1Ref.current.hidden = !!main.querySelector('h1:not(.pagetitle)'); };
     upd(); const mo = new MutationObserver(upd); mo.observe(main, { childList: true, subtree: true }); return () => mo.disconnect();
   }, [route.v, !!session, !!me]);   // main only exists once signed in and loaded
+  if (pending) return <ConfirmLink link={pending} onDone={(reset) => { setPending(null); if (reset) setRecovery(true); navigate('/', { replace: true }); }} />;
   if (session === undefined) return <Boot />;
   if (recovery && session) return <NewPassword onDone={() => setRecovery(false)} />;
-  if (!session || !isConfirmed(session)) return <Auth />;
+  if (!session || !isConfirmed(session)) return <Auth notice={linkNotice} />;
   if (!me) return meErr ? <div className="authwrap"><ErrorState error={meErr} onRetry={loadMe} title="Could not load your account" /></div> : <Boot />;
   const notify = (msg, type = 'ok') => setToast({ msg: type === 'err' ? friendlyError({ message: msg }) : msg, type });
   // first run after sign-up: the welcome steps (null = not done yet; undefined = the 0024 migration has not run, so nobody is sent through it)

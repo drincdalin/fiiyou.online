@@ -13,7 +13,7 @@ export const RESERVED = [
   // app pages
   'home', 'me', 'u', 'map', 'people', 'chat', 'messages', 'post', 'admin', 'notifications', 'invite', 'tag', 'search',
   // auth / meta pages
-  'login', 'signup', 'settings', 'about', 'help', 'privacy', 'terms', 'api',
+  'login', 'signup', 'auth', 'settings', 'about', 'help', 'privacy', 'terms', 'api',
   // static files and folders
   'assets', 'icons', 'index.html', '404.html', 'terms.html', 'privacy.html', 'accessibility.html', 'accessibility', 'sw.js',
   'sitemap.xml', 'robots.txt', 'manifest.webmanifest', 'og-image.png', 'favicon.ico',
