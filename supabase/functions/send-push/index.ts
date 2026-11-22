@@ -12,8 +12,13 @@ const admin = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY')
 // The function reaches the gateway over the internal network, but a phone must download the picture from the public host.
 const PUBLIC_URL = (env('SUPABASE_PUBLIC_URL') || env('SUPABASE_URL')).replace(/\/+$/, '');
 function publicUrl(u: string) {
-  try { const x = new URL(u), b = new URL(PUBLIC_URL); x.protocol = b.protocol; x.host = b.host; return x.toString(); }
-  catch { return u; }
+  try {
+    const x = new URL(u), b = new URL(PUBLIC_URL);
+    x.protocol = b.protocol;
+    x.hostname = b.hostname;
+    x.port = b.port;   // setting x.host alone keeps the old port (api-gw:8000), which the public host does not serve
+    return x.toString();
+  } catch { return u; }
 }
 
 // A bad or missing key must not stop the function from starting: it answers every call with a readable reason instead.
