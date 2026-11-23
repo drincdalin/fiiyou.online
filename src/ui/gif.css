@@ -1,0 +1,106 @@
+/* GIF picker + GIF messages/comments. Loaded from main.jsx after social-ui.css. */
+
+.gifmodal {
+  position: fixed; inset: 0; z-index: 120;
+  display: grid; place-items: center; padding: 18px;
+  background: rgba(0, 0, 0, .74);
+}
+.gifpanel {
+  width: min(660px, 96vw); height: min(720px, 86vh);
+  display: grid; grid-template-rows: auto auto 1fr auto;
+  border: 2px solid var(--g3, #333); border-radius: var(--rad-l, 16px);
+  background: var(--g1, #101010); color: var(--text, #f2f2f2);
+  overflow: hidden; box-shadow: 0 24px 70px rgba(0, 0, 0, .55);
+}
+.gifhead { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 8px; }
+.gifhead b { font-size: 1rem; letter-spacing: .01em; }
+.gifclose {
+  all: unset; display: grid; place-items: center; width: 34px; height: 34px; cursor: pointer;
+  border-radius: 999px; color: var(--muted, #999);
+}
+.gifclose:hover, .gifclose:focus-visible { background: var(--g2, #1c1c1c); color: var(--text, #fff); }
+.gifsearch {
+  display: flex; align-items: center; gap: 8px; margin: 0 16px 12px; padding: 0 12px;
+  min-height: 42px; border: 2px solid var(--g3, #333); border-radius: 999px; background: var(--g2, #191919);
+  color: var(--muted, #999);
+}
+.gifsearch:focus-within { border-color: var(--g5, #666); }
+.gifsearch input {
+  flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text, #fff);
+  font: inherit; font-size: .9375rem; padding: 9px 0;
+}
+.gifsearch button {
+  all: unset; display: grid; place-items: center; width: 26px; height: 26px; cursor: pointer;
+  border-radius: 999px; color: var(--muted, #999);
+}
+.gifsearch button:hover { color: var(--text, #fff); background: var(--g3, #333); }
+.gifscroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 12px 12px; }
+.gifgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: 8px; }
+.giftile {
+  all: unset; display: block; cursor: pointer; overflow: hidden; aspect-ratio: 1;
+  border-radius: 12px; background: #050505; border: 2px solid transparent;
+}
+.giftile:hover, .giftile:focus-visible { border-color: var(--accent, #d6d6d6); }
+.giftile img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.gifskel { display: block; aspect-ratio: 1; border-radius: 12px; background: linear-gradient(100deg, #171717 20%, #242424 40%, #171717 60%); background-size: 220% 100%; animation: gifskel 1.2s linear infinite; }
+@keyframes gifskel { to { background-position: -220% 0; } }
+.gifmsg { padding: 36px 20px; text-align: center; color: var(--muted, #999); font-size: .9375rem; }
+.gifstart { padding: 18px 6px; color: var(--muted, #999); font-size: .875rem; }
+.gifstart p { margin: 0 0 10px; }
+.gifchips { display: flex; flex-wrap: wrap; gap: 8px; }
+.gifchips button {
+  all: unset; cursor: pointer; padding: 7px 12px; border-radius: 999px;
+  border: 1.5px solid var(--g3, #333); background: var(--g2, #191919); color: var(--text, #eee);
+  font-size: .8125rem;
+}
+.gifchips button:hover, .gifchips button:focus-visible { border-color: var(--g5, #666); }
+.giffoot { padding: 9px 16px 12px; border-top: 1px solid var(--g3, #2a2a2a); color: var(--muted, #888); font-size: .75rem; }
+.giffoot a { color: inherit; text-underline-offset: 2px; }
+
+.gifbtn {
+  all: unset; flex: none; display: grid; place-items: center; cursor: pointer;
+  width: 46px; height: 46px; border-radius: var(--rad-l, 14px);
+  background: var(--g2, #191919); color: var(--muted, #bbb);
+}
+.gifbtn:hover, .gifbtn:focus-visible, .gifbtn[aria-expanded="true"] { color: var(--text, #fff); background: var(--g3, #2a2a2a); }
+.gifbtn svg { display: block; }
+
+/* Chat field: a textarea keeps Android from treating the composer as a login form.
+   It starts one line high and grows to four lines. */
+.cthread .inline textarea.chatbox {
+  flex: 1 1 14rem; min-width: 0; width: auto; max-height: 124px;
+  padding: .7rem 1rem; border: 2px solid transparent; border-radius: var(--rad-l, 14px);
+  background: var(--g2, #191919); color: var(--text, #fff);
+  font: inherit; font-size: 1rem; line-height: 1.35; resize: none; overflow-y: auto;
+}
+.cthread .inline textarea.chatbox:focus { border-color: var(--g4, #555); outline: 0; box-shadow: none; }
+.cthread .inline textarea.chatbox::placeholder { color: var(--muted, #888); }
+
+.bub.gif { padding: 6px; }
+.bub.gif .gifimg {
+  display: block; width: min(280px, 100%); max-height: 340px; object-fit: contain;
+  border-radius: var(--rad-m, 12px); background: #000;
+}
+.bub.gif > p { padding: 6px 6px 0; }
+
+.cmgif img {
+  display: block; width: min(240px, 100%); max-height: 300px; object-fit: contain;
+  border-radius: 10px; background: #000; margin: 2px 0 4px;
+}
+.cmgif .cmtext { margin-top: 2px; }
+.cmgifpick {
+  display: flex; align-items: center; gap: 10px; margin: 8px 0 2px;
+  padding: 6px; border: 2px solid var(--g3, #333); border-radius: 12px; background: var(--g2, #191919);
+}
+.cmgifpick img { display: block; width: 74px; height: 74px; object-fit: contain; border-radius: 8px; background: #000; }
+.cmgifpick span { flex: 1; min-width: 0; color: var(--muted, #999); font-size: .8125rem; }
+.cmgifpick button { all: unset; cursor: pointer; color: var(--muted, #999); padding: 8px; border-radius: 999px; }
+.cmgifpick button:hover { color: var(--text, #fff); background: var(--g3, #2a2a2a); }
+.cmform .gifbtn { width: 38px; height: 38px; border-radius: var(--rad-m, 12px); }
+
+@media (max-width: 560px) {
+  .gifmodal { padding: 0; place-items: end center; }
+  .gifpanel { width: 100vw; height: 88vh; border-radius: 18px 18px 0 0; border-bottom: 0; }
+  .gifgrid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+  .cthread .inline textarea.chatbox { font-size: 16px; }   /* iOS does not zoom on focus */
+}

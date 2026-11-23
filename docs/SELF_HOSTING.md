@@ -147,13 +147,21 @@ sudo cloudflared tunnel ingress validate
 sudo systemctl restart cloudflared
 ```
 
-3. In Cloudflare: **Zero Trust → Access → Applications → Add an application → Self-hosted**.
+3. **The WAF must allow the dashboard.** The API-only rule currently blocks `/` on every hostname, which is why `http://dashboard.fiiyou.online` shows Cloudflare's "Sorry, you have been blocked" page. In **Security → WAF → Custom rules**, either scope the existing API block to `http.host eq "api.fiiyou.online"`, or add a rule above it:
+
+   - Name: `dashboard allow`
+   - Expression: `http.host eq "dashboard.fiiyou.online"`
+   - Action: **Skip** → *All remaining custom rules* (use *Managed rules* too only if the block came from a managed rule; the dashboard has its own Basic auth and Access gate).
+
+   Then open `https://dashboard.fiiyou.online`, not the `http://` address.
+
+4. In Cloudflare: **Zero Trust → Access → Applications → Add an application → Self-hosted**.
    - Name: `fiiyou dashboard`
    - Public hostname: `dashboard.fiiyou.online`
    - Session duration: 24 hours
    - Policy: **Allow**, Include → **Emails** → your email address. Add a second policy only if someone else needs it.
 
-4. Open `https://dashboard.fiiyou.online` from mobile data. Cloudflare asks for a one-time email code, then the dashboard asks for `DASH_USER` / `DASH_PASS`.
+5. Open `https://dashboard.fiiyou.online` from mobile data. Cloudflare asks for a one-time email code, then the dashboard asks for `DASH_USER` / `DASH_PASS`.
 
 The Cloudflare Access policy is the real gate; the dashboard's Basic auth remains as a second layer. If Access is not configured, do not route the hostname at all.
 
@@ -161,6 +169,19 @@ Alternatives if you prefer no Cloudflare dependency:
 
 - **Tailscale**: install it on the server and the laptop, then `tailscale serve --bg 8090` and open the tailnet URL.
 - **SSH tunnel**: install `openssh-server`, then `ssh -L 8090:127.0.0.1:8090 dr-dalin@<host>` and open `http://127.0.0.1:8090` on the laptop.
+
+## GIFs and the invite contest
+
+GIF search uses **GifJif**, a keyless, CORS-enabled API (`https://gifjif.com`). No API key is needed. The Content-Security-Policy allows `gifjif.com` for images and connections. A GIF is stored as a short `fiiyou:gif:` message/comment body that contains only the provider path, so the normal spam-link rules do not treat it as a link and the app can never be pointed at an arbitrary remote image. Posts and stickers still accept uploaded GIF files through the normal media pipeline.
+
+Invite tracking is in migration `0047_invites.sql`:
+
+- `invite_visits` records one row per browser, per inviter, per week. The browser key is a random id in `localStorage`; no IP address or fingerprint is stored.
+- `referrals` records a confirmed account once, resolved from the `invited_by` sign-up metadata through a trigger on `auth.users`.
+- Existing `invited_by` metadata is backfilled by the migration.
+- The contest week starts Monday, `Europe/Bucharest`. The dashboard's **Invites** tab shows visits, confirmed sign-ups, conversion, all-time totals and recent referrals.
+
+Run migration 0047 before deploying the frontend that calls `record_invite_visit`.
 
 ## Backups
 

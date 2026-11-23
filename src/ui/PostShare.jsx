@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { X, DownloadSimple, ShareNetwork, PaperPlaneRight, Check, ImageSquare, ChatCircle } from '@phosphor-icons/react';
 import { friends, social } from '../index.js';
+import { decodeGif } from '../lib/gifs.js';
 import { Avatar, useImages } from './shared.jsx';
 import './PostShare.css';
 import { friendlyError } from './errors.jsx';
@@ -156,7 +157,7 @@ export function decodeSharedPost(body) {
 }
 
 /** Short text for places that cannot draw a card (conversation list, reply quotes). */
-export const previewText = (body) => { if (body === social.DELETED_BODY) return 'Message deleted'; const s = decodeSharedPost(body); return s ? `Shared a post by @${s.data.u}` : body; };
+export const previewText = (body) => { if (body === social.DELETED_BODY) return 'Message deleted'; const s = decodeSharedPost(body); if (s) return `Shared a post by @${s.data.u}`; const g = decodeGif(body); return g ? (g.note ? `GIF · ${g.note}` : 'GIF') : body; };
 
 /** The card shown inside a chat bubble. Everything in `data` is untrusted text from another user: it is only ever rendered as text. */
 export function SharedPostCard({ data, go }) {

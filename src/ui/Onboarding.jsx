@@ -10,6 +10,7 @@ import { PRESETS } from './themes.js';
 import { MOODS, INTERESTS, VIBE_IDS, composeAbout, matchPreset } from './onboardingData.js';
 import './onboarding.css';
 import LocalityPicker from './LocalityPicker.jsx';
+import AvatarCrop from './AvatarCrop.jsx';
 const InviteModal = lazy(() => import('./InviteModal.jsx'));
 
 const STEPS = ['Who are you?', 'Pick your vibe', 'Add a photo', 'What are you into?', 'Find your people'];
@@ -52,7 +53,7 @@ export default function Onboarding({ me, inviter: rawInviter, onDone, notify }) 
   const [name, setName] = useState(me.display_name || me.username); const [loc, setLoc] = useState(me.locality_id ? String(me.locality_id) : '');
   const [mood, setMood] = useState(me.headline || ''); const [ownMood, setOwnMood] = useState(!!me.headline && !MOODS.includes(me.headline));
   const [vibe, setVibe] = useState(() => matchPreset(VIBES, me.theme) || VIBES[0].id); const savedVibe = useRef(matchPreset(VIBES, me.theme)); const vibeTouched = useRef(false);
-  const [avatar, setAvatar] = useState(me.avatar_path || null); const [preview, setPreview] = useState(null);
+  const [avatar, setAvatar] = useState(me.avatar_path || null); const [preview, setPreview] = useState(null); const [crop, setCrop] = useState(null);
   const [picks, setPicks] = useState([]); const [extra, setExtra] = useState(''); const [writing, setWriting] = useState(false); const aboutCard = useRef(null);
   const [q, setQ] = useState(''); const [hits, setHits] = useState(null); const seq = useRef(0);
   const [people, setPeople] = useState(null); const [sent, setSent] = useState({}); const [adding, setAdding] = useState({}); const [inv, setInv] = useState(false);
@@ -119,6 +120,12 @@ export default function Onboarding({ me, inviter: rawInviter, onDone, notify }) 
   const pickAvatar = async (e) => {
     const file = e.target.files?.[0]; e.target.value = ''; if (!file) return;
     if (preview) URL.revokeObjectURL(preview); setPreview(URL.createObjectURL(file));
+    if (file.type === 'image/gif') { if (!(await run(async () => { const p = await profiles.setAvatar(file); setAvatar(p.avatar_path); }))) setPreview(null); return; }
+    setCrop(file);
+  };
+  const cropDone = async (blob) => {
+    setCrop(null);
+    const file = new File([blob], `avatar.${blob.type === 'image/png' ? 'png' : 'webp'}`, { type: blob.type || 'image/webp' });
     if (!(await run(async () => { const p = await profiles.setAvatar(file); setAvatar(p.avatar_path); }))) setPreview(null);
   };
   const add = async (p) => {
@@ -192,5 +199,6 @@ export default function Onboarding({ me, inviter: rawInviter, onDone, notify }) 
     <button type="button" className="link muted obskip" onClick={finish} disabled={busy}>Skip setup for now</button>
     </footer>
     {inv && <Suspense fallback={null}><InviteModal me={me} onClose={() => setInv(false)} notify={notify} /></Suspense>}
+    {crop && <AvatarCrop file={crop} onCancel={() => { setCrop(null); setPreview(null); }} onDone={cropDone} />}
   </div></div>);
 }

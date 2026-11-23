@@ -14,6 +14,7 @@
  */
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useSheetDrag } from './shared.jsx';
+import AvatarCrop from './AvatarCrop.jsx';
 import { createPortal } from 'react-dom';
 import {
   ArrowLineDown, ArrowLineUp, ArrowDown, ArrowUp, BookOpenText, Cards, CaretDoubleRight,
@@ -826,12 +827,19 @@ function MusicSection({ ctx }) {
 /** Who am I — identity, privacy, top friends, music. */
 function ProfileTab({ ctx }) {
   const { draft, setField, locs, run, busy, reload, notify } = ctx;
+  const [crop, setCrop] = useState(null);
+  const save = (blob) => new File([blob], `avatar.${blob.type === 'image/png' ? 'png' : 'webp'}`, { type: blob.type || 'image/webp' });
+  const pick = (file) => {
+    if (!file) return;
+    if (file.type === 'image/gif') return run(async () => { await profiles.setAvatar(file); await reload(); notify('Avatar updated'); });   // cropping would freeze the animation
+    setCrop(file);
+  };
   return (
     <>
       <Section title="Basics" icon={UserCircle}>
         <Group label="Avatar">
-          <FilePick disabled={busy} block onFiles={(fs) => run(async () => { await profiles.setAvatar(fs[0]); await reload(); notify('Avatar updated'); })}>Change avatar</FilePick>
-          <p className="cz-hint">Updates right away.</p>
+          <FilePick disabled={busy} block onFiles={(fs) => pick(fs[0])}>Change avatar</FilePick>
+          <p className="cz-hint">Drag and zoom the square before saving.</p>
         </Group>
         <TextField label="Display name" max={50} value={draft.fields.display_name} onChange={(v) => setField('display_name', v)} />
         <TextField label="Mood or headline" max={80} value={draft.fields.headline || ''} onChange={(v) => setField('headline', v)} />
@@ -852,6 +860,7 @@ function ProfileTab({ ctx }) {
 
       <TopFriends ctx={ctx} />
       <MusicSection ctx={ctx} />
+      {crop && <AvatarCrop file={crop} onCancel={() => setCrop(null)} onDone={async (blob) => { setCrop(null); await run(async () => { await profiles.setAvatar(save(blob)); await reload(); notify('Avatar updated'); }); }} />}
     </>
   );
 }

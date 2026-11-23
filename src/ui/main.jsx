@@ -7,12 +7,15 @@ import MusicDock from './MusicDock.jsx';
 import { bootRouter } from './router.jsx';
 import { Boundary, OfflineBanner } from './errors.jsx';
 import { captureInvite } from '../lib/invite.js';
+import { recordInviteVisit } from '../api/invites.js';
 import { captureInstall } from './install.js';
 import { watchKeyboard, fixAndroidInset } from './viewport.js';
 import './styles.css';
 import './design.css';
 import './ui-theme.css';
 import './social-ui.css';   // hashtags, comment layout, chat message menu
+import './gif.css';         // GIF picker, GIF bubbles and the textarea composer
+import './avatarCrop.css';  // profile picture crop dialog
 import './polish.css';      // release polish
 import './musicPlayer.css'; // global music player: mini dock, Now Playing sheet, queue (loads last: only .mp-* plus a few .player.mpcard lines)
 import './nav.css';         // navigation redesign: floating island on phones, roomy top bar on desktop (every rule is .nav-scoped, so it wins without touching the old nav rules)
@@ -22,7 +25,8 @@ import './composer.css';    // the post composer (after system.css so it has the
 import './refine.css';      // final polish: input + button pairs, icon centring, press feedback, tabular numbers (loads last)
 
 bootRouter();       // old /#/... links become real paths
-captureInvite({ base: import.meta.env.BASE_URL.replace(/\/$/, '') });   // /invite/<username>: remember who invited you, then show the normal page
+const inviter = captureInvite({ base: import.meta.env.BASE_URL.replace(/\/$/, '') });   // /invite/<username>: remember who invited you, then show the normal page
+if (inviter) recordInviteVisit(inviter);   // one visit per browser/inviter/week; never blocks the page
 fixAndroidInset();   // Android: don't count the system nav bar twice under the dock
 watchKeyboard();     // phones: tab bar steps aside while the keyboard is open
 captureInstall();   // keep the browser's "install app" offer for the Settings button (it only fires once, early)

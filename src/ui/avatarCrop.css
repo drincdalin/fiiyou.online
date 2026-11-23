@@ -1,0 +1,42 @@
+/* Profile picture crop dialog */
+
+.acmodal {
+  position: fixed; inset: 0; z-index: 130;
+  display: grid; place-items: center; padding: 18px;
+  background: rgba(0, 0, 0, .78);
+}
+.acpanel {
+  width: min(420px, 94vw); padding: 18px;
+  border: 2px solid var(--g3, #333); border-radius: var(--rad-l, 16px);
+  background: var(--g1, #101010); color: var(--text, #f2f2f2);
+  box-shadow: 0 26px 80px rgba(0, 0, 0, .6);
+}
+.achead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.achead h3 { margin: 0; font-size: 1rem; }
+.acclose { all: unset; display: grid; place-items: center; width: 34px; height: 34px; cursor: pointer; border-radius: 999px; color: var(--muted, #999); }
+.acclose:hover, .acclose:focus-visible { background: var(--g2, #1c1c1c); color: var(--text, #fff); }
+.accrop {
+  position: relative; width: min(300px, 72vw); aspect-ratio: 1; margin: 0 auto;
+  overflow: hidden; border-radius: 14px; background: #000;
+  border: 2px solid var(--g3, #333);
+}
+.accanvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+.accanvas:active { cursor: grabbing; }
+.acguide {
+  position: absolute; inset: 6%; pointer-events: none;
+  border: 2px solid rgba(255, 255, 255, .55); border-radius: 50%;
+  box-shadow: 0 0 0 999px rgba(0, 0, 0, .12);
+}
+.aczoom { display: flex; align-items: center; gap: 10px; margin: 16px 2px 0; color: var(--muted, #999); font-size: .8125rem; }
+.aczoom input { flex: 1; accent-color: var(--accent, #d6d6d6); }
+.aczoom span:last-child { min-width: 42px; text-align: right; font-variant-numeric: tabular-nums; }
+.acerr { margin: 10px 0 0; color: var(--danger, #ff7b72); font-size: .8125rem; }
+.achint { margin: 10px 0 0; color: var(--muted, #888); font-size: .8125rem; line-height: 1.45; }
+.acactions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.acactions .primary { display: inline-flex; align-items: center; gap: 6px; }
+.acactions button:disabled { opacity: .55; pointer-events: none; }
+
+@media (max-width: 560px) {
+  .acmodal { padding: 0; place-items: end center; }
+  .acpanel { width: 100vw; border-radius: 18px 18px 0 0; padding-bottom: max(18px, env(safe-area-inset-bottom)); }
+}

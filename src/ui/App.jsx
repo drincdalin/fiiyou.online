@@ -9,6 +9,8 @@ import Onboarding from './Onboarding.jsx';
 import { friendlyError, ErrorState } from './errors.jsx';
 import { useDraftAutosave, DraftRestoreBar } from './draft.jsx';
 import { clearDraft } from '../lib/draftStore.js';
+import GifPicker from './GifPicker.jsx';
+import { decodeGif, encodeGif } from '../lib/gifs.js';
 import { visiblePoll, debounce } from '../lib/poll.js';
 import { getInvite, clearInvite } from '../lib/invite.js';
 import { getConfirmLink, clearConfirmLink, takeLinkError } from '../lib/authLink.js';
@@ -33,7 +35,7 @@ import { PasswordMeter } from './PasswordMeter.jsx';
 import Captcha, { CAPTCHA_ON } from './Captcha.jsx';
 import { registerSW, forgetDevice, syncPush, listenForOpen, clearDeliveredNotifications } from './push.js';
 import GithubActivity from './GithubActivity.jsx';
-import { Bell, CaretRight, Eye, EyeSlash, Check, GearSix, Heart, ListChecks, MagnifyingGlass, PencilSimple, ShareNetwork, SignOut, Trash, UserPlus, EnvelopeSimple } from '@phosphor-icons/react';
+import { Bell, CaretRight, Eye, EyeSlash, Check, GearSix, Gif, Heart, ListChecks, MagnifyingGlass, PencilSimple, ShareNetwork, SignOut, Trash, UserPlus, EnvelopeSimple, X } from '@phosphor-icons/react';
 
 const BASE = import.meta.env.BASE_URL;
 /** A signed-in session whose email is not confirmed is never treated as an account (the profile does not exist until confirmation, see 0043). */
@@ -140,18 +142,24 @@ function NewPassword({ onDone }) {
 }
 
 function Guestbook({ profileId, go, own, meName, notify }) {
-  const [rows, setRows] = useState([]); const [body, setBody] = useState(''); const [err, setErr] = useState('');
+  const [rows, setRows] = useState([]); const [body, setBody] = useState(''); const [err, setErr] = useState(''); const [gif, setGif] = useState(null); const [gifOpen, setGifOpen] = useState(false);
   const load = () => wall.listWall(profileId).then(setRows).catch((e) => setErr(friendlyError(e, 'Could not load the guestbook.'))); useEffect(() => { load(); }, [profileId]);
   const img = useImages(rows.map((r) => r.author.avatar_path));
-  const send = async (e) => { e.preventDefault(); setErr('');
-    try { await wall.postOnWall(profileId, body); setBody(''); load(); } catch (er) { setErr(spamMessage(er) || (errorCode(er) === 'rate_limit' ? 'Slow down a bit.' : 'Cannot post here.')); } };
+  const send = async (e) => { e.preventDefault(); setErr(''); const text = gif ? encodeGif(gif, body) : body.trim(); if (!text) return;
+    if (text.length > 500) return setErr('That caption is too long for a GIF message.');
+    try { await wall.postOnWall(profileId, text); setBody(''); setGif(null); load(); } catch (er) { setErr(spamMessage(er) || (errorCode(er) === 'rate_limit' ? 'Slow down a bit.' : 'Cannot post here.')); } };
   return (<>
-    <form className="inline" onSubmit={send}><input value={body} maxLength={500} onChange={(e) => setBody(e.target.value)} placeholder="Write something…" />
-      <button className="primary" disabled={!body.trim()}>Send</button></form>
+    {gif && <div className="cmgifpick"><img src={gif.url} alt="Selected GIF" width={gif.width} height={gif.height} loading="lazy" /><span>GIF selected. Add a caption or send it.</span>
+      <button type="button" aria-label="Remove GIF" onClick={() => setGif(null)}><X size={16} weight="bold" aria-hidden="true" /></button></div>}
+    <form className="inline" onSubmit={send}><button type="button" className="gifbtn" aria-label="Add a GIF" title="Add a GIF" aria-expanded={gifOpen} onPointerDown={(e) => e.preventDefault()} onMouseDown={(e) => e.preventDefault()} onClick={() => setGifOpen(true)}><Gif size={17} weight="bold" aria-hidden="true" /></button><input value={body} maxLength={500} onChange={(e) => setBody(e.target.value)} placeholder="Write something…" />
+      <button className="primary" disabled={!body.trim() && !gif}>Send</button></form>
     {err && <p className="err">{err}</p>}
     {rows.map((r) => (<div className="msg gb" key={r.id}><button className="who" onClick={() => go('profile', r.author.username)} aria-label="Open profile"><Avatar src={img[r.author.avatar_path]} size={38} /></button>
-      <div><button className="ulink" onClick={() => go('profile', r.author.username)}><b>{r.author.display_name}</b> <span className="muted">@{r.author.username}</span></button><p><Rich text={r.body} onUser={(u) => go('profile', u)} /></p></div>
+      <div><button className="ulink" onClick={() => go('profile', r.author.username)}><b>{r.author.display_name}</b> <span className="muted">@{r.author.username}</span></button>{(() => { const g = decodeGif(r.body); return g
+        ? <div className="cmgif"><img src={g.gif.url} width={g.gif.width} height={g.gif.height} alt="GIF" loading="lazy" decoding="async" referrerPolicy="no-referrer" />{g.note && <p><Rich text={g.note} onUser={(u) => go('profile', u)} /></p>}</div>
+        : <p><Rich text={r.body} onUser={(u) => go('profile', u)} /></p>; })()}</div>
       {(own || r.author.username === meName) ? <button className="ghost sm danger" aria-label="Delete message" onClick={() => wall.deleteWallComment(r.id).then(() => { notify('Message deleted'); load(); }).catch((e) => notify(e.message || 'Could not delete', 'err'))}><Trash size={14} weight="bold" aria-hidden="true" /></button> : <span />}</div>))}
+    {gifOpen && <GifPicker onPick={(g) => { setGif(g); setGifOpen(false); }} onClose={() => setGifOpen(false)} />}
   </>);
 }
 

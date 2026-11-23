@@ -1,17 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Heart, ArrowBendUpLeft, CaretDown, CaretUp, Trash, PaperPlaneRight, X } from '@phosphor-icons/react';
+import { Heart, ArrowBendUpLeft, CaretDown, CaretUp, Trash, PaperPlaneRight, X, Gif } from '@phosphor-icons/react';
 import { posts } from '../index.js';
 import { Avatar, Rich, ago, useImages } from './shared.jsx';
 import { ask } from './dialog.jsx';
 import MentionInput from './MentionInput.jsx';
 import { ErrorState } from './errors.jsx';
 import { RowsSkeleton } from './states.jsx';
+import GifPicker from './GifPicker.jsx';
+import { decodeGif, encodeGif } from '../lib/gifs.js';
 
 /** Comment thread of one post: likes, replies (one level deep) and @mentions. Used inside PostCard.
  *  Props: postId, postAuthorId (the post author may delete any comment), me, go(view, arg), notify, fail(err) (error toast),
  *  onDelta(n) (comment_count changed by n), onTag(tag). */
 export default function Comments({ postId, postAuthorId, me, go, notify, fail, onDelta, onTag }) {
-  const [rows, setRows] = useState(null); const [text, setText] = useState(''); const [reply, setReply] = useState(null); const [busy, setBusy] = useState(false); const [err, setErr] = useState(null);
+  const [rows, setRows] = useState(null); const [text, setText] = useState(''); const [reply, setReply] = useState(null); const [busy, setBusy] = useState(false); const [err, setErr] = useState(null); const [gif, setGif] = useState(null); const [gifOpen, setGifOpen] = useState(false);
   const [openT, setOpenT] = useState(() => new Set());   // threads with more than 2 replies start collapsed
   const field = useRef(null);
   const load = useCallback(() => { setErr(null); return posts.listComments(postId).then(setRows).catch((e) => { setErr(e); setRows((x) => x || []); }); }, [postId]);   // a failed load says so (it used to look like "no comments yet")
@@ -36,12 +38,13 @@ export default function Comments({ postId, postAuthorId, me, go, notify, fail, o
     requestAnimationFrame(() => field.current?.focus());
   };
   const send = async (e) => {
-    e.preventDefault(); const body = text.trim(); if (!body || busy) return;
+    e.preventDefault(); const body = gif ? encodeGif(gif, text) : text.trim(); if (!body || busy) return;
+    if (body.length > 500) return fail(new Error('That caption is too long for a GIF comment.'));
     setBusy(true);
     try {
       await posts.addComment(postId, body, reply?.id);
       if (reply) { const root = byId.get(reply.id)?.parent_id || reply.id; setOpenT((x) => new Set(x).add(root)); }   // show the reply that was just sent
-      setText(''); setReply(null); await load(); onDelta?.(1); }
+      setText(''); setGif(null); setReply(null); await load(); onDelta?.(1); }
     catch (er) { fail(er); } finally { setBusy(false); }
   };
   const del = async (c) => {
@@ -64,7 +67,9 @@ export default function Comments({ postId, postAuthorId, me, go, notify, fail, o
             <small className="cmmeta">@{c.author.username} · {ago(c.created_at)}</small>
             {canDel && <button type="button" className="cmdel" aria-label="Delete comment" title="Delete comment" onClick={() => del(c)}><Trash size={14} weight="bold" aria-hidden="true" /></button>}
           </div>
-          <p className="cmtext"><Rich text={c.body} onUser={(u) => go('profile', u)} onTag={onTag} /></p>
+          {(() => { const g = decodeGif(c.body); return g
+            ? <div className="cmgif"><img src={g.gif.url} width={g.gif.width} height={g.gif.height} alt="GIF" loading="lazy" decoding="async" referrerPolicy="no-referrer" />{g.note && <p className="cmtext"><Rich text={g.note} onUser={(u) => go('profile', u)} onTag={onTag} /></p>}</div>
+            : <p className="cmtext"><Rich text={c.body} onUser={(u) => go('profile', u)} onTag={onTag} /></p>; })()}
         </div>
         <div className="cmactions">
           <button type="button" className={c.liked ? 'on' : ''} aria-pressed={c.liked} aria-label={c.liked ? 'Unlike comment' : 'Like comment'} onClick={() => like(c)}>
@@ -86,9 +91,13 @@ export default function Comments({ postId, postAuthorId, me, go, notify, fail, o
       : <ul className="cmlist">{roots.map((c) => item(c, false))}</ul>}
     {reply && <div className="cmreplying"><span>Replying to @{reply.username}</span>
       <button type="button" aria-label="Cancel reply" onClick={() => setReply(null)}><X size={14} weight="bold" aria-hidden="true" /></button></div>}
+    {gif && <div className="cmgifpick"><img src={gif.url} alt="Selected GIF" width={gif.width} height={gif.height} loading="lazy" /><span>GIF selected. Add a caption or send it.</span>
+      <button type="button" aria-label="Remove GIF" onClick={() => setGif(null)}><X size={16} weight="bold" aria-hidden="true" /></button></div>}
     <form className="inline cmform" onSubmit={send}>
+      <button type="button" className="gifbtn" aria-label="Add a GIF" title="Add a GIF" aria-expanded={gifOpen} onPointerDown={(e) => e.preventDefault()} onMouseDown={(e) => e.preventDefault()} onClick={() => setGifOpen(true)}><Gif size={17} weight="bold" aria-hidden="true" /></button>
       <MentionInput inputRef={field} name="fiiyou-comment" aria-label="Comment" autoComplete="off" enterKeyHint="send" data-lpignore="true" data-1p-ignore="true" data-form-type="other" value={text} maxLength={500} placeholder="Write a comment… use @ to mention" onChange={(e) => setText(e.target.value)} />
-      <button className="primary sm" disabled={busy || !text.trim()} onPointerDown={(e) => e.preventDefault()} onMouseDown={(e) => e.preventDefault()}><PaperPlaneRight size={14} weight="bold" aria-hidden="true" />Send</button>
+      <button className="primary sm" disabled={busy || (!text.trim() && !gif)} onPointerDown={(e) => e.preventDefault()} onMouseDown={(e) => e.preventDefault()}><PaperPlaneRight size={14} weight="bold" aria-hidden="true" />Send</button>
     </form>
+    {gifOpen && <GifPicker onPick={(g) => { setGif(g); setGifOpen(false); requestAnimationFrame(() => field.current?.focus()); }} onClose={() => setGifOpen(false)} />}
   </div>);
 }
