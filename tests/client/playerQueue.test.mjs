@@ -16,7 +16,14 @@ test('makeTrack: audio files (uploaded or direct links) are not supported; re-wr
   const a = makeTrack({ src: 'https://youtu.be/dQw4w9WgXcQ', cover: 'https://x/c.webp' }, 'card');
   assert.equal(a.kind, 'yt'); assert.equal(a.key, 'yt:dQw4w9WgXcQ'); assert.equal(a.origin, 'card'); assert.equal(a.cover, 'https://x/c.webp');
   const b = makeTrack(a); assert.equal(b.key, a.key); assert.notEqual(b.qid, a.qid);
-  assert.equal(makeTrack({ src: 'https://youtu.be/dQw4w9WgXcQ', cover: 'javascript:x' }).cover, '');
+  assert.equal(makeTrack({ src: 'https://youtu.be/dQw4w9WgXcQ', cover: 'javascript:x' }).cover, 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg');   // an empty/invalid cover still gets the stable YouTube thumbnail
+});
+test('meta fills only the blank fields, never the title the person typed', () => {
+  const t = makeTrack({ src: 'https://youtu.be/dQw4w9WgXcQ', title: 'My title' });
+  let s = reduce(emptyQueue(), { type: 'set', tracks: [t], start: 0 });
+  s = reduce(s, { type: 'meta', qid: t.qid, title: 'YouTube title', artist: 'YouTube artist' });
+  assert.equal(currentOf(s).title, 'My title');
+  assert.equal(currentOf(s).artist, 'YouTube artist');
 });
 test('set / add / currentOf', () => {
   let s = emptyQueue(); assert.equal(currentOf(s), null); assert.equal(pickNext(s), -1); assert.equal(pickPrev(s), -1);
