@@ -53,8 +53,9 @@ export default function GifPicker({ onPick, onClose }) {
         </label>
         <div className="gifscroll" aria-busy={loading || undefined}>
           {!q.trim() && !err ? <div className="gifstart">
-            <p>Search for a reaction. Try one of these:</p>
-            <div className="gifchips">{['hello', 'thanks', 'love', 'lol', 'wow', 'yes', 'no', 'good night'].map((w) => <button key={w} type="button" onClick={() => setQ(w)}>{w}</button>)}</div>
+            <p className="giflead">Find a reaction</p>
+            <p>Start with a mood, a film, or something you want to say.</p>
+            <div className="gifchips">{['hello', 'thank you', 'love', 'lol', 'wow', 'yes', 'no', 'good morning'].map((w) => <button key={w} type="button" onClick={() => setQ(w)}>{w}</button>)}</div>
           </div>
             : err ? <div className="gifmsg" role="alert">{err}</div>
               : items.length ? <div className="gifgrid">{items.map((g) => (

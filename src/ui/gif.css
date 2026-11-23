@@ -6,8 +6,8 @@
   background: rgba(0, 0, 0, .74);
 }
 .gifpanel {
-  width: min(660px, 96vw); height: min(720px, 86vh);
-  display: grid; grid-template-rows: auto auto 1fr auto;
+  width: min(660px, 96vw); height: auto; max-height: min(720px, 86vh);
+  display: grid; grid-template-rows: auto auto auto auto;
   border: 2px solid var(--g3, #333); border-radius: var(--rad-l, 16px);
   background: var(--g1, #101010); color: var(--text, #f2f2f2);
   overflow: hidden; box-shadow: 0 24px 70px rgba(0, 0, 0, .55);
@@ -34,7 +34,7 @@
   border-radius: 999px; color: var(--muted, #999);
 }
 .gifsearch button:hover { color: var(--text, #fff); background: var(--g3, #333); }
-.gifscroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 12px 12px; }
+.gifscroll { min-height: 0; max-height: min(520px, 62vh); overflow-y: auto; overscroll-behavior: contain; padding: 0 12px 12px; }
 .gifgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: 8px; }
 .giftile {
   all: unset; display: block; cursor: pointer; overflow: hidden; aspect-ratio: 1;
@@ -45,8 +45,9 @@
 .gifskel { display: block; aspect-ratio: 1; border-radius: 12px; background: linear-gradient(100deg, #171717 20%, #242424 40%, #171717 60%); background-size: 220% 100%; animation: gifskel 1.2s linear infinite; }
 @keyframes gifskel { to { background-position: -220% 0; } }
 .gifmsg { padding: 36px 20px; text-align: center; color: var(--muted, #999); font-size: .9375rem; }
-.gifstart { padding: 18px 6px; color: var(--muted, #999); font-size: .875rem; }
+.gifstart { padding: 18px 6px 22px; color: var(--muted, #999); font-size: .875rem; }
 .gifstart p { margin: 0 0 10px; }
+.giflead { color: var(--text, #eee); font-size: 1rem; font-weight: 700; margin-bottom: 4px !important; }
 .gifchips { display: flex; flex-wrap: wrap; gap: 8px; }
 .gifchips button {
   all: unset; cursor: pointer; padding: 7px 12px; border-radius: 999px;
@@ -100,7 +101,8 @@
 
 @media (max-width: 560px) {
   .gifmodal { padding: 0; place-items: end center; }
-  .gifpanel { width: 100vw; height: 88vh; border-radius: 18px 18px 0 0; border-bottom: 0; }
+  .gifpanel { width: 100vw; height: auto; max-height: 88vh; border-radius: 18px 18px 0 0; border-bottom: 0; }
+  .gifscroll { max-height: 66vh; }
   .gifgrid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
   .cthread .inline textarea.chatbox { font-size: 16px; }   /* iOS does not zoom on focus */
 }
