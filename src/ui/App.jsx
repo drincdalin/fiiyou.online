@@ -215,6 +215,15 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
     if (!d || d.relationship.status === 'self' || viewed.current === d.profile.id) return; const id = d.profile.id; viewed.current = id;
     profiles.recordView(id).then(() => profiles.myViews(id)).then((n) => setD((x) => (x && x.profile.id === id ? { ...x, views: n } : x))).catch(() => {});
   }, [d]);
+  useEffect(() => {   // match the page behind a profile background: on touch/fixed backgrounds the viewport edge must not show the app's black body
+    const t = draft ? draft.theme : d?.profile?.theme;
+    if (!t?.bg_image) return undefined;
+    const html = document.documentElement, body = document.body;
+    const oldHtml = html.style.backgroundColor, oldBody = body.style.backgroundColor;
+    const bg = t.bg_color || '#0b0b0b';
+    html.style.backgroundColor = bg; body.style.backgroundColor = bg;
+    return () => { html.style.backgroundColor = oldHtml; body.style.backgroundColor = oldBody; };
+  }, [d?.profile?.theme?.bg_image, d?.profile?.theme?.bg_color, draft?.theme?.bg_image, draft?.theme?.bg_color]);
   useEffect(() => { const c = cardsRef.current, a = avRef.current; if (!c) return; const upd = () => { setColW(c.clientWidth || 920); setAvW((a && a.clientWidth) || 190); }; const ro = new ResizeObserver(upd); ro.observe(c); if (a) ro.observe(a); upd(); return () => ro.disconnect(); }, [d]);   // widths the sticker units are measured against (cards column, avatar)
   const shown = draft ? draft.cards : d?.cards; const theme = draft ? draft.theme : d?.profile.theme; const music = (draft ? draft.fields.music : d?.profile.music) || {};
   const img = useImages(d ? [d.profile.avatar_path, theme.bg_image, music.cover, ...shown.flatMap((c) => c.content.images || []), ...d.photos.map((p) => p.path), ...d.topFriends.map((f) => f.avatar_path), ...(d.friendProfiles || []).map((f) => f.avatar_path)] : []);
