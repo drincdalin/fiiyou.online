@@ -42,7 +42,10 @@
 }
 .gifsearch button:hover { color: var(--text, #fff); background: var(--g3, #333); }
 .gifscroll { min-height: 0; max-height: min(520px, 62vh);
-  max-height: min(520px, 62dvh); overflow-y: auto; overscroll-behavior: contain; padding: 0 12px 12px; }
+  max-height: min(520px, 62dvh); overflow-y: auto; overscroll-behavior: contain; padding: 0 12px 12px;
+  scrollbar-width: none; -ms-overflow-style: none; }
+.gifscroll::-webkit-scrollbar { width: 0; height: 0; }
+.gifsearch input::-webkit-search-cancel-button, .gifsearch input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; display: none; }
 .gifgrid { column-width: 116px; column-gap: 8px; }
 .giftile {
   all: unset; display: block; cursor: pointer; overflow: hidden;
@@ -109,7 +112,8 @@
 .cmgifpick span { flex: 1; min-width: 0; color: var(--muted, #999); font-size: .8125rem; }
 .cmgifpick button { all: unset; cursor: pointer; color: var(--muted, #999); padding: 8px; border-radius: 999px; }
 .cmgifpick button:hover { color: var(--text, #fff); background: var(--g3, #2a2a2a); }
-.cmform .gifbtn { width: 38px; height: 38px; border-radius: var(--rad-m, 12px); }
+.cmform .gifbtn { width: var(--pair-h, 40px); height: var(--pair-h, 40px); border-radius: var(--pair-r, 999px); }
+.cmform .primary.sendbtn { width: var(--pair-h, 40px); height: var(--pair-h, 40px); padding: 0; border-radius: var(--pair-r, 999px); }
 
 @media (max-width: 560px) {
   .gifmodal { padding: 0; place-items: end center; }

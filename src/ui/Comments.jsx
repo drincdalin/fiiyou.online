@@ -96,7 +96,7 @@ export default function Comments({ postId, postAuthorId, me, go, notify, fail, o
     <form className="inline cmform" onSubmit={send}>
       <button type="button" className="gifbtn" aria-label="Add a GIF" title="Add a GIF" aria-expanded={gifOpen} onPointerDown={(e) => e.preventDefault()} onMouseDown={(e) => e.preventDefault()} onClick={() => setGifOpen(true)}><Gif size={17} weight="bold" aria-hidden="true" /></button>
       <MentionInput inputRef={field} name="fiiyou-comment" aria-label="Comment" autoComplete="off" enterKeyHint="send" data-lpignore="true" data-1p-ignore="true" data-form-type="other" value={text} maxLength={500} placeholder="Write a comment… use @ to mention" onChange={(e) => setText(e.target.value)} />
-      <button className="primary sm" disabled={busy || (!text.trim() && !gif)} onPointerDown={(e) => e.preventDefault()} onMouseDown={(e) => e.preventDefault()}><PaperPlaneRight size={14} weight="bold" aria-hidden="true" />Send</button>
+      <button className="primary sm sendbtn" aria-label="Send comment" title="Send comment" disabled={busy || (!text.trim() && !gif)} onPointerDown={(e) => e.preventDefault()} onMouseDown={(e) => e.preventDefault()}><PaperPlaneRight size={16} weight="bold" aria-hidden="true" /></button>
     </form>
     {gifOpen && <GifPicker onPick={(g) => { setGif(g); setGifOpen(false); requestAnimationFrame(() => field.current?.focus()); }} onClose={() => setGifOpen(false)} />}
   </div>);
