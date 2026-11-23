@@ -206,6 +206,7 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
   const [d, setD] = useState(null); const [draft, setDraft] = useState(null); const [sel, setSel] = useState(null); const [colW, setColW] = useState(920); const [avW, setAvW] = useState(190); const cardsRef = useRef(); const avRef = useRef();
   const [collapsed, setCollapsed] = useState(false); const [lb, setLb] = useState(null); const [rep, setRep] = useState(false); const frame = useRef(); const pageRef = useRef(); const [sharing, setSharing] = useState(false); const [shareData, setShareData] = useState(null); const [likers, setLikers] = useState(null);
   const [loadErr, setLoadErr] = useState(null); const [missing, setMissing] = useState(false);   // missing = no such profile (or hidden from you)
+  const [profileLikers, setProfileLikers] = useState(false); const [likePop, setLikePop] = useState(false);
   const load = useCallback(() => profiles.getFullProfile(username).then((x) => { setLoadErr(null); if (x) { setMissing(false); setD(x); } else setMissing(true); }).catch((e) => { setLoadErr(e); notify(friendlyError(e), 'err'); }), [username]);
   useEffect(() => { setD(null); setMissing(false); setDraft(null); setSel(null); setLb(null); setLoadErr(null); load(); }, [load]);
   useDraftAutosave(d && d.relationship?.status === 'self' ? d.profile.id : null, draft);   // the editor draft survives a refresh
@@ -253,7 +254,6 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
     pending_received: ['Accept request', () => friends.acceptRequest(rel.id), 'You are now friends'], friends: ['Friends', () => friends.removeFriend(profile.id), 'Friend removed'] }[rel.status];
   const name = draft?.fields.display_name ?? profile.display_name; const headline = draft?.fields.headline ?? profile.headline;
   const items = d.photos.map((p) => ({ id: p.id, src: img[p.path], caption: p.caption, likes: p.like_count, liked: p.liked }));
-  const [profileLikers, setProfileLikers] = useState(false); const [likePop, setLikePop] = useState(false);
   const likeCount = d.profileLikes?.count || 0; const liked = !!d.profileLikes?.liked;
   const likeProfile = async () => { if (own) return; const before = d.profileLikes; const on = !liked; setD((x) => ({ ...x, profileLikes: { liked: on, count: Math.max(0, likeCount + (on ? 1 : -1)) } })); setLikePop(true); setTimeout(() => setLikePop(false), 500);
     try { await profiles.setProfileLike(profile.id, on); } catch (e) { setD((x) => ({ ...x, profileLikes: before })); notify(e?.message === 'rate_limit' ? 'Slow down a little.' : 'Could not like this profile.', 'err'); } };
