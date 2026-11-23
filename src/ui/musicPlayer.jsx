@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { MUSIC_CONFIG as CFG } from '../lib/musicConfig.js';
-import { cleanArtist, loadYouTubeApi, ytThumb } from '../lib/youtube.js';
+import { cleanArtist, fetchYouTubeMeta, loadYouTubeApi, ytThumb } from '../lib/youtube.js';
 import { createYouTubeEngine } from '../lib/playerEngines.js';
 import { createClock } from '../lib/playerClock.js';
 import { currentOf, emptyQueue, makeTrack, pickNext, pickPrev, reduce } from '../lib/playerQueue.js';
@@ -35,6 +35,14 @@ const LIVE = ['loading', 'buffering', 'playing'];
 function makeController({ R, clock, S, mountRef }) {
   const cur = () => currentOf(R.current.q);
   const dispatch = (a) => { const n = reduce(R.current.q, a); R.current.q = n; S.setQ(n); return n; };
+  /** Ask YouTube's oEmbed endpoint for a title/artist when the link came without them. The queue entry is updated in place,
+   *  so the dock, the queue and the player all show the same text, and a title the person typed is never replaced. */
+  const hydrate = (tracks) => {
+    for (const t of tracks) {
+      if (!t || (t.title && t.artist)) continue;
+      fetchYouTubeMeta(t.videoId).then((m) => { if (m) dispatch({ type: 'meta', qid: t.qid, title: m.title, artist: m.artist }); });
+    }
+  };
   const status = (s) => { R.current.status = s; S.setStatus(s); };
   const want = (w) => { R.current.want = w; S.setWant(w); };
   const engineFor = (kind) => (kind === 'yt' ? R.current.yt : null);   // YouTube is the only engine: uploaded / direct audio was removed
@@ -55,6 +63,7 @@ function makeController({ R, clock, S, mountRef }) {
   /** Start a track. autoplay=false only SELECTS it (nothing is loaded, so nothing is requested from YouTube until play is pressed). */
   const loadTrack = (t, autoplay) => {
     if (!t) return;
+    hydrate([t]);
     const r = R.current; r.cancelAutoplay = false; clearTimeout(r.skipTimer);
     clock.set({ position: 0, duration: 0, buffered: 0 }); S.setError(null);
     if (!autoplay) { r.loaded = null; pauseAll(); want(false); status('paused'); return; }
@@ -126,7 +135,10 @@ function makeController({ R, clock, S, mountRef }) {
       }
     } else if (e.type === 'meta') {
       if (e.duration > 0) clock.set({ duration: e.duration });
-      if (e.title || e.artist) S.setMeta((m) => (m[t.qid] ? m : { ...m, [t.qid]: { title: e.title, artist: cleanArtist(e.artist) } }));
+      if (e.title || e.artist) {
+        dispatch({ type: 'meta', qid: t.qid, title: e.title || '', artist: cleanArtist(e.artist || '') });
+        S.setMeta((m) => (m[t.qid] ? m : { ...m, [t.qid]: { title: e.title, artist: cleanArtist(e.artist) } }));
+      }
     } else if (e.type === 'error') {
       want(false); status('error'); S.setError({ message: e.message, skip: !!e.skip });
       if (e.skip && r.q.queue.length > 1 && r.failures < r.q.queue.length - 1) {   // a removed / blocked video: move on, but never loop forever when everything fails
@@ -159,11 +171,11 @@ function makeController({ R, clock, S, mountRef }) {
     /** Add to the end of the queue. With nothing playing it only selects the track (nothing loads until play). Returns how many were added. */
     enqueue(input) {
       const list = toTracks(input); if (!list.length) return 0; const first = R.current.q.cursor < 0;
-      dispatch({ type: 'add', tracks: list }); if (first) { R.current.loaded = null; want(false); status('paused'); } return list.length;
+      dispatch({ type: 'add', tracks: list }); hydrate(list); if (first) { R.current.loaded = null; want(false); status('paused'); } return list.length;
     },
     playNext(input) {
       const list = toTracks(input); if (!list.length) return 0; const first = R.current.q.cursor < 0;
-      dispatch({ type: 'next-up', tracks: list }); if (first) { R.current.loaded = null; want(false); status('paused'); } return list.length;
+      dispatch({ type: 'next-up', tracks: list }); hydrate(list); if (first) { R.current.loaded = null; want(false); status('paused'); } return list.length;
     },
     jump(qid) {
       const s = R.current.q; const i = s.queue.findIndex((t) => t.qid === qid); if (i < 0) return;

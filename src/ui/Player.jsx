@@ -34,7 +34,7 @@ export default function Player({ src, title, artist, cover, cid, children }) {
   useEffect(() => () => clearTimeout(addTimer.current), []);
   if (!track) return null;
 
-  const hasCover = !!(cover || (track.videoId && (CFG.autoThumbnail || mine)));
+  const hasCover = !!(track.cover || (track.videoId && (CFG.autoThumbnail || mine)));
   const shownTitle = (mine && p.current.title) || title || 'Untitled'; const shownArtist = (mine && p.current.artist) || artist || '';
   const shownVol = p.muted ? 0 : p.volume;
   const press = () => { if (track.kind === 'yt') a.preload(); };

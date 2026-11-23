@@ -122,6 +122,46 @@ ssh -L 8000:127.0.0.1:8000 dr-dalin@<host>
 # then open http://127.0.0.1:8000/ with DASHBOARD_USERNAME / DASHBOARD_PASSWORD
 ```
 
+## Dashboard from outside the LAN
+
+The dashboard listens on `127.0.0.1:8090` and uses HTTP Basic auth. Do not expose that port directly; put **Cloudflare Access** in front of it, so only your email can open it and no port is opened.
+
+1. Add a DNS route for the dashboard through the existing tunnel:
+
+```bash
+cloudflared tunnel route dns fiiyou dashboard.fiiyou.online
+```
+
+2. Add this rule to `/etc/cloudflared/config.yml`, **above** the `http_status:404` catch-all:
+
+```yaml
+  - hostname: dashboard.fiiyou.online
+    service: http://127.0.0.1:8090
+    originRequest:
+      connectTimeout: 30s
+      httpHostHeader: dashboard.fiiyou.online
+```
+
+```bash
+sudo cloudflared tunnel ingress validate
+sudo systemctl restart cloudflared
+```
+
+3. In Cloudflare: **Zero Trust → Access → Applications → Add an application → Self-hosted**.
+   - Name: `fiiyou dashboard`
+   - Public hostname: `dashboard.fiiyou.online`
+   - Session duration: 24 hours
+   - Policy: **Allow**, Include → **Emails** → your email address. Add a second policy only if someone else needs it.
+
+4. Open `https://dashboard.fiiyou.online` from mobile data. Cloudflare asks for a one-time email code, then the dashboard asks for `DASH_USER` / `DASH_PASS`.
+
+The Cloudflare Access policy is the real gate; the dashboard's Basic auth remains as a second layer. If Access is not configured, do not route the hostname at all.
+
+Alternatives if you prefer no Cloudflare dependency:
+
+- **Tailscale**: install it on the server and the laptop, then `tailscale serve --bg 8090` and open the tailnet URL.
+- **SSH tunnel**: install `openssh-server`, then `ssh -L 8090:127.0.0.1:8090 dr-dalin@<host>` and open `http://127.0.0.1:8090` on the laptop.
+
 ## Backups
 
 `/srv/fiiyou/ops/backup.sh` writes a compressed `pg_dump`, a tarball of `volumes/storage` and a copy of `.env` to `/srv/backups`, keeping 14 days. A systemd timer runs it at 03:30.

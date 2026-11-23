@@ -7,12 +7,19 @@ const MAX_BYTES = 1_500_000;        // keep under bucket limit (1572864)
 // Per-use targets: longest side (px) and max size (KB). WebP, EXIF stripped, re-encoded until it fits.
 // Stickers are small on screen (about 15% of the cards column, so roughly 140 CSS px wide before the owner resizes them), which is why they get the tightest
 // budget of all: 420 px on the long side and ~45 KB. Transparency is kept (WebP has an alpha channel).
-export const PRESETS = { avatar: { max: 512, kb: 70 }, sticker: { max: 420, kb: 45 }, cover: { max: 640, kb: 80 },
-  photo: { max: 1280, kb: 200 }, post: { max: 1280, kb: 200 }, event: { max: 1280, kb: 240 }, bg: { max: 1600, kb: 260 } };
+export const PRESETS = { avatar: { max: 512, kb: 60 }, sticker: { max: 420, kb: 40 }, cover: { max: 640, kb: 75 },
+  photo: { max: 1200, kb: 150 }, post: { max: 1200, kb: 150 }, event: { max: 1200, kb: 180 }, bg: { max: 1600, kb: 240 } };
 
 // Animated GIFs are kept as they are (nothing in the browser can re-encode an animation), so they must already be small. Stickers get a lower cap.
 const GIF_MAX = { sticker: 300_000, default: 600_000 };
-const QUALITY = [0.82, 0.7, 0.58, 0.46, 0.36];           // tried in this order at each size
+const QUALITY = [0.8, 0.68, 0.55, 0.42, 0.32];           // tried in this order at each size
+let webpEncoder = null;                                    // Safari (and some older browsers) silently return PNG for image/webp
+async function canEncodeWebp() {
+  if (webpEncoder !== null) return webpEncoder;
+  try { const b = await new OffscreenCanvas(1, 1).convertToBlob({ type: 'image/webp', quality: 0.8 }); webpEncoder = b.type === 'image/webp'; }
+  catch { webpEncoder = false; }
+  return webpEncoder;
+}
 const HARD_MAX = { sticker: 120_000, default: 300_000 }; // last resort: anything still bigger than this after every shrink round is refused
 
 /** Resizes + re-encodes. Returns { blob, width, height } (the stored picture's real size, which stickers need for their aspect ratio). */
@@ -33,21 +40,30 @@ async function encodeImage(file, preset = 'photo') {
     // without guessing. Landscape: centred. Portrait: the square starts 30% from the top, because faces sit in the upper part of a photo.
     let sx = 0, sy = 0, sw = bmp.width, sh = bmp.height;
     if (preset === 'avatar') { const s = Math.min(bmp.width, bmp.height); sx = (bmp.width - s) / 2; sy = bmp.height > bmp.width ? (bmp.height - s) * 0.3 : 0; sw = sh = s; }
+    const useWebp = await canEncodeWebp();
     let scale = Math.min(1, max / Math.max(sw, sh)), blob = null, cw = 1, ch = 1;
     for (let round = 0; round < 7; round++) {
       cw = Math.max(1, Math.round(sw * scale)); ch = Math.max(1, Math.round(sh * scale));
       const c = new OffscreenCanvas(cw, ch); const g = c.getContext('2d');
       g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
       g.drawImage(bmp, sx, sy, sw, sh, 0, 0, cw, ch);
+      // WebP where it can really be written; JPEG for photos elsewhere; PNG only for stickers, which need transparency.
+      const type = useWebp ? 'image/webp' : (isSticker ? 'image/png' : 'image/jpeg');
       for (const q of QUALITY) {
-        const b = await c.convertToBlob({ type: 'image/webp', quality: q });
-        if (b.type !== 'image/webp') { blob = b; break; }  // this browser cannot write WebP (it silently returns PNG): shrink the picture instead of trusting quality
-        blob = b; if (b.size <= kb * 1024) return { blob: b, width: cw, height: ch };
+        const b = type === 'image/png' ? await c.convertToBlob({ type }) : await c.convertToBlob({ type, quality: q });
+        blob = b;
+        if (b.size <= kb * 1024) return { blob: b, width: cw, height: ch };
+        if (type === 'image/png') break;   // PNG has no quality knob: shrink the picture instead
       }
       scale *= isSticker ? 0.8 : 0.85;                   // still too big: shrink and retry
     }
     const hard = isSticker ? HARD_MAX.sticker : HARD_MAX.default;
-    if (!blob || blob.size > hard) throw new Error(isSticker ? 'That sticker is too detailed to shrink. Try a simpler or smaller picture.' : 'Image is too large.');   // was 1.4 MB: a photo that could not be squeezed still went up at up to 1.4 MB
+    if (!blob || blob.size > hard) {
+      const kbNow = Math.round((blob ? blob.size : 0) / 1024);
+      throw new Error(isSticker
+        ? 'That sticker is too detailed to shrink. Try a simpler or smaller picture.'
+        : `That photo is still ${kbNow} KB after compression. Try a smaller photo or a JPEG.`);
+    }
     return { blob, width: cw, height: ch };
   } finally { bmp.close?.(); }
 }

@@ -51,6 +51,26 @@ function tryImage(url) {
     img.src = url;
   });
 }
+/** Title, artist and thumbnail from a video id, via YouTube's public oEmbed endpoint (no API key, CORS allowed).
+ *  Cached per id, never rejects: returns null when the video is private/removed or the request fails. */
+const metaCache = new Map();
+export function fetchYouTubeMeta(id) {
+  if (!ID.test(id || '')) return Promise.resolve(null);
+  if (!metaCache.has(id)) {
+    const url = `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${id}`)}&format=json`;
+    const plain = (v) => String(v || '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+    metaCache.set(id, fetch(url, { credentials: 'omit' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => (j && j.title ? {
+        title: plain(j.title).trim().slice(0, 160),
+        artist: cleanArtist(plain(j.author_name)).slice(0, 160),
+        cover: typeof j.thumbnail_url === 'string' ? j.thumbnail_url : '',
+      } : null))
+      .catch(() => null));
+  }
+  return metaCache.get(id);
+}
+
 /** Resolves { url, lb } for a video id. Cached per id, never rejects (falls back to the always-present hqdefault). */
 export function probeYtCover(id) {
   if (!ID.test(id || '')) return Promise.resolve(null);

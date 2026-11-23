@@ -1,4 +1,4 @@
-import { parseYouTubeId } from './youtube.js';
+import { parseYouTubeId, ytThumb } from './youtube.js';
 
 /* The queue as plain data + pure functions (no React, no DOM), so the rules for shuffle / repeat / "play next" are unit-tested.
    state = { queue: Track[], cursor, shuffle, repeat: 'off'|'all'|'one', played: qid[], trail: qid[], up: qid[] }
@@ -24,7 +24,8 @@ export function makeTrack(x, origin = 'app') {
     kind: 'yt',
     src, videoId,
     title: STR(x.title, 160), artist: STR(x.artist, 160),
-    cover: URLISH.test(x.cover || '') ? x.cover : '',
+    // A YouTube track always has a picture from the first render, so the art box never appears or moves when play is pressed.
+    cover: URLISH.test(x.cover || '') ? x.cover : ytThumb(videoId, 'hqdefault'),
     origin,
   };
 }
@@ -71,6 +72,12 @@ export function reduce(s, a) {
     case 'clear': return emptyQueue(s);
     case 'shuffle': { const c = currentOf(s); return { ...s, shuffle: !!a.on, played: c ? [c.qid] : [], trail: [] }; }
     case 'repeat': return { ...s, repeat: a.mode === 'all' || a.mode === 'one' ? a.mode : 'off' };
+    case 'meta': {   // fill a blank title/artist when YouTube tells us what the video is; never overwrite what the person wrote
+      const fix = (t) => (t.qid === a.qid
+        ? { ...t, title: t.title || STR(a.title, 160), artist: t.artist || STR(a.artist, 160) }
+        : t);
+      return { ...s, queue: s.queue.map(fix) };
+    }
     default: return s;
   }
 }
