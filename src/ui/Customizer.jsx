@@ -789,7 +789,7 @@ function CardTopFriends({ friends = [], selected = [], onChange }) {
   };
   return (
     <div className="cz-field">
-      <p className="cz-hint">Choose up to {MAX_TOP} friends for this card. Each top-friends card keeps its own group.</p>
+      <p className="cz-hint">Choose up to {MAX_TOP} friends for this card. Each top-friends card keeps its own group; changes apply with Save changes.</p>
       {!friends.length && <p className="cz-hint">Add some friends first, then choose them here.</p>}
       {chosen.length > 0 && (
         <ul className="cz-list">
@@ -1090,12 +1090,13 @@ function ContentTab({ ctx }) {
                 onTitle={(title) => setCard(c.id, { title })}
                 onMove={(dir) => move(i, dir)}
                 onToggle={() => setCard(c.id, { visible: !c.visible })}
-                onDelete={() => run(async () => { await cardsApi.deleteCard(c); drop(c.id); })}
+                onDelete={() => drop(c.id)}
                 setContent={(content) => setCard(c.id, { content })} />
             ))}
           </ul>
         )}
         <p className="cz-sub">Add a card</p>
+        <p className="cz-hint">New cards stay in this editor until you press Save changes.</p>
         <div className="cz-add-grid">
           {Object.entries(CARD_TYPES).map(([t, { label, icon: Icon }]) => (
             <button key={t} type="button" className="cz-btn cz-btn--sm" disabled={busy} onClick={() => addCard(t)}>
@@ -1184,6 +1185,8 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
   const bodyRef = useRef(null);
   const startRef = useRef(null);
   if (startRef.current === null) startRef.current = JSON.stringify(draft);
+  const originalRef = useRef(null);
+  if (originalRef.current === null) originalRef.current = { cards: draft.cards.map((c) => c) };
 
   const busy = job !== null;
   const saving = job === 'save';
@@ -1254,25 +1257,32 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
       if (o.cover && o.cover !== n.cover) media.deleteImage(o.cover).catch(() => {});
     }
     const flow = draft.cards.filter((c) => c.type !== 'sticker');
-    const res = await Promise.allSettled(draft.cards.map((c) => (c.type === 'sticker'
-      ? cardsApi.updateCard(c.id, { x: c.x, y: c.y, w: c.w, h: c.h, z: c.z, rotation: c.rotation, visible: c.visible, content: c.content })
-      : cardsApi.updateCard(c.id, {
-        y: flow.indexOf(c) * 10,
-        title: c.title,
-        content: c.type === 'links' ? { links: cleanLinks(c.content.links) } : c.content,
-        visible: c.visible,
-      }))));
+    const removed = originalRef.current.cards.filter((o) => !draft.cards.some((c) => c.id === o.id));
+    const res = await Promise.allSettled([
+      ...draft.cards.map((c) => (c.type === 'sticker'
+        ? cardsApi.updateCard(c.id, { x: c.x, y: c.y, w: c.w, h: c.h, z: c.z, rotation: c.rotation, visible: c.visible, content: c.content })
+        : c._new || String(c.id).startsWith('new-')
+          ? cardsApi.createCard({ type: c.type, title: c.title, content: c.type === 'links' ? { links: cleanLinks(c.content.links) } : c.content, visible: c.visible, x: c.x, y: flow.indexOf(c) * 10, w: c.w, h: c.h, z: c.z, rotation: c.rotation, style: c.style || {} })
+          : cardsApi.updateCard(c.id, {
+            y: flow.indexOf(c) * 10,
+            title: c.title,
+            content: c.type === 'links' ? { links: cleanLinks(c.content.links) } : c.content,
+            visible: c.visible,
+          }))),
+      ...removed.map((c) => cardsApi.deleteCard(c)),
+    ]);
     const bad = res.filter((x) => x.status === 'rejected');
     if (bad.length) throw new Error(`${bad.length === 1 ? 'One card or sticker' : `${bad.length} cards or stickers`} could not be saved. ${friendlyError(bad[0].reason)}`);
     await reload(); notify('Saved'); onClose();
   }, 'save');
 
-  const addCard = (type) => run(async () => {
+  const addCard = (type) => {
     const meta = typeMeta(type);
     const content = type === 'top_friends' ? { friends: [...draft.top] } : meta.empty;   // a second group starts from the current Top 8, then can be changed
-    const c = await cardsApi.createCard({ type, title: meta.label, content, y: draft.cards.length * 10 });
-    setDraft((d) => ({ ...d, cards: [...d.cards, c] }));
-  });
+    const id = `new-${globalThis.crypto?.randomUUID?.() || Date.now()}`;
+    const c = { id, type, title: meta.label, content, visible: true, x: 40, y: draft.cards.length * 10, w: 460, h: 260, z: 0, rotation: 0, style: {} };
+    setDraft((d) => ({ ...d, cards: [...d.cards, c] }));   // created in the database only when Save is pressed
+  };
   const addSticker = (file) => run(async () => {
     // Compressed first (max 420 px, ~45 KB WebP, transparency kept), and sized from the picture that is really stored.
     const { path, width, height } = await media.uploadSticker(file);

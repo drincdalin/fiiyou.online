@@ -6,7 +6,9 @@
   background: rgba(0, 0, 0, .74);
 }
 .gifpanel {
+  position: relative;
   width: min(660px, 96vw); height: auto; max-height: min(720px, 86vh);
+  max-height: min(720px, 86dvh);
   display: grid; grid-template-rows: auto auto auto auto;
   border: 2px solid var(--g3, #333); border-radius: var(--rad-l, 16px);
   background: var(--g1, #101010); color: var(--text, #f2f2f2);
@@ -24,7 +26,6 @@
   min-height: 42px; border: 2px solid var(--g3, #333); border-radius: 999px; background: var(--g2, #191919);
   color: var(--muted, #999);
 }
-.gifsearch:focus-within { border-color: var(--g4, #666); background: var(--g2, #191919); }
 .gifsearch:focus-within > svg { color: var(--text, #fff); }
 .gifsearch input,
 .gifsearch input:hover,
@@ -40,7 +41,8 @@
   border-radius: 999px; color: var(--muted, #999);
 }
 .gifsearch button:hover { color: var(--text, #fff); background: var(--g3, #333); }
-.gifscroll { min-height: 0; max-height: min(520px, 62vh); overflow-y: auto; overscroll-behavior: contain; padding: 0 12px 12px; }
+.gifscroll { min-height: 0; max-height: min(520px, 62vh);
+  max-height: min(520px, 62dvh); overflow-y: auto; overscroll-behavior: contain; padding: 0 12px 12px; }
 .gifgrid { column-width: 116px; column-gap: 8px; }
 .giftile {
   all: unset; display: block; cursor: pointer; overflow: hidden;
@@ -62,7 +64,7 @@
   font-size: .8125rem;
 }
 .gifchips button:hover, .gifchips button:focus-visible { border-color: var(--g4, #666); }
-.giffoot { padding: 9px 16px 12px; border-top: 1px solid var(--g3, #2a2a2a); color: var(--muted, #888); font-size: .75rem; }
+.giffoot { padding: 9px 16px max(12px, env(safe-area-inset-bottom)); border-top: 1px solid var(--g3, #2a2a2a); color: var(--muted, #888); font-size: .75rem; }
 .giffoot a { color: inherit; text-underline-offset: 2px; }
 
 .gifbtn {
@@ -81,18 +83,21 @@
   background: var(--g2, #191919); color: var(--text, #fff);
   font: inherit; font-size: 1rem; line-height: 1.35; resize: none; overflow-y: auto;
 }
-.cthread .inline textarea.chatbox:focus { border-color: var(--g4, #555); outline: 0; box-shadow: none; }
+.cthread .inline textarea.chatbox:focus, .cthread .inline textarea.chatbox:focus-visible { border-color: transparent; outline: 0; box-shadow: none; }
 .cthread .inline textarea.chatbox::placeholder { color: var(--muted, #888); }
 
-.bub.gif { padding: 6px; }
+.bub.gif { width: min(286px, 78vw) !important; max-width: none !important; padding: 6px; background: var(--g1, #101010); color: var(--text, #f2f2f2); }
+.bub.gif.mine { background: var(--g1, #101010); color: var(--text, #f2f2f2); }
+.bub.gif small { color: var(--muted, #a6a6a6); opacity: 1; }
 .bub.gif .gifimg {
-  display: block; width: auto; height: auto; max-width: min(280px, 100%); max-height: 340px;
+  display: block; width: 100%; height: auto;
   border-radius: var(--rad-m, 12px);
 }
 .bub.gif > p { padding: 6px 6px 0; }
 
+.cmgif { width: min(240px, 78vw) !important; max-width: none !important; }
 .cmgif img {
-  display: block; width: auto; height: auto; max-width: min(240px, 100%); max-height: 300px;
+  display: block; width: 100%; height: auto;
   border-radius: 10px; margin: 2px 0 4px;
 }
 .cmgif .cmtext { margin-top: 2px; }
@@ -108,8 +113,10 @@
 
 @media (max-width: 560px) {
   .gifmodal { padding: 0; place-items: end center; }
-  .gifpanel { width: 100vw; height: auto; max-height: 88vh; border-radius: 18px 18px 0 0; border-bottom: 0; }
-  .gifscroll { max-height: 66vh; }
+  .gifpanel { width: 100vw; height: auto; max-height: 88vh; max-height: 88dvh; border-radius: 18px 18px 0 0; border-bottom: 0; }
+  .gifpanel::before { content: ''; position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 38px; height: 4px; border-radius: 2px; background: var(--g4, #4a4a4a); }
+  .gifhead { padding-top: 22px; }
+  .gifscroll { max-height: 66vh; max-height: 66dvh; }
   .gifgrid { column-width: 100px; }
   .cthread .inline textarea.chatbox { font-size: 16px; }   /* iOS does not zoom on focus */
 }

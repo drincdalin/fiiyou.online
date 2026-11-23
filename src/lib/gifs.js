@@ -1,4 +1,5 @@
 /* GIF messages use the same trick as shared posts: a normal text message with a prefix.
+   GifJif's default search is randomised; sort=top is what makes results match the query.
    The URL is deliberately restricted to the GIF provider, so a message can never turn into
    an arbitrary remote image or tracking pixel. */
 
@@ -54,7 +55,7 @@ function normalize(item) {
 export async function searchGifs(q, { signal, limit = 24 } = {}) {
   const text = String(q || '').trim().slice(0, 80);
   const url = text
-    ? `https://gifjif.com/api/search?q=${encodeURIComponent(text)}&limit=${Math.min(30, Math.max(1, limit))}`
+    ? `https://gifjif.com/api/search?q=${encodeURIComponent(text)}&limit=${Math.min(30, Math.max(1, limit))}&sort=top`
     : `https://gifjif.com/api/feed?limit=${Math.min(30, Math.max(1, limit))}&sort=top`;
   const r = await fetch(url, { signal, headers: { accept: 'application/json' } });
   if (!r.ok) throw new Error(`GIF search is unavailable (${r.status}).`);
