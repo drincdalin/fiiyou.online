@@ -51,7 +51,7 @@ const CARD_TYPES = {
   gallery:     { label: 'Gallery',     icon: Images,             empty: { images: [] } },
   links:       { label: 'Links',       icon: LinkSimple,         empty: { links: [] } },
   interests:   { label: 'Interests',   icon: Hash,               empty: { interests: [] } },
-  guestbook:   { label: 'Guestbook',   icon: BookOpenText,       empty: {} },
+  guestbook:   { label: 'Porch',       icon: BookOpenText,       empty: {} },
   top_friends: { label: 'Top friends', icon: UsersThree,         empty: {} },
 };
 
@@ -626,7 +626,7 @@ function CardBody({ c, setContent, goTab, friends = [] }) {
     case 'gallery':
       return <p className="cz-hint">Shows your photos. Add and arrange them in <button type="button" className="cz-link" onClick={() => goTab('Media')}>Media</button>.</p>;
     case 'guestbook':
-      return <p className="cz-hint">Shows what visitors write. Choose who can write in <button type="button" className="cz-link" onClick={() => goTab('Profile')}>Profile</button>.</p>;
+      return <p className="cz-hint">Shows the notes visitors leave on your Porch. Choose who can write in <button type="button" className="cz-link" onClick={() => goTab('Profile')}>Profile</button>.</p>;
     case 'top_friends':
       if (!Array.isArray(c.content.friends)) return <p className="cz-hint">Shows your main Top 8. Choose them in <button type="button" className="cz-link" onClick={() => goTab('Profile')}>Profile</button>. Add another Top friends card for a separate group.</p>;
       return <CardTopFriends friends={friends} selected={c.content.friends} onChange={(ids) => setContent({ ...c.content, friends: ids })} />;
@@ -889,7 +889,7 @@ function ProfileTab({ ctx }) {
       </Section>
 
       <Section title="Privacy" icon={ShieldCheck}>
-        <Segmented label="Who can write on my wall" value={draft.fields.wall_policy} options={['everyone', 'friends', 'nobody']} onChange={(v) => setField('wall_policy', v)} />
+        <Segmented label="Who can leave a note on your Porch" value={draft.fields.wall_policy} options={['everyone', 'friends', 'nobody']} onChange={(v) => setField('wall_policy', v)} />
         <Switch checked={!!draft.fields.show_on_map} onChange={(v) => setField('show_on_map', v)}>Show me on my friends’ map</Switch>
         <Group label="Your data">
           <button type="button" className="cz-btn cz-btn--block" disabled={busy}
