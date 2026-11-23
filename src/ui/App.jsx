@@ -257,11 +257,6 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
   const likeCount = d.profileLikes?.count || 0; const liked = !!d.profileLikes?.liked;
   const likeProfile = async () => { if (own) return; const before = d.profileLikes; const on = !liked; setD((x) => ({ ...x, profileLikes: { liked: on, count: Math.max(0, likeCount + (on ? 1 : -1)) } })); setLikePop(true); setTimeout(() => setLikePop(false), 500);
     try { await profiles.setProfileLike(profile.id, on); } catch (e) { setD((x) => ({ ...x, profileLikes: before })); notify(e?.message === 'rate_limit' ? 'Slow down a little.' : 'Could not like this profile.', 'err'); } };
-  const likeBar = <div className="plikebar">
-    {!own && <button type="button" className={`plike${liked ? ' on' : ''}${likePop ? ' pop' : ''}`} aria-pressed={liked} aria-label={liked ? 'Unlike this profile' : 'Like this profile'} onClick={likeProfile}><Heart size={16} weight={liked ? 'fill' : 'bold'} aria-hidden="true" /><b>{likeCount}</b><span>{liked ? 'Liked' : 'Like'}</span></button>}
-    {own && <span className="plike-note">{likeCount ? `${likeCount} ${likeCount === 1 ? 'person likes' : 'people like'} your profile` : 'No profile likes yet.'}</span>}
-    {likeCount > 0 && <button type="button" className="link plike-who" onClick={() => setProfileLikers(true)}>{own ? 'See who' : `Liked by ${likeCount}`}</button>}
-  </div>;
   // Stickers are rendered inside the card they are pinned to (or at the top of the cards column when that card is hidden / gone / they are not pinned yet).
   const flowShown = shown.filter((c) => c.visible && c.type !== 'music' && c.type !== 'sticker'); const flowIds = new Set(flowShown.map((c) => c.id));
   const stickerList = shown.filter((c) => c.type === 'sticker' && c.visible).map((c) => ({ c, m: stickerModel(c, theme) }));
@@ -297,10 +292,11 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
         <aside className="side">
           <div className="avatar" ref={avRef} data-cid="avatar">{img[profile.avatar_path] ? <img src={img[profile.avatar_path]} alt="" /> : <i />}{stickersOn('avatar')}</div>
           <div className="nameplate" data-cid="nameplate"><h1>{name}{profile.is_official && <Verified />}<ProfileBadges badges={d.badges || []} /></h1><small>@{profile.username}{profile.locality ? ` · ${profile.locality.name}` : ''}</small>
-            <small className="views">{d.friendCount} friend{d.friendCount === 1 ? '' : 's'} · {d.views} view{d.views === 1 ? '' : 's'}</small>{headline && theme.layout === 'single' && <p className="headline in">{headline}</p>}{stickersOn('nameplate')}</div>
+            <div className="pstats"><small className="views">{d.friendCount} friend{d.friendCount === 1 ? '' : 's'} · {d.views} view{d.views === 1 ? '' : 's'}</small>
+              {(!own || likeCount > 0) && <button type="button" className={`plike-stat${liked ? ' on' : ''}${likePop ? ' pop' : ''}`} aria-label={own ? 'See who liked your profile' : liked ? 'Unlike this profile' : 'Like this profile'} aria-pressed={own ? undefined : liked} title={own ? 'See who liked your profile' : liked ? 'Unlike this profile' : 'Like this profile'} onClick={own ? () => setProfileLikers(true) : likeProfile}><Heart size={13} weight={liked ? 'fill' : 'bold'} aria-hidden="true" /><b>{likeCount}</b><span>{own ? (likeCount === 1 ? 'like' : 'likes') : (liked ? 'liked' : 'like')}</span></button>}</div>{headline && theme.layout === 'single' && <p className="headline in">{headline}</p>}{stickersOn('nameplate')}</div>
           {headline && theme.layout !== 'single' && <p className="headline">{headline}</p>}
           {music.url && <Player key={music.url} src={music.url} title={music.title} artist={music.artist} cover={img[music.cover]} cid="player">{stickersOn('player')}</Player>}
-          {own ? (!draft ? <div className="acw own" data-cid="actions"><button className="primary wide" onClick={startEdit}><PencilSimple size={18} weight="bold" aria-hidden="true" />Customize profile</button><button className="ghost wide" aria-busy={sharing || undefined} onClick={() => !sharing && openShare()}><ShareNetwork size={18} weight="bold" aria-hidden="true" />Share profile</button><button className="ghost wide" onClick={() => go('content')}><ListChecks size={18} weight="bold" aria-hidden="true" />Your posts</button>{likeBar}{stickersOn('actions')}</div>
+          {own ? (!draft ? <div className="acw own" data-cid="actions"><button className="primary wide" onClick={startEdit}><PencilSimple size={18} weight="bold" aria-hidden="true" />Customize profile</button><button className="ghost wide" aria-busy={sharing || undefined} onClick={() => !sharing && openShare()}><ShareNetwork size={18} weight="bold" aria-hidden="true" />Share profile</button><button className="ghost wide" onClick={() => go('content')}><ListChecks size={18} weight="bold" aria-hidden="true" />Your posts</button>{stickersOn('actions')}</div>
             : <div className="acw" data-cid="actions"><div className="actions preview" aria-hidden="true"><div className="arow"><button className="primary" tabIndex={-1} disabled>Message</button><button className="ghost" tabIndex={-1} disabled>Friends</button></div>
               <div className="safe"><span>Report</span><span>·</span><span>Block</span></div></div>{stickersOn('actions')}</div>) : <div className="acw" data-cid="actions"><div className="actions">
             {rel.status === 'friends' ? <div className="arow">
@@ -309,7 +305,7 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
               : friendBtn && <button className="primary wide" onClick={() => act(friendBtn[1], friendBtn[2])}>{friendBtn[0]}</button>}
             <div className="safe">
               <button className="link" onClick={() => setRep(true)}>Report</button><span aria-hidden="true">·</span>
-              <button className="link" onClick={async () => (await ask({ title: 'Block this person?', message: `${name} will no longer be able to interact with you.`, confirmLabel: 'Block', danger: true })) && safety.blockUser(profile.id).then(() => go('people')).catch((e) => notify(e.message || 'Could not block', 'err'))}>Block</button></div></div>{likeBar}{stickersOn('actions')}</div>}
+              <button className="link" onClick={async () => (await ask({ title: 'Block this person?', message: `${name} will no longer be able to interact with you.`, confirmLabel: 'Block', danger: true })) && safety.blockUser(profile.id).then(() => go('people')).catch((e) => notify(e.message || 'Could not block', 'err'))}>Block</button></div></div>{stickersOn('actions')}</div>}
         </aside>
         <div className="divider" />
         <div className="cards" ref={cardsRef}>{flowShown.map((c) => <CardView key={c.id} c={c} d={d} img={img} go={go} openPhoto={setLb} own={own} meName={meName} notify={notify}>{stickersOn(c.id)}</CardView>)}
