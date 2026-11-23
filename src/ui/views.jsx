@@ -235,7 +235,7 @@ export function MessagesView({ me, peer, go, notify, refreshUnread }) {
         <button type="button" className="primary sendbtn" aria-label="Send" title="Send" disabled={!txt.trim()} onPointerDown={(e) => e.preventDefault()} onMouseDown={(e) => e.preventDefault()} onClick={send}><PaperPlaneRight size={20} weight="fill" aria-hidden="true" /></button></div></>)
       : <p className="empty">Pick a conversation.</p>}</section>
     {sheet && <MessageSheet m={sheet} mine={sheet.sender_id === me.id} preview={previewText(sheet.body)} pinned={pinnedIds.has(sheet.id)} liked={hasLiked(sheet)} onLike={() => toggleLike(sheet)} canEdit={!decodeSharedPost(sheet.body) && !decodeGif(sheet.body)} canCopy={!decodeSharedPost(sheet.body) && !decodeGif(sheet.body)} notify={notify}
-      onReply={() => startReply(sheet)} onPin={() => togglePin(sheet)} onEdit={() => setEditing(sheet.id)} onDeleted={replaceMsg} onClose={() => setSheet(null)} />}</div>);
+      onReply={() => startReply(sheet)} onPin={() => togglePin(sheet)} onEdit={() => setEditing(sheet.id)} onDeleted={replaceMsg} onClose={() => setSheet(null)} />}{gifOpen && <GifPicker onPick={sendGif} onClose={() => setGifOpen(false)} />}</div>);
 }
 
 /* ---------------- People (discover + friends + requests) ---------------- */

@@ -600,7 +600,7 @@ function LinksEditor({ links, onChange }) {
   );
 }
 
-function CardBody({ c, setContent, goTab }) {
+function CardBody({ c, setContent, goTab, friends = [] }) {
   switch (c.type) {
     case 'about':
     case 'text': {
@@ -628,13 +628,14 @@ function CardBody({ c, setContent, goTab }) {
     case 'guestbook':
       return <p className="cz-hint">Shows what visitors write. Choose who can write in <button type="button" className="cz-link" onClick={() => goTab('Profile')}>Profile</button>.</p>;
     case 'top_friends':
-      return <p className="cz-hint">Shows your top friends. Choose them in <button type="button" className="cz-link" onClick={() => goTab('Profile')}>Profile</button>.</p>;
+      if (!Array.isArray(c.content.friends)) return <p className="cz-hint">Shows your main Top 8. Choose them in <button type="button" className="cz-link" onClick={() => goTab('Profile')}>Profile</button>. Add another Top friends card for a separate group.</p>;
+      return <CardTopFriends friends={friends} selected={c.content.friends} onChange={(ids) => setContent({ ...c.content, friends: ids })} />;
     default:
       return null;
   }
 }
 
-function CardItem({ c, first, last, busy, onTitle, onMove, onToggle, onDelete, setContent, goTab }) {
+function CardItem({ c, first, last, busy, onTitle, onMove, onToggle, onDelete, setContent, goTab, friends }) {
   const { label, icon: Icon } = typeMeta(c.type);
   return (
     <li className="cz-item" data-hidden={!c.visible || undefined}>
@@ -654,7 +655,7 @@ function CardItem({ c, first, last, busy, onTitle, onMove, onToggle, onDelete, s
           <DangerButton label="Delete card" disabled={busy} onConfirm={onDelete} />
         </span>
       </div>
-      <div className="cz-item-main"><CardBody c={c} setContent={setContent} goTab={goTab} /></div>
+      <div className="cz-item-main"><CardBody c={c} setContent={setContent} goTab={goTab} friends={friends} /></div>
     </li>
   );
 }
@@ -774,6 +775,47 @@ function TopFriends({ ctx }) {
       )}
       {draft.top.length >= MAX_TOP && <p className="cz-hint">Your top {MAX_TOP} is full. Remove someone to add another.</p>}
     </Section>
+  );
+}
+
+/** Per-card top friends: a second (or third) card has its own group, title and order. */
+function CardTopFriends({ friends = [], selected = [], onChange }) {
+  const ids = selected.filter((id) => friends.some((f) => f.id === id));
+  const chosen = ids.map((id) => friends.find((f) => f.id === id)).filter(Boolean);
+  const available = friends.filter((f) => !ids.includes(f.id));
+  const move = (i, dir) => {
+    const j = i + dir; if (j < 0 || j >= ids.length) return;
+    const next = [...ids]; [next[i], next[j]] = [next[j], next[i]]; onChange(next);
+  };
+  return (
+    <div className="cz-field">
+      <p className="cz-hint">Choose up to {MAX_TOP} friends for this card. Each top-friends card keeps its own group.</p>
+      {!friends.length && <p className="cz-hint">Add some friends first, then choose them here.</p>}
+      {chosen.length > 0 && (
+        <ul className="cz-list">
+          {chosen.map((f, i) => (
+            <li className="cz-friend" key={f.id}>
+              <span className="cz-rank">{i + 1}</span>
+              <span className="cz-ava" aria-hidden="true">{(f.display_name || '?').charAt(0).toUpperCase()}</span>
+              <span className="cz-friend-name">{f.display_name}</span>
+              <span className="cz-actions">
+                <IconButton icon={ArrowUp} label={`Move ${f.display_name} up`} disabled={i === 0} onClick={() => move(i, -1)} />
+                <IconButton icon={ArrowDown} label={`Move ${f.display_name} down`} disabled={i === chosen.length - 1} onClick={() => move(i, 1)} />
+                <IconButton icon={X} label={`Remove ${f.display_name}`} onClick={() => onChange(ids.filter((id) => id !== f.id))} />
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {ids.length < MAX_TOP && available.length > 0 && (
+        <Select lead={Plus} ariaLabel="Add a friend to this card" value="" onChange={(e) => e.target.value && onChange([...ids, e.target.value])}>
+          <option value="">Add a friend…</option>
+          {available.map((f) => <option key={f.id} value={f.id}>{f.display_name}</option>)}
+        </Select>
+      )}
+      {ids.length >= MAX_TOP && <p className="cz-hint">This card is full. Remove someone to add another.</p>}
+      {ids.length === 0 && friends.length > 0 && <p className="cz-hint">No one on this card yet.</p>}
+    </div>
   );
 }
 
@@ -1044,7 +1086,7 @@ function ContentTab({ ctx }) {
         {flow.length > 0 && (
           <ul className="cz-list">
             {flow.map(({ c, i }, n) => (
-              <CardItem key={c.id} c={c} busy={busy} first={n === 0} last={n === flow.length - 1} goTab={goTab}
+              <CardItem key={c.id} c={c} busy={busy} first={n === 0} last={n === flow.length - 1} goTab={goTab} friends={ctx.fl}
                 onTitle={(title) => setCard(c.id, { title })}
                 onMove={(dir) => move(i, dir)}
                 onToggle={() => setCard(c.id, { visible: !c.visible })}
@@ -1227,7 +1269,8 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
 
   const addCard = (type) => run(async () => {
     const meta = typeMeta(type);
-    const c = await cardsApi.createCard({ type, title: meta.label, content: meta.empty, y: draft.cards.length * 10 });
+    const content = type === 'top_friends' ? { friends: [...draft.top] } : meta.empty;   // a second group starts from the current Top 8, then can be changed
+    const c = await cardsApi.createCard({ type, title: meta.label, content, y: draft.cards.length * 10 });
     setDraft((d) => ({ ...d, cards: [...d.cards, c] }));
   });
   const addSticker = (file) => run(async () => {

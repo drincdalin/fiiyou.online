@@ -5,6 +5,7 @@ import { safeGeometry } from '../lib/cardGeometry.js';
  *  content shapes (plain data, never HTML):
  *    about/text -> {body}            gallery -> {images:[path]}   image -> {images:[path]}
  *    links -> {links:[{label,url}]}  music -> {url}               interests -> {interests:[str]}
+ *    top_friends -> {friends:[profile id]} (omit friends on the main Top 8 card)
  *  style: bg_color, text_color, border_color, border_style, border_width(0-8), shadow
  */
 export const CARD_TYPES = ['about', 'text', 'image', 'gallery', 'links', 'interests', 'music', 'top_friends', 'guestbook'];

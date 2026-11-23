@@ -14,7 +14,7 @@ export async function getFullProfile(username) {
   const profile = unwrap(await supabase.from('profiles')
     .select('*, locality:localities(id, name, slug)').eq('username', username.toLowerCase()).maybeSingle());
   if (!profile) return null;
-  const [cards, top, friendCount, relationship, photos, views] = await Promise.all([
+  const [cards, top, friendRows, relationship, photos, views] = await Promise.all([
     supabase.from('profile_cards').select('*').eq('profile_id', profile.id).eq('visible', true).order('y').order('z'),
     supabase.from('top_friends')
       .select('rank, friend:profiles!top_friends_friend_id_fkey(id, username, display_name, avatar_path)')
@@ -24,11 +24,13 @@ export async function getFullProfile(username) {
     supabase.rpc('photos_of', { p_profile: profile.id }),
     supabase.rpc('profile_view_count', { p_profile: profile.id }),
   ]);
+  const friendProfiles = unwrap(friendRows);
   return {
     profile,
     cards: unwrap(cards),
     topFriends: unwrap(top).map(t => ({ rank: t.rank, ...t.friend })),
-    friendCount: unwrap(friendCount).length,
+    friendProfiles,
+    friendCount: friendProfiles.length,
     relationship,
     photos: unwrap(photos),
     views: Number(unwrap(views)),

@@ -171,10 +171,15 @@ function CardView({ c, d, img, go, openPhoto, own, meName, notify, children }) {
       : <p className="muted">No photos yet.</p>,
     links: () => <ul>{(c.content.links || []).map((l, i) => <li key={i}><a href={l.url} target="_blank" rel="noopener noreferrer nofollow">{l.label}</a></li>)}</ul>,
     interests: () => <div className="tags">{(c.content.interests || []).map((t) => <span key={t}>{t}</span>)}</div>,
-    top_friends: () => d.topFriends.length ? <div className="top">{d.topFriends.map((f) => (
-      <button key={f.id} className="ghost" onClick={() => go('profile', f.username)}>
-        {f.avatar_path && img[f.avatar_path] ? <img src={img[f.avatar_path]} alt="" /> : <i />}<span>{f.display_name}</span></button>))}</div>
-      : <p className="muted">No top friends yet.</p>,
+    top_friends: () => {
+      const list = Array.isArray(c.content.friends)
+        ? c.content.friends.map((id) => (d.friendProfiles || []).find((f) => f.id === id)).filter(Boolean)
+        : d.topFriends;
+      return list.length ? <div className="top">{list.map((f) => (
+        <button key={f.id} className="ghost" onClick={() => go('profile', f.username)}>
+          {f.avatar_path && img[f.avatar_path] ? <img src={img[f.avatar_path]} alt="" /> : <i />}<span>{f.display_name}</span></button>))}</div>
+        : <p className="muted">No top friends yet.</p>;
+    },
     guestbook: () => <Guestbook profileId={d.profile.id} go={go} own={own} meName={meName} notify={notify} />,
   }[c.type];
   return body ? <div className="cw" data-cid={c.id}><section className="card"><h2>{c.title}</h2>{body()}</section>{children}</div> : null;   // children = the stickers pinned to this card
@@ -218,7 +223,7 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
   }, [d]);
   useEffect(() => { const c = cardsRef.current, a = avRef.current; if (!c) return; const upd = () => { setColW(c.clientWidth || 920); setAvW((a && a.clientWidth) || 190); }; const ro = new ResizeObserver(upd); ro.observe(c); if (a) ro.observe(a); upd(); return () => ro.disconnect(); }, [d]);   // widths the sticker units are measured against (cards column, avatar)
   const shown = draft ? draft.cards : d?.cards; const theme = draft ? draft.theme : d?.profile.theme; const music = (draft ? draft.fields.music : d?.profile.music) || {};
-  const img = useImages(d ? [d.profile.avatar_path, theme.bg_image, music.cover, ...shown.flatMap((c) => c.content.images || []), ...d.photos.map((p) => p.path), ...d.topFriends.map((f) => f.avatar_path)] : []);
+  const img = useImages(d ? [d.profile.avatar_path, theme.bg_image, music.cover, ...shown.flatMap((c) => c.content.images || []), ...d.photos.map((p) => p.path), ...d.topFriends.map((f) => f.avatar_path), ...(d.friendProfiles || []).map((f) => f.avatar_path)] : []);
   const fontFamily = useCustomFont(theme?.font_file);   // registers the uploaded font (draft or saved) so the page can use it
   const [spans, setSpans] = useState({});   // width of each anchor in its own units
   const [, bump] = useState(0);   // bumped when a sticker image finishes loading: re-renders, and the measuring effect below runs again
