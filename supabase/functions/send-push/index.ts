@@ -39,7 +39,7 @@ const TEXT: Record<string, string> = {
   comment: 'commented on your post',
   friend_request: 'sent you a friend request',
   friend_accept: 'accepted your friend request',
-  wall_comment: 'left a note on your Porch',          // 0025
+  wall_comment: 'left a note on your guestbook',          // 0025
   comment_like: 'liked your comment',              // 0028 and below
   reply: 'replied to your comment',
   mention: 'mentioned you in a post',

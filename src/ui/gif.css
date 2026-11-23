@@ -84,10 +84,11 @@
   flex: 1 1 14rem; min-width: 0; width: auto; height: 46px; min-height: 46px; max-height: 124px;
   padding: .7rem 1rem; border: 2px solid transparent; border-radius: var(--rad-l, 14px);
   background: var(--g2, #191919); color: var(--text, #fff);
-  font: inherit; font-size: 1rem; line-height: 1.35; resize: none; overflow-y: auto;
+  font: inherit; font-size: 1rem; line-height: 1.35; resize: none; overflow-y: hidden; scrollbar-width: none; -ms-overflow-style: none;
 }
 .cthread .inline textarea.chatbox:focus, .cthread .inline textarea.chatbox:focus-visible { border-color: transparent; outline: 0; box-shadow: none; }
 .cthread .inline textarea.chatbox::placeholder { color: var(--muted, #888); }
+.cthread .inline textarea.chatbox::-webkit-scrollbar { width: 0; height: 0; }
 
 .bub.gif { width: min(286px, 78vw) !important; max-width: none !important; padding: 6px; background: var(--g1, #101010); color: var(--text, #f2f2f2); }
 .bub.gif.mine { background: var(--g1, #101010); color: var(--text, #f2f2f2); }
@@ -112,8 +113,8 @@
 .cmgifpick span { flex: 1; min-width: 0; color: var(--muted, #999); font-size: .8125rem; }
 .cmgifpick button { all: unset; cursor: pointer; color: var(--muted, #999); padding: 8px; border-radius: 999px; }
 .cmgifpick button:hover { color: var(--text, #fff); background: var(--g3, #2a2a2a); }
-.cmform .gifbtn { width: var(--pair-h, 40px); height: var(--pair-h, 40px); border-radius: var(--pair-r, 999px); }
-.cmform .primary.sendbtn { width: var(--pair-h, 40px); height: var(--pair-h, 40px); padding: 0; border-radius: var(--pair-r, 999px); }
+.cmform .gifbtn { width: var(--pair-h, 40px); height: var(--pair-h, 40px); border-radius: var(--rad-l, 14px); }
+.cmform .primary.sendbtn { width: var(--pair-h, 40px); height: var(--pair-h, 40px); padding: 0; border-radius: var(--rad-l, 14px); }
 
 @media (max-width: 560px) {
   .gifmodal { padding: 0; place-items: end center; }

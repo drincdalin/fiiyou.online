@@ -83,8 +83,8 @@ export const PROMO_TEMPLATES = [
   },
   {
     id: 'wall',
-    label: 'A note on my Porch',
-    hint: 'One real note from your Porch.',
+    label: 'Left on my guestbook',
+    hint: 'One real guestbook message.',
     needs: (d) => d.guestbook.length > 0,
   },
   {
@@ -108,7 +108,7 @@ export const promoShareText = (template, slug) => {
       card: `Come say hi on fiiyou → ${url}`,
       top8: `This is my top 8. Who’s on yours? ${url}`,
       vibe: `What I’m listening to right now → ${url}`,
-      wall: `Someone left this on my Porch. Leave one too → ${url}`,
+      wall: `Someone left this on my guestbook. Sign it too → ${url}`,
       full: `My fiiyou profile → ${url}`,
     }[template] || url
   );
@@ -546,7 +546,7 @@ export async function renderPromo({ template = 'card', ...args }) {
   }
 
   if (template === 'wall' && !entry) {
-    throw new Error('The Porch promo requires a note.');
+    throw new Error('The guestbook promo requires an entry.');
   }
 
   const [avatar, bg, cover, entryImg, friendImgs] = await Promise.all([
@@ -1233,7 +1233,7 @@ export async function renderPromo({ template = 'card', ...args }) {
         /* guestbook prompt: how the empty wall looks on the real page */
         const gy = py + plateH + GAP;
 
-        cardBox(x, gy, IW, guestH, titleOf('guestbook', 'Porch'));
+        cardBox(x, gy, IW, guestH, titleOf('guestbook', 'Guestbook'));
 
         const bx = 150;
         const iw = CIW - bx - 14;
@@ -1529,7 +1529,7 @@ export async function renderPromo({ template = 'card', ...args }) {
   }
 
   /* ==================================================================
-     A note on my Porch
+     Left on my guestbook
      ================================================================== */
 
   function buildWall(maxH) {
@@ -1581,7 +1581,7 @@ export async function renderPromo({ template = 'card', ...args }) {
       h: cardH + GAP + ownerH,
 
       draw(x, y) {
-        cardBox(x, y, IW, cardH, titleOf('guestbook', 'Porch'));
+        cardBox(x, y, IW, cardH, titleOf('guestbook', 'Guestbook'));
 
         const ay = y + cpad + TITLE_H + titleGap;
         const ax = x + cpad;
@@ -1660,7 +1660,7 @@ export async function renderPromo({ template = 'card', ...args }) {
 
         g.font = `500 30px ${bodyStack}`;
         put(
-          ellipsize(g, `on @${profile.username}'s Porch`, orm),
+          ellipsize(g, `on @${profile.username}'s guestbook`, orm),
           ox,
           oy + ownerH / 2 + 22,
           `500 30px ${bodyStack}`,
@@ -1743,7 +1743,7 @@ export async function renderPromo({ template = 'card', ...args }) {
       card: 'Find me on fiiyou',
       top8: 'Make your own top 8',
       vibe: 'Listen with me on fiiyou',
-      wall: 'Leave a note on my Porch',
+      wall: 'Sign my guestbook',
     };
 
     const label = labels[template] || 'Find me on fiiyou';

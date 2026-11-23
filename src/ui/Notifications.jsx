@@ -25,7 +25,7 @@ const KINDS = {
   post_like: [Heart, 'liked your post'],
   photo_like: [Heart, 'liked your photo'],
   comment: [ChatCircle, 'commented on your post'],
-  wall_comment: [ChatCircle, 'left a note on your Porch'],
+  wall_comment: [ChatCircle, 'left a note on your guestbook'],
   friend_request: [UserPlus, 'sent you a friend request'],
   friend_accept: [UsersThree, 'accepted your friend request'],
   comment_like: [Heart, 'liked your comment'],

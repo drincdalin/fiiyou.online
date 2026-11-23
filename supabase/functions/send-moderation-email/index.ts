@@ -101,7 +101,7 @@ function contentRemoved(row: { username?: string; payload: Record<string, unknow
 function itemRemoved(kind: string, row: { username?: string; payload: Record<string, unknown> }, cfg: Cfg): Rendered {
   const p = row.payload; const who = oneLine(row.username, 40);
   const ct = String(p.content_type ?? 'post');
-  const what = kind === 'post_removed' ? 'post' : ct === 'wall_comment' ? 'note on a Porch' : 'comment';
+  const what = kind === 'post_removed' ? 'post' : ct === 'wall_comment' ? 'note on a guestbook' : 'comment';
   const title = oneLine(p.title, 80); const excerpt = oneLine(p.excerpt, 300);
   const reason = reasonOf(p);
   const subject = `Your ${what} was removed`;

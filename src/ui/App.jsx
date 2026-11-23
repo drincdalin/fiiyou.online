@@ -139,20 +139,20 @@ function NewPassword({ onDone }) {
     {msg && <p className="err" role="alert">{msg}</p>}<button className="primary wide" aria-busy={busy || undefined}>Save password</button></form></div>);
 }
 
-function Porch({ profileId, go, own, meName, notify }) {
+function Guestbook({ profileId, go, own, meName, notify }) {
   const [rows, setRows] = useState([]); const [body, setBody] = useState(''); const [err, setErr] = useState('');
-  const load = () => wall.listWall(profileId).then(setRows).catch((e) => setErr(friendlyError(e, 'Could not load the Porch.'))); useEffect(() => { load(); }, [profileId]);
+  const load = () => wall.listWall(profileId).then(setRows).catch((e) => setErr(friendlyError(e, 'Could not load the guestbook.'))); useEffect(() => { load(); }, [profileId]);
   const img = useImages(rows.map((r) => r.author.avatar_path));
   const send = async (e) => { e.preventDefault(); setErr(''); const text = body.trim(); if (!text) return;
     try { await wall.postOnWall(profileId, text); setBody(''); load(); } catch (er) { setErr(spamMessage(er) || (errorCode(er) === 'rate_limit' ? 'Slow down a bit.' : 'Cannot post here.')); } };
   return (<>
-    <form className="inline" onSubmit={send}><input value={body} maxLength={500} onChange={(e) => setBody(e.target.value)} placeholder="Leave a note…" aria-label="Leave a note on the Porch" />
-      <button className="primary" disabled={!body.trim()}>Leave note</button></form>
+    <form className="inline" onSubmit={send}><input value={body} maxLength={500} onChange={(e) => setBody(e.target.value)} placeholder="Write something…" aria-label="Write on the guestbook" />
+      <button className="primary" disabled={!body.trim()}>Send</button></form>
     {err && <p className="err">{err}</p>}
-    {!rows.length && !err && <p className="muted">No notes yet. Leave the first one.</p>}
+    {!rows.length && !err && <p className="muted">No messages yet. Say something.</p>}
     {rows.map((r) => (<div className="msg gb" key={r.id}><button className="who" onClick={() => go('profile', r.author.username)} aria-label="Open profile"><Avatar src={img[r.author.avatar_path]} size={38} /></button>
       <div><button className="ulink" onClick={() => go('profile', r.author.username)}><b>{r.author.display_name}</b> <span className="muted">@{r.author.username}</span></button><p><Rich text={r.body} onUser={(u) => go('profile', u)} /></p></div>
-      {(own || r.author.username === meName) ? <button className="ghost sm danger" aria-label="Delete note" onClick={() => wall.deleteWallComment(r.id).then(() => { notify('Note deleted'); load(); }).catch((e) => notify(e.message || 'Could not delete', 'err'))}><Trash size={14} weight="bold" aria-hidden="true" /></button> : <span />}</div>))}
+      {(own || r.author.username === meName) ? <button className="ghost sm danger" aria-label="Delete message" onClick={() => wall.deleteWallComment(r.id).then(() => { notify('Message deleted'); load(); }).catch((e) => notify(e.message || 'Could not delete', 'err'))}><Trash size={14} weight="bold" aria-hidden="true" /></button> : <span />}</div>))}
   </>);
 }
 
@@ -173,7 +173,7 @@ function CardView({ c, d, img, go, openPhoto, own, meName, notify, children }) {
           {f.avatar_path && img[f.avatar_path] ? <img src={img[f.avatar_path]} alt="" /> : <i />}<span>{f.display_name}</span></button>))}</div>
         : <p className="muted">No top friends yet.</p>;
     },
-    guestbook: () => <Porch profileId={d.profile.id} go={go} own={own} meName={meName} notify={notify} />,
+    guestbook: () => <Guestbook profileId={d.profile.id} go={go} own={own} meName={meName} notify={notify} />,
   }[c.type];
   return body ? <div className="cw" data-cid={c.id}><section className="card"><h2>{c.title}</h2>{body()}</section>{children}</div> : null;   // children = the stickers pinned to this card
 }
@@ -264,7 +264,7 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
     try {
       const flowCards = shown.filter((c) => c.visible && c.type !== 'music' && c.type !== 'sticker');
       const stickers = shown.filter((c) => c.type === 'sticker' && c.visible).map((c) => { const m = stickerModel(c, theme); return { src: img[c.content.images?.[0]], card: m.card, v: m.v, x: m.x, y: m.y, w: m.w, h: m.h, rotation: c.rotation || 0, z: c.z || 0 }; });
-      const gb = await wall.listWall(profile.id).catch(() => []);          // always loaded: the "note on my Porch" card needs it even if the Porch card is hidden
+      const gb = await wall.listWall(profile.id).catch(() => []);          // always loaded: the "Left on my wall" card needs it even if the guestbook card is hidden
       setShareData({
         slug: profile.username,
         profile: { username: profile.username, display_name: name, headline, locality: profile.locality?.name, verified: !!profile.is_official, friends: d.friendCount, views: d.views },

@@ -144,7 +144,7 @@ export function MessagesView({ me, peer, go, notify, refreshUnread }) {
     typing.current = ch; return () => { ch.off(); typing.current = null; clearTimeout(typingT.current); };
   }, [cur]);
   useEffect(() => { setPeerTyping(false); }, [msgs?.length]);   // a new message from them ends the indicator
-  useEffect(() => { const el = inp.current; if (!el) return; el.style.height = 'auto'; el.style.height = `${Math.min(124, el.scrollHeight)}px`; }, [txt, cur]);   // the textarea grows with the message, up to four lines
+  useEffect(() => { const el = inp.current; if (!el) return; el.style.height = 'auto'; const h = el.scrollHeight; el.style.height = `${Math.min(124, h)}px`; el.style.overflowY = h > 124 ? 'auto' : 'hidden'; }, [txt, cur]);   // the textarea grows with the message, up to four lines
   useEffect(() => { if (msgs && pendingJump.current) { const id = pendingJump.current; pendingJump.current = null; setTimeout(() => jump(id), 60); } }, [msgs]);
   useEffect(() => {
     const soon = debounce(() => { loadConvs(); if (cur) loadThread(cur); }, 800);   // one refresh per burst of realtime events (mark-as-read fires one event per message)
