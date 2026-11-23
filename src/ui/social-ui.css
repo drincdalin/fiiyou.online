@@ -95,26 +95,26 @@ button.mention:focus-visible { text-decoration: underline; }
 
 /* Profile badges + profile likes */
 .pbadges { display: inline-flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px; margin-left: 6px; vertical-align: middle; }
-.pbadge {
+.profile-badge {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 3px 6px; border: 1px solid currentColor; border-radius: 999px;
-  font: 800 .5em/1 var(--ui-font, 'Ubuntu Sans'); letter-spacing: .08em; text-transform: uppercase;
+  font-family: inherit; font-size: .5em; font-weight: 800; line-height: 1; letter-spacing: .08em; text-transform: uppercase;
   white-space: nowrap;
 }
-.pbadge::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
-.pbadge.beta { color: var(--yellow, #ffd84d); }
-.pbadge.og { color: var(--ink, #f4f4f4); }
-.pbadge.founder { color: var(--accent-fg, var(--accent, #f4f4f4)); }
+.profile-badge::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+.profile-badge.beta { color: var(--yellow, #ffd84d); }
+.profile-badge.og { color: var(--ink, #f4f4f4); }
+.profile-badge.founder { color: var(--accent-fg, var(--accent, #f4f4f4)); }
 
 .pstats { display: inline-flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 7px; margin-top: 2px; }
 .pstats .views { margin: 0; }
 .plike-stat {
   all: unset; display: inline-flex; align-items: center; gap: 3px; cursor: pointer;
   padding: 2px 6px; border-radius: 99px; color: var(--muted, #a6a6a6);
-  font: 700 .8em/1.15 var(--ui-font, 'Ubuntu Sans');
+  font: inherit; font-size: .8em; font-weight: 700; line-height: 1.15;
 }
 .plike-stat:hover, .plike-stat:focus-visible { color: var(--ink, #f4f4f4); background: color-mix(in srgb, var(--ink, #f4f4f4) 8%, transparent); }
-.plike-stat.on { color: var(--red, #ff6b6b); background: color-mix(in srgb, var(--red, #ff6b6b) 11%, transparent); }
+.plike-stat.on { color: var(--accent-fg, var(--accent, #ff6b6b)); background: color-mix(in srgb, var(--accent-fg, var(--accent, #ff6b6b)) 11%, transparent); }
 .plike-stat b { font-variant-numeric: tabular-nums; }
 .plike-stat span { opacity: .78; }
 .plike-stat svg { flex: none; }

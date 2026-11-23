@@ -30,7 +30,7 @@ export function ProfileBadges({ badges = [] }) {
   if (!list.length) return null;
   return <span className="pbadges">{list.map((k) => {
     const [label, title] = BADGE_META[k];
-    return <span key={k} className={`pbadge ${k}`} title={title} aria-label={title}>{label}</span>;
+    return <span key={k} className={`profile-badge ${k}`} title={title} aria-label={title}>{label}</span>;
   })}</span>;
 }
 
