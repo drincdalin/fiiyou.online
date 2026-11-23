@@ -1,0 +1,130 @@
+/* ======================================================================
+   fintech.css — final, isolated polish for the app chrome.
+
+   Inspired by the surface discipline of Revolut / Stripe / Wise, but mapped
+   onto this app's own theme tokens. It deliberately excludes .page (themed
+   profiles), so a person's custom creator page keeps its own design.
+
+   No layout structure, routes, component hierarchy or business logic change
+   here: only borders, radii, spacing, shadows, motion and state feedback.
+   ====================================================================== */
+
+:root {
+  --app-radius-card: 18px;
+  --app-radius-control: 12px;
+  --app-hairline: color-mix(in srgb, var(--g3) 72%, transparent);
+  --app-hairline-strong: color-mix(in srgb, var(--g3) 52%, var(--g4));
+  --app-shadow: 0 4px 20px -2px color-mix(in srgb, var(--shade) 45%, transparent),
+                0 1px 0 color-mix(in srgb, var(--ink) 4%, transparent);
+  --app-shadow-hover: 0 10px 28px -10px color-mix(in srgb, var(--shade) 65%, transparent),
+                      0 1px 0 color-mix(in srgb, var(--ink) 5%, transparent);
+  --app-ease: cubic-bezier(.2, .7, .2, 1);
+}
+
+/* ------------------------------------------------------------------
+   surfaces: hairline edge, soft ambient depth, generous rounding
+   ------------------------------------------------------------------ */
+:is(.panel, .post, .authcard, .clist, .cthread, .composer.panel, .snap.panel,
+    .modal .panel, .modal .mform, .menu, .sresults, .cand):not(.page *) {
+  border-width: 1px;
+  border-color: var(--app-hairline);
+  border-radius: var(--app-radius-card);
+  box-shadow: var(--app-shadow);
+}
+
+:is(.panel, .authcard, .modal .panel, .modal .mform):not(.page *) {
+  padding: 22px;
+}
+.post:not(.page *) { padding: 17px 19px; }
+.composer.panel:not(.page *) { padding: 16px 18px; }
+.snap.panel:not(.page *) { padding: 18px; }
+.menu:not(.page *), .sresults:not(.page *), .cand:not(.page *) { padding: 6px; }
+
+/* list rows: same quiet edge, slightly tighter than a card */
+.plain .row:not(.page *) {
+  border-width: 1px;
+  border-color: var(--app-hairline);
+  border-radius: 14px;
+  background: var(--g1);
+  padding: 12px 14px;
+  box-shadow: none;
+  transition: background-color .18s var(--app-ease), border-color .18s var(--app-ease), transform .18s var(--app-ease);
+}
+.plain .row:not(.page *):hover {
+  border-color: var(--app-hairline-strong);
+  background: var(--g2);
+  transform: none;
+}
+
+/* navigation: a thin line, not a heavy rule */
+.nav { border-bottom-width: 1px; box-shadow: 0 1px 0 var(--app-hairline); }
+.navlinks { border-width: 1px; border-radius: 16px; }
+.nav .more > .avbtn { border-width: 1px; }
+.nav .more .menu { border-radius: 16px; }
+
+/* ------------------------------------------------------------------
+   controls: compact geometry, crisp focus, tactile press
+   ------------------------------------------------------------------ */
+:is(.primary, .ghost, .filebtn, .like, .chip, .tabs button, .seg button):not(.page *) {
+  border-width: 1px;
+  border-radius: var(--app-radius-control);
+  transition: background-color .18s var(--app-ease), border-color .18s var(--app-ease),
+              color .18s var(--app-ease), box-shadow .18s var(--app-ease), transform .12s var(--app-ease);
+}
+:is(.primary, .ghost):not(.page *) { box-shadow: none; font-weight: 650; letter-spacing: -.005em; }
+:is(.primary, .ghost):not(.page *):active:not(:disabled):not([aria-busy=true]) { transform: scale(.98); }
+.primary:not(.page *):hover:not(:disabled):not([aria-busy=true]) {
+  filter: none;
+  transform: translateY(-1px);
+  box-shadow: 0 7px 20px -12px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+.ghost:not(.page *):hover:not(:disabled) { background: var(--hover); border-color: var(--app-hairline-strong); }
+.primary:not(.page *):disabled, .ghost:not(.page *):disabled { opacity: .45; }
+
+/* fields: one hairline, one radius, no visible browser ring */
+:is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]), select, textarea):not(.page *):not(.chatbox):not(.msearch *):not(.lpsearch *):not(.gifsearch *):not(.cz-input) {
+  border-width: 1px;
+  border-color: var(--app-hairline);
+  border-radius: var(--app-radius-control);
+  background: color-mix(in srgb, var(--g0) 92%, var(--g2));
+  transition: border-color .18s var(--app-ease), box-shadow .18s var(--app-ease), background-color .18s var(--app-ease);
+}
+:is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]), select, textarea):not(.page *):not(.chatbox):not(.msearch *):not(.lpsearch *):not(.gifsearch *):not(.cz-input):hover:not(:disabled):not(:focus) {
+  border-color: var(--app-hairline-strong);
+}
+:is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]), select, textarea):not(.page *):not(.chatbox):not(.msearch *):not(.lpsearch *):not(.gifsearch *):not(.cz-input):focus-visible {
+  outline: none;
+  border-color: var(--accent-fg);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+/* status chips keep the compact pill language */
+.badge, .count, .dotb { border-radius: 999px; font-weight: 700; }
+
+/* ------------------------------------------------------------------
+   type + data hierarchy
+   ------------------------------------------------------------------ */
+.muted, .hint, small { letter-spacing: -.002em; }
+:is(.badge, .dotb, .count, .cnt, .mcount, .cmcount, .mheart, .times, time, .num,
+    .stats3 b, .stats4 b, .snapstats b, .pstats, .plike-stat, [data-num]):not(.page *) {
+  font-variant-numeric: tabular-nums;
+}
+.plike-stat { font-feature-settings: "tnum" 1; }
+
+/* ------------------------------------------------------------------
+   auth and sheets
+   ------------------------------------------------------------------ */
+.authcard { padding: 24px 22px; border-radius: 20px; }
+.authcard .authtabs { border-bottom-width: 1px; }
+.modal .panel, .modal .mform { border-radius: 20px; padding: 22px; }
+.clist, .cthread { border-radius: 18px; }
+.cthread .inline { border-top-width: 1px; }
+
+/* ------------------------------------------------------------------
+   small interaction polish
+   ------------------------------------------------------------------ */
+.post:not(.page *) { transition: border-color .18s var(--app-ease), box-shadow .18s var(--app-ease), background-color .18s var(--app-ease); }
+.post:not(.page *):hover { border-color: var(--app-hairline-strong); box-shadow: var(--app-shadow-hover); }
+@media (prefers-reduced-motion: reduce) {
+  :is(.primary, .ghost, .post, .plain .row):not(.page *) { transition: none; }
+}
