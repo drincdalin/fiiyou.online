@@ -14,7 +14,7 @@ export async function getFullProfile(username) {
   const profile = unwrap(await supabase.from('profiles')
     .select('*, locality:localities(id, name, slug)').eq('username', username.toLowerCase()).maybeSingle());
   if (!profile) return null;
-  const [cards, top, friendRows, relationship, photos, views] = await Promise.all([
+  const [cards, top, friendRows, relationship, photos, views, badgeRows, likeRows] = await Promise.all([
     supabase.from('profile_cards').select('*').eq('profile_id', profile.id).eq('visible', true).order('y').order('z'),
     supabase.from('top_friends')
       .select('rank, friend:profiles!top_friends_friend_id_fkey(id, username, display_name, avatar_path)')
@@ -23,8 +23,11 @@ export async function getFullProfile(username) {
     relationshipWith(profile.id),
     supabase.rpc('photos_of', { p_profile: profile.id }),
     supabase.rpc('profile_view_count', { p_profile: profile.id }),
+    supabase.from('profile_badges').select('kind').eq('profile_id', profile.id),
+    supabase.rpc('profile_like_state', { p_profile: profile.id }),
   ]);
   const friendProfiles = unwrap(friendRows);
+  const [likeState] = unwrap(likeRows) || [];
   return {
     profile,
     cards: unwrap(cards),
@@ -34,6 +37,8 @@ export async function getFullProfile(username) {
     relationship,
     photos: unwrap(photos),
     views: Number(unwrap(views)),
+    badges: (unwrap(badgeRows) || []).map((b) => b.kind),
+    profileLikes: { count: Number(likeState?.count || 0), liked: !!likeState?.liked },
   };
 }
 
@@ -81,3 +86,16 @@ export async function setBackgroundImage(file) {
 }
 
 export async function myViews(id) { return Number(unwrap(await supabase.rpc('profile_view_count', { p_profile: id }))); }
+
+/** Like (on = true) or unlike someone's profile. A profile cannot be liked by its owner. */
+export async function setProfileLike(profileId, on) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('not_authenticated');
+  if (on) unwrap(await supabase.from('profile_likes').insert({ profile_id: profileId, liker_id: user.id }));
+  else unwrap(await supabase.from('profile_likes').delete().eq('profile_id', profileId).eq('liker_id', user.id));
+}
+
+/** Who liked this profile, newest first (privacy and blocks are enforced by the database). */
+export async function listProfileLikers(profileId) {
+  return unwrap(await supabase.rpc('profile_likers', { p_profile: profileId })) || [];
+}

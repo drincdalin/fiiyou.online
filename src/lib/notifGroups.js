@@ -8,6 +8,7 @@ const GROUP_BY = {
   comment_like: (r) => r.comment_id,
   comment: (r) => r.post_id,
   wall_comment: () => 'wall',
+  profile_like: () => 'profile',
 };
 const targetOf = (r) => r.post_id || r.photo_id || r.comment_id || null;
 

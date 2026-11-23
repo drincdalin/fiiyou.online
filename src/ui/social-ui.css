@@ -92,3 +92,32 @@ button.mention:focus-visible { text-decoration: underline; }
 .mentionpop button.on, .mentionpop button:hover { background: color-mix(in srgb, var(--t-text) 10%, transparent); }
 .mentionpop span { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
 .mentionpop small { opacity: .65; }
+
+/* Profile badges + profile likes */
+.pbadges { display: inline-flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px; margin-left: 6px; vertical-align: middle; }
+.pbadge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 6px; border: 1px solid currentColor; border-radius: 999px;
+  font: 800 .5em/1 var(--ui-font, 'Ubuntu Sans'); letter-spacing: .08em; text-transform: uppercase;
+  white-space: nowrap;
+}
+.pbadge::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+.pbadge.beta { color: var(--yellow, #ffd84d); }
+.pbadge.og { color: var(--ink, #f4f4f4); }
+.pbadge.founder { color: var(--accent-fg, var(--accent, #f4f4f4)); }
+
+.plikebar { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; min-height: 32px; }
+.plike {
+  all: unset; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  padding: 6px 11px; border: 1.5px solid var(--g3, #2c2c2c); border-radius: 999px;
+  background: var(--g1, #101010); color: var(--muted, #a6a6a6);
+  font: 700 .8125rem/1 var(--ui-font, 'Ubuntu Sans');
+}
+.plike:hover, .plike:focus-visible { color: var(--ink, #f4f4f4); border-color: var(--g4, #4a4a4a); }
+.plike.on { color: var(--red, #ff6b6b); border-color: color-mix(in srgb, var(--red, #ff6b6b) 60%, transparent); background: color-mix(in srgb, var(--red, #ff6b6b) 12%, transparent); }
+.plike b { font-variant-numeric: tabular-nums; }
+.plike svg { flex: none; }
+.plike.pop svg { animation: plike-pop .48s var(--ease, ease); }
+@keyframes plike-pop { 0% { transform: scale(1); } 32% { transform: scale(1.45) rotate(-8deg); } 65% { transform: scale(.92) rotate(4deg); } 100% { transform: scale(1); } }
+.plike-who { font-size: .8125rem; color: var(--muted, #a6a6a6); }
+.plike-note { color: var(--muted, #a6a6a6); font-size: .8125rem; }

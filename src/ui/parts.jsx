@@ -19,6 +19,21 @@ export const spamMessage = (er) => {
   return null;
 };
 
+/** Small profile badges assigned from the control room. */
+export const BADGE_META = {
+  beta: ['BETA', 'Beta tester'],
+  og: ['OG', 'Original member'],
+  founder: ['FOUNDER', 'Founding member'],
+};
+export function ProfileBadges({ badges = [] }) {
+  const list = (badges || []).filter((k) => BADGE_META[k]);
+  if (!list.length) return null;
+  return <span className="pbadges">{list.map((k) => {
+    const [label, title] = BADGE_META[k];
+    return <span key={k} className={`pbadge ${k}`} title={title} aria-label={title}>{label}</span>;
+  })}</span>;
+}
+
 /** Verified checkmark (Instagram style), coloured by the theme accent. */
 export function Verified() {
   return (<svg className="vcheck" viewBox="0 0 24 24" role="img" aria-label="Verified" width="1em" height="1em"><title>Verified</title>

@@ -24,6 +24,7 @@ import { NoticeSkeleton } from './states.jsx';
 const KINDS = {
   post_like: [Heart, 'liked your post'],
   photo_like: [Heart, 'liked your photo'],
+  profile_like: [Heart, 'liked your profile'],
   comment: [ChatCircle, 'commented on your post'],
   wall_comment: [ChatCircle, 'left a note on your guestbook'],
   friend_request: [UserPlus, 'sent you a friend request'],
@@ -80,7 +81,7 @@ export function NotificationList({ go, notify, tick, onRead, limit, grouped = tr
   const visit = (g) => {
     const r = g.latest;
     if (r.post_id) go('post', r.post_id);
-    else if ((r.type === 'wall_comment' || r.type === 'photo_like') && r.profile_username) go('profile', r.profile_username);
+    else if ((r.type === 'wall_comment' || r.type === 'photo_like' || r.type === 'profile_like') && r.profile_username) go('profile', r.profile_username);
     else if (r.actor) go('profile', r.actor.username);
   };
 

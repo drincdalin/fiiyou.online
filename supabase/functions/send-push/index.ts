@@ -36,6 +36,7 @@ const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), { sta
 const TEXT: Record<string, string> = {
   post_like: 'liked your post',
   photo_like: 'liked your photo',
+  profile_like: 'liked your profile',
   comment: 'commented on your post',
   friend_request: 'sent you a friend request',
   friend_accept: 'accepted your friend request',
@@ -46,7 +47,7 @@ const TEXT: Record<string, string> = {
   comment_mention: 'mentioned you in a comment',
 };
 // these happened on the receiving person's OWN profile, so a tap opens their profile, not the actor's
-const OWN_PROFILE = new Set(['wall_comment', 'photo_like']);
+const OWN_PROFILE = new Set(['wall_comment', 'photo_like', 'profile_like']);
 
 /** A one-hour link to a private photo (the notification is shown within seconds, the phone downloads the picture then). undefined on any problem: the notification still goes out. */
 async function photoUrl(path?: string | null) {
