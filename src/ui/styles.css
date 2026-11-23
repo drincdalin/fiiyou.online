@@ -350,8 +350,8 @@ input[type=file]::file-selector-button { background: var(--accent); color: var(-
 
 /* profile actions */
 .actions { display: grid; grid-template-columns: 1fr; gap: 10px; }
-.actions .arow { display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; align-items: stretch; }
-.actions .primary, .actions .ghost { padding: .65rem 1rem; min-height: 44px; text-align: center; width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; line-height: 1; }
+.actions .arow { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; align-items: stretch; }
+.actions .primary, .actions .ghost { padding: .65rem 1rem; min-height: 44px; text-align: center; width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; line-height: 1; font-family: var(--ui-font, 'Ubuntu Sans'); font-size: .875rem; }
 .actions .arow .ghost { background: color-mix(in srgb, var(--card) 70%, transparent); }
 .safe { display: flex; justify-content: center; align-items: center; gap: 10px; font-size: 0.85em; opacity: .75; }
 .safe .link { display: inline; width: auto; color: var(--text); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: color-mix(in srgb, var(--text) 40%, transparent); }
@@ -372,7 +372,7 @@ input[type=file]::file-selector-button { background: var(--accent); color: var(-
 .page { isolation: isolate; }
 .sticker { z-index: 100; }
 /* keep the sidebar exactly as wide as its column: nothing inside may push it wider */
-.side > * { min-width: 0; } .actions { grid-template-columns: minmax(0, 1fr); } .actions .arow { grid-template-columns: minmax(0, 1fr) auto; }
+.side > * { min-width: 0; } .actions { grid-template-columns: minmax(0, 1fr); } .actions .arow { grid-template-columns: minmax(0, 1fr); }
 .actions .primary, .actions .ghost { padding-left: .6rem; padding-right: .6rem; }
 /* editing: keep the page at the same 1210px design width a wide viewer sees, so sticker spots match what visitors get (scroll sideways on narrower screens) */
 @media (min-width: 1001px) { .page.editing { overflow-x: auto; } .page.editing .frame { min-width: 1210px; } }
@@ -615,9 +615,6 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .player .pplay { position: absolute; inset: 0; display: block; width: 100%; height: 100%; padding: 0; border: 0; background: none; color: #fff; cursor: pointer; }
 .player .pplay .cover { width: 100%; height: 100%; aspect-ratio: auto; object-fit: cover; border-radius: 0; display: block; }
 .player .pplay .cover.ph { display: block; background: color-mix(in srgb, var(--accent) 35%, #000); }
-.player .pbadge { position: absolute; inset: 0; display: grid; place-items: center; background: linear-gradient(transparent 50%, #0007); }
-.player .pbadge .ico { width: 3rem; height: 3rem; padding: .8rem; border-radius: 50%; background: #000a; box-sizing: border-box; transition: transform .15s; }
-.player .pplay:hover .pbadge .ico, .player .pplay:focus-visible .pbadge .ico { transform: scale(1.08); }
 .player .pyt { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #000; }
 
 /* tablet + phone: cover on the left next to title and buttons, seek bar full width underneath */

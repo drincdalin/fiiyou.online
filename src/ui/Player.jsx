@@ -48,7 +48,6 @@ export default function Player({ src, title, artist, cover, cid, children }) {
         <div className="pcover">
           <button type="button" className="pplay" onPointerDown={press} onClick={toggle} aria-label={`${playing ? 'Pause' : 'Play'} ${shownTitle}`}>
             <CoverImg cover={pic} className="cover" />
-            <span className="pbadge"><span className="mp-badge"><PlayGlyph playing={playing} busy={busy} size="1.5rem" /></span></span>
             {playing && <span className="mp-cardeq"><Eq active /></span>}
           </button>
         </div>

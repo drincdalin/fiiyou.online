@@ -186,10 +186,6 @@ html.mp-on .toast { bottom: 90px; }
 html.kb .mp-dock { bottom: 8px; }
 
 /* ---------- the profile card (.player.mpcard): follows the PROFILE's own theme (--text, --accent, --card), not the app chrome ---------- */
-.player.mpcard .pbadge { transition: opacity .2s; }
-.player.mpcard .mp-badge { display: grid; place-items: center; width: 3rem; height: 3rem; border-radius: 50%; background: #000a; color: #fff; transition: transform .15s; }   /* sits on the cover picture: fixed colours */
-.player.mpcard .pplay:hover .mp-badge, .player.mpcard .pplay:focus-visible .mp-badge { transform: scale(1.08); }
-.player.mpcard[data-playing] .pbadge { opacity: 0; } .player.mpcard[data-playing] .pplay:hover .pbadge, .player.mpcard[data-playing] .pplay:focus-visible .pbadge { opacity: 1; }
 .player.mpcard .pplay { overflow: hidden; } .player.mpcard .pplay:focus-visible { outline: 2px solid var(--accent-fg, var(--accent)); outline-offset: -3px; }
 .mp-cardeq { position: absolute; left: 10px; bottom: 10px; color: #fff; filter: drop-shadow(0 1px 3px #000a); }
 .player .mp-cardnote { grid-column: 1 / -1; text-align: center; opacity: .85; font-size: 0.85em; }
