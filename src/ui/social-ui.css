@@ -97,14 +97,15 @@ button.mention:focus-visible { text-decoration: underline; }
 .pbadges { display: inline-flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px; margin-left: 6px; vertical-align: middle; }
 .profile-badge {
   display: inline-flex; align-items: center; gap: 4px;
-  padding: 3px 6px; border: 1px solid currentColor; border-radius: 999px;
-  font-family: inherit; font-size: .5em; font-weight: 800; line-height: 1; letter-spacing: .08em; text-transform: uppercase;
+  padding: 3px 7px; border: 1px solid color-mix(in srgb, currentColor 42%, transparent); border-radius: 999px;
+  background: color-mix(in srgb, currentColor 9%, transparent);
+  font-family: inherit; font-size: .56em; font-weight: 800; line-height: 1; letter-spacing: .075em; text-transform: uppercase;
   white-space: nowrap;
 }
-.profile-badge::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+.profile-badge svg { flex: none; width: .92em; height: .92em; }
 .profile-badge.beta { color: var(--yellow, #ffd84d); }
-.profile-badge.og { color: var(--ink, #f4f4f4); }
 .profile-badge.founder { color: var(--accent-fg, var(--accent, #f4f4f4)); }
+.profile-badge.donor { color: var(--pink, #ff8fb1); }
 
 .pstats { display: inline-flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 7px; margin-top: 2px; }
 .pstats .views { margin: 0; }

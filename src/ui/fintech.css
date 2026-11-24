@@ -163,3 +163,32 @@
   .menu, .nav .more .menu, .sresults, .cand, .dlgcard, .lppop, .toast { animation: none; }
   .like.pop svg, .mheart.pop svg, .plike-stat.pop svg { animation: none; }
 }
+
+/* ------------------------------------------------------------------
+   positional stillness: hover and press never move a control.
+   Colour, border and focus carry the state; the geometry stays put.
+   ------------------------------------------------------------------ */
+:is(.primary, .ghost, .like, .filebtn, .chip, .seg button, .tabs button,
+    .plain .row, .post, .newp button, .top button, .preset,
+    .nav > button, .navlinks button, .nav .more > .avbtn,
+    .sresults button, .mapbar > button, .msearch .primary,
+    .volbtn, .pimg img, .gtile img):not(.page *):hover,
+:is(.primary, .ghost, .like, .filebtn, .chip, .seg button, .tabs button,
+    .plain .row, .post, .newp button, .top button, .preset,
+    .nav > button, .navlinks button, .nav .more > .avbtn,
+    .sresults button, .mapbar > button, .msearch .primary,
+    .volbtn, .pimg img, .gtile img):not(.page *):active {
+  transform: none !important;
+}
+
+/* image zoom is decoration, not navigation */
+.pimg:hover img, .gtile:hover img { transform: none !important; }
+
+/* no decorative row or post lift; the hairline and surface do the work */
+.post:not(.page *):hover { box-shadow: var(--app-shadow) !important; }
+
+/* badge icons get a crisp optical alignment inside the pill */
+.profile-badge svg { transform: translateY(.02em); }
+
+/* the GIF reply keeps the comment column width on phones */
+.cmgif { max-width: 100% !important; }

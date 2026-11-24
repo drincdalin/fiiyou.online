@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { House, User, MapPin, ChatCircle, ShieldCheck, Heart, X, CaretLeft, CaretRight, Flag, PencilSimple, Trash, PaperPlaneRight, ImageSquare, CalendarBlank, ShareNetwork, DotsThree, Clock, ImageBroken, UsersThree, Link as LinkIcon, ArrowSquareOut , SlidersHorizontal } from '@phosphor-icons/react';
+import { House, User, MapPin, ChatCircle, ShieldCheck, Heart, X, CaretLeft, CaretRight, Flag, PencilSimple, Trash, PaperPlaneRight, ImageSquare, CalendarBlank, ShareNetwork, DotsThree, Clock, ImageBroken, UsersThree, Link as LinkIcon, ArrowSquareOut, SlidersHorizontal, Flask, CrownSimple, HandHeart } from '@phosphor-icons/react';
 import PostShareModal from './PostShare.jsx';
 import { posts, safety } from '../index.js';
 import { friendlyError } from './errors.jsx';
@@ -21,16 +21,16 @@ export const spamMessage = (er) => {
 
 /** Small profile badges assigned from the control room. */
 export const BADGE_META = {
-  beta: ['BETA', 'Beta tester'],
-  og: ['OG', 'Original member'],
-  founder: ['FOUNDER', 'Founding member'],
+  beta: ['BETA', 'Beta tester', Flask],
+  founder: ['FOUNDER', 'Founding member', CrownSimple],
+  donor: ['DONOR', 'Supporter', HandHeart],
 };
 export function ProfileBadges({ badges = [] }) {
   const list = (badges || []).filter((k) => BADGE_META[k]);
   if (!list.length) return null;
   return <span className="pbadges">{list.map((k) => {
-    const [label, title] = BADGE_META[k];
-    return <span key={k} className={`profile-badge ${k}`} title={title} aria-label={title}>{label}</span>;
+    const [label, title, Icon] = BADGE_META[k];
+    return <span key={k} className={`profile-badge ${k}`} title={title} aria-label={title}><Icon size="1em" weight="fill" aria-hidden="true" /><span>{label}</span></span>;
   })}</span>;
 }
 

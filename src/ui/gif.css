@@ -99,7 +99,7 @@
 }
 .bub.gif > p { padding: 6px 6px 0; }
 
-.cmgif { width: min(240px, 78vw) !important; max-width: none !important; }
+.cmgif { width: 100% !important; max-width: min(240px, 100%) !important; box-sizing: border-box; overflow: hidden; }
 .cmgif img {
   display: block; width: 100%; height: auto;
   border-radius: 10px; margin: 2px 0 4px;
