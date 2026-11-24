@@ -1,89 +1,132 @@
 /* GIF picker + GIF messages/comments. Loaded from main.jsx after social-ui.css. */
 
+/* ---------- picker: scrim + panel ---------- */
 .gifmodal {
   position: fixed; inset: 0; z-index: 120;
-  display: grid; place-items: center; padding: 18px;
-  background: rgba(0, 0, 0, .74);
+  display: grid; place-items: center; padding: var(--s-4, 16px);
+  background: var(--scrim);
+  animation: giffade var(--dur-2, 200ms) var(--ease-out, ease) backwards;
 }
 .gifpanel {
   position: relative;
-  width: min(660px, 96vw); height: auto; max-height: min(720px, 86vh);
-  max-height: min(720px, 86dvh);
-  display: grid; grid-template-rows: auto auto auto auto;
-  border: 2px solid var(--g3, #333); border-radius: var(--rad-l, 16px);
-  background: var(--g1, #101010); color: var(--text, #f2f2f2);
-  overflow: hidden; box-shadow: 0 24px 70px rgba(0, 0, 0, .55);
+  width: min(660px, 100%); height: auto; max-height: min(720px, 86dvh);
+  display: flex; flex-direction: column;
+  background: var(--g1); color: var(--ink);
+  border: 1px solid var(--g3); border-radius: var(--rad-xl, 16px);
+  overflow: hidden; box-shadow: var(--lift-lg);
+  animation: gifpop var(--dur-2, 200ms) var(--ease-out, ease) backwards;
 }
-.gifhead { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 8px; }
-.gifhead b { font-size: 1rem; letter-spacing: .01em; }
+@keyframes giffade { from { opacity: 0; } }
+@keyframes gifpop { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+@keyframes gifup { from { transform: translateY(100%); } }
+
+.gifhead { flex: none; display: flex; align-items: center; justify-content: space-between; padding: var(--s-4, 16px) var(--s-4, 16px) var(--s-2, 8px); }
+.giftitle { margin: 0; font-size: var(--fs-lg, 1rem); font-weight: 800; letter-spacing: -.01em; }
 .gifclose {
   all: unset; display: grid; place-items: center; width: 34px; height: 34px; cursor: pointer;
-  border-radius: 999px; color: var(--muted, #999);
+  border-radius: var(--rad-m, 10px); color: var(--muted);
 }
-.gifclose:hover, .gifclose:focus-visible { background: var(--g2, #1c1c1c); color: var(--text, #fff); }
+.gifclose:hover, .gifclose:focus-visible { background: var(--hover); color: var(--ink); }
+
 .gifsearch {
-  display: flex; align-items: center; gap: 8px; margin: 0 16px 12px; padding: 0 12px;
-  min-height: 42px; border: 2px solid var(--g3, #333); border-radius: 999px; background: var(--g2, #191919);
-  color: var(--muted, #999);
+  flex: none; display: flex; align-items: center; gap: var(--s-2, 8px);
+  margin: 0 var(--s-4, 16px) var(--s-3, 12px); padding: 0 var(--s-3, 12px);
+  min-height: 42px; border: 1px solid var(--g3); border-radius: var(--rad-m, 10px);
+  background: var(--g0); color: var(--muted);
 }
-.gifsearch:focus-within > svg { color: var(--text, #fff); }
+.gifsearch:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--ring); }
+.gifsearch:focus-within > svg { color: var(--ink); }
 .gifsearch input,
 .gifsearch input:hover,
 .gifsearch input:focus,
 .gifsearch input:focus-visible {
-  flex: 1; min-width: 0; border: 0 !important; border-radius: 0 !important;
+  flex: 1; min-width: 0; min-height: 0; border: 0 !important; border-radius: 0 !important;
   outline: 0 !important; box-shadow: none !important; background: transparent !important;
-  color: var(--text, #fff); font: inherit; font-size: .9375rem; padding: 9px 0;
+  color: var(--ink); font: inherit; font-size: var(--fs-lg, 1rem); padding: 9px 0;
   -webkit-appearance: none; appearance: none;
 }
+.gifsearch input::-webkit-search-cancel-button, .gifsearch input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; display: none; }
 .gifsearch button {
   all: unset; display: grid; place-items: center; width: 26px; height: 26px; cursor: pointer;
-  border-radius: 999px; color: var(--muted, #999);
+  border-radius: var(--rad-s, 8px); color: var(--muted);
 }
-.gifsearch button:hover { color: var(--text, #fff); background: var(--g3, #333); }
-.gifscroll { min-height: 0; max-height: min(520px, 62vh);
-  max-height: min(520px, 62dvh); overflow-y: auto; overscroll-behavior: contain; padding: 0 12px 12px;
-  scrollbar-width: none; -ms-overflow-style: none; }
-.gifscroll::-webkit-scrollbar { width: 0; height: 0; }
-.gifsearch input::-webkit-search-cancel-button, .gifsearch input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; display: none; }
-.gifgrid { column-width: 116px; column-gap: 8px; }
+.gifsearch button:hover, .gifsearch button:focus-visible { color: var(--ink); background: var(--hover); }
+
+.gifscroll { flex: 1 1 auto; min-height: 0; max-height: min(520px, 62dvh); overflow-y: auto; overscroll-behavior: contain; padding: 0 var(--s-3, 12px) var(--s-3, 12px); }
+
+.gifgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-2, 8px); }
+@media (min-width: 480px) { .gifgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 700px) { .gifgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
 .giftile {
-  all: unset; display: block; cursor: pointer; overflow: hidden;
-  margin: 0 0 8px; break-inside: avoid;
-  border-radius: 12px; background: #050505; border: 2px solid transparent;
+  all: unset; position: relative; display: block; cursor: pointer;
+  aspect-ratio: 1 / 1; border-radius: var(--rad-m, 10px); overflow: hidden;
+  background: var(--g2); -webkit-tap-highlight-color: transparent;
 }
-.giftile:hover, .giftile:focus-visible { border-color: var(--accent, #d6d6d6); }
-.giftile img { display: block; width: 100%; height: auto; }
-.gifskel { display: block; aspect-ratio: 1; margin: 0 0 8px; break-inside: avoid; border-radius: 12px; background: linear-gradient(100deg, #171717 20%, #242424 40%, #171717 60%); background-size: 220% 100%; animation: gifskel 1.2s linear infinite; }
-@keyframes gifskel { to { background-position: -220% 0; } }
-.gifmsg { padding: 36px 20px; text-align: center; color: var(--muted, #999); font-size: .9375rem; }
-.gifstart { padding: 18px 6px 22px; color: var(--muted, #999); font-size: .875rem; }
-.gifstart p { margin: 0 0 10px; }
-.giflead { color: var(--text, #eee); font-size: 1rem; font-weight: 700; margin-bottom: 4px !important; }
-.gifchips { display: flex; flex-wrap: wrap; gap: 8px; }
+.giftile img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.giftile:hover img { filter: brightness(1.07); }
+.giftile:active { transform: scale(var(--press, .97)); }
+
+.gifskel {
+  display: block; position: relative; overflow: hidden;
+  aspect-ratio: 1 / 1; border-radius: var(--rad-m, 10px); background: var(--g2);
+}
+.gifskel::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--ink) 9%, transparent) 50%, transparent 70%);
+  transform: translateX(-100%); animation: gifshimmer 1.4s infinite;
+}
+@keyframes gifshimmer { to { transform: translateX(100%); } }
+
+.gifstate { display: grid; justify-items: center; gap: var(--s-2, 8px); padding: var(--s-8, 32px) var(--s-4, 16px); text-align: center; color: var(--muted); }
+.gifstatet { margin: 0; color: var(--ink); font-size: var(--fs-lg, 1rem); font-weight: 700; }
+.gifstateh { margin: 0; font-size: var(--fs-md, .875rem); line-height: var(--lh-snug, 1.35); }
+.gifstate .primary { margin-top: var(--s-1, 4px); }
+
+.gifstart { padding: var(--s-4, 16px) var(--s-2, 8px) var(--s-5, 20px); color: var(--muted); font-size: var(--fs-md, .875rem); text-align: center; }
+.gifstart p { margin: 0 0 var(--s-2, 8px); }
+.giflead { color: var(--ink); font-size: var(--fs-lg, 1rem); font-weight: 800; margin-bottom: var(--s-1, 4px) !important; }
+.gifchips { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s-2, 8px); margin-top: var(--s-3, 12px); }
 .gifchips button {
-  all: unset; cursor: pointer; padding: 7px 12px; border-radius: 999px;
-  border: 1.5px solid var(--g3, #333); background: var(--g2, #191919); color: var(--text, #eee);
-  font-size: .8125rem;
+  all: unset; cursor: pointer; padding: 0 var(--s-4, 16px); min-height: 34px;
+  border: 1px solid var(--g4); border-radius: 999px; background: var(--g1); color: var(--ink2);
+  font-size: var(--fs-sm, .8125rem); font-weight: 600;
 }
-.gifchips button:hover, .gifchips button:focus-visible { border-color: var(--g4, #666); }
-.giffoot { padding: 9px 16px max(12px, env(safe-area-inset-bottom)); border-top: 1px solid var(--g3, #2a2a2a); color: var(--muted, #888); font-size: .75rem; }
+.gifchips button:hover, .gifchips button:focus-visible { background: var(--hover); color: var(--ink); border-color: var(--accent-fg); }
+
+.giffoot { flex: none; display: flex; gap: var(--s-1, 4px); padding: var(--s-2, 8px) var(--s-4, 16px) max(var(--s-3, 12px), env(safe-area-inset-bottom)); border-top: 1px solid var(--g3); color: var(--muted); font-size: var(--fs-xs, .75rem); }
 .giffoot a { color: inherit; text-underline-offset: 2px; }
 
+/* ---------- phone: bottom sheet ---------- */
+@media (max-width: 700px) {
+  .gifmodal { padding: 0; place-items: end center; }
+  .gifpanel { width: 100%; height: auto; max-height: 88dvh; border-radius: 20px 20px 0 0; border-bottom: 0; animation: gifup var(--dur-2, 200ms) var(--ease-out, ease) backwards; }
+  .gifpanel::before { content: ''; position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 38px; height: 4px; border-radius: 2px; background: var(--g4); }
+  .gifhead { padding-top: var(--s-6, 24px); }
+  .gifscroll { max-height: 66dvh; }
+}
+
+/* ---------- reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .gifmodal, .gifpanel { animation: none; }
+  .gifskel::after { animation: none; }
+}
+
+/* ---------- the trigger button (chat + comment composer) ---------- */
 .gifbtn {
   all: unset; flex: none; display: grid; place-items: center; cursor: pointer;
-  width: 46px; height: 46px; border-radius: var(--rad-l, 14px);
-  background: var(--g2, #191919); color: var(--muted, #bbb);
+  width: 46px; height: 46px; border-radius: var(--rad-l, 12px);
+  background: var(--g2); color: var(--ink2);
 }
-.gifbtn:hover, .gifbtn:focus-visible, .gifbtn[aria-expanded="true"] { color: var(--text, #fff); background: var(--g3, #2a2a2a); }
+.gifbtn:hover, .gifbtn:focus-visible, .gifbtn[aria-expanded="true"] { color: var(--ink); background: var(--hover); }
 .gifbtn svg { display: block; }
 
 /* Chat field: a textarea keeps Android from treating the composer as a login form.
    It starts one line high and grows to four lines. */
 .cthread .inline textarea.chatbox {
   flex: 1 1 14rem; min-width: 0; width: auto; height: 46px; min-height: 46px; max-height: 124px;
-  padding: .7rem 1rem; border: 2px solid transparent; border-radius: var(--rad-l, 14px);
-  background: var(--g2, #191919); color: var(--text, #fff);
+  padding: .7rem 1rem; border: 2px solid transparent; border-radius: var(--rad-l, 12px);
+  background: var(--g2); color: var(--text, #fff);
   font: inherit; font-size: 1rem; line-height: 1.35; resize: none; overflow-y: hidden; scrollbar-width: none; -ms-overflow-style: none;
 }
 .cthread .inline textarea.chatbox:focus, .cthread .inline textarea.chatbox:focus-visible { border-color: transparent; outline: 0; box-shadow: none; }
@@ -113,15 +156,9 @@
 .cmgifpick span { flex: 1; min-width: 0; color: var(--muted, #999); font-size: .8125rem; }
 .cmgifpick button { all: unset; cursor: pointer; color: var(--muted, #999); padding: 8px; border-radius: 999px; }
 .cmgifpick button:hover { color: var(--text, #fff); background: var(--g3, #2a2a2a); }
-.cmform .gifbtn { width: var(--pair-h, 40px); height: var(--pair-h, 40px); border-radius: var(--rad-l, 14px); }
-.cmform .primary.sendbtn { width: var(--pair-h, 40px); height: var(--pair-h, 40px); padding: 0; border-radius: var(--rad-l, 14px); }
+.cmform .gifbtn { width: var(--pair-h, 40px); height: var(--pair-h, 40px); border-radius: var(--rad-l, 12px); }
+.cmform .primary.sendbtn { width: var(--pair-h, 40px); height: var(--pair-h, 40px); padding: 0; border-radius: var(--rad-l, 12px); }
 
 @media (max-width: 560px) {
-  .gifmodal { padding: 0; place-items: end center; }
-  .gifpanel { width: 100vw; height: auto; max-height: 88vh; max-height: 88dvh; border-radius: 18px 18px 0 0; border-bottom: 0; }
-  .gifpanel::before { content: ''; position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 38px; height: 4px; border-radius: 2px; background: var(--g4, #4a4a4a); }
-  .gifhead { padding-top: 22px; }
-  .gifscroll { max-height: 66vh; max-height: 66dvh; }
-  .gifgrid { column-width: 100px; }
   .cthread .inline textarea.chatbox { font-size: 16px; }   /* iOS does not zoom on focus */
 }
