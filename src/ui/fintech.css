@@ -14,10 +14,10 @@
   --app-radius-control: 12px;
   --app-hairline: color-mix(in srgb, var(--g3) 72%, transparent);
   --app-hairline-strong: color-mix(in srgb, var(--g3) 52%, var(--g4));
-  --app-shadow: 0 4px 20px -2px color-mix(in srgb, var(--shade) 45%, transparent),
-                0 1px 0 color-mix(in srgb, var(--ink) 4%, transparent);
-  --app-shadow-hover: 0 10px 28px -10px color-mix(in srgb, var(--shade) 65%, transparent),
-                      0 1px 0 color-mix(in srgb, var(--ink) 5%, transparent);
+  --app-shadow: 0 1px 2px color-mix(in srgb, var(--shade) 24%, transparent),
+                0 8px 24px -20px color-mix(in srgb, var(--shade) 55%, transparent);
+  --app-shadow-hover: 0 1px 2px color-mix(in srgb, var(--shade) 28%, transparent),
+                      0 10px 28px -22px color-mix(in srgb, var(--shade) 60%, transparent);
   --app-ease: cubic-bezier(.2, .7, .2, 1);
 }
 
@@ -124,7 +124,42 @@
    small interaction polish
    ------------------------------------------------------------------ */
 .post:not(.page *) { transition: border-color .18s var(--app-ease), box-shadow .18s var(--app-ease), background-color .18s var(--app-ease); }
-.post:not(.page *):hover { border-color: var(--app-hairline-strong); box-shadow: var(--app-shadow-hover); }
+.post:not(.page *):hover { border-color: var(--app-hairline-strong); box-shadow: var(--app-shadow); }
 @media (prefers-reduced-motion: reduce) {
   :is(.primary, .ghost, .post, .plain .row):not(.page *) { transition: none; }
+}
+
+/* ------------------------------------------------------------------
+   motion: only state changes, never decorative movement.
+   No page rise, no hover lift, no bouncy dialogs. A short opacity fade
+   is reserved for menus and dialogs; feedback lives in colour + focus.
+   ------------------------------------------------------------------ */
+@keyframes app-fade { from { opacity: 0; } }
+@keyframes app-like { 0% { transform: scale(1); } 38% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+.view,
+.tabs + :is(div, ul, section, form),
+.seg + :is(div, ul, section, form) { animation: none !important; }
+
+.menu, .nav .more .menu, .sresults, .cand, .dlgcard, .lppop, .toast {
+  animation: app-fade .12s ease-out;
+}
+.nav .more .menu { transform-origin: top right; }
+
+:is(.primary, .ghost):not(.page *):hover:not(:disabled):not([aria-busy=true]) {
+  transform: none;
+  filter: none;
+  box-shadow: none;
+}
+:is(.primary, .ghost):not(.page *):active:not(:disabled):not([aria-busy=true]) {
+  transform: scale(.99);
+}
+.post:not(.page *):hover { box-shadow: var(--app-shadow); }
+.plain .row:not(.page *) { transition: background-color .16s var(--app-ease), border-color .16s var(--app-ease); }
+
+.like.pop svg, .mheart.pop svg, .plike-stat.pop svg { animation: app-like .26s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .menu, .nav .more .menu, .sresults, .cand, .dlgcard, .lppop, .toast { animation: none; }
+  .like.pop svg, .mheart.pop svg, .plike-stat.pop svg { animation: none; }
 }
