@@ -1,7 +1,8 @@
 import { supabase, unwrap } from '../lib/client.js';
 import { uploadImage, deleteImage } from './media.js';
+import { cleanPhoneTheme } from '../lib/phoneLayout.js';
 
-const EDITABLE = ['display_name', 'headline', 'bio', 'locality_id', 'show_on_map', 'wall_policy', 'theme', 'music', 'custom_css', 'onboarded_at'];
+const EDITABLE = ['display_name', 'headline', 'bio', 'locality_id', 'show_on_map', 'wall_policy', 'theme', 'music', 'custom_css', 'onboarded_at', 'phone_theme'];
 
 export async function getMyProfile() {
   const { data: { user } } = await supabase.auth.getUser();
@@ -67,6 +68,10 @@ export async function updateMyProfile(patch) {
 
 /** theme keys: bg_color, text_color, link_color, accent_color, border_color, bg_image, bg_repeat, font, cursor */
 export const updateTheme = (theme) => updateMyProfile({ theme });
+
+/** Phone theme override: only bg_image and font_size may differ (the accent stays shared).
+ *  {} = fall back to the desktop theme. Validated server-side by is_valid_phone_theme. */
+export const updateMyPhoneTheme = (phoneTheme) => updateMyProfile({ phone_theme: cleanPhoneTheme(phoneTheme) });
 
 export async function setAvatar(file) {
   const me = await getMyProfile();

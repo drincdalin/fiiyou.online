@@ -1,5 +1,6 @@
 import { supabase, unwrap } from '../lib/client.js';
 import { safeGeometry } from '../lib/cardGeometry.js';
+import { cleanPhoneLayout } from '../lib/phoneLayout.js';
 
 /** Card types: about | text | image | gallery | links | interests | music | top_friends | guestbook
  *  content shapes (plain data, never HTML):
@@ -32,6 +33,15 @@ export async function deleteCard(cardOrId) {
 /** layout = [{id, x, y, w, h, z, rotation}] — call on drag/resize end (debounce it). */
 export async function saveLayout(layout) {
   unwrap(await supabase.rpc('save_card_layout', { p_layout: layout }));
+}
+
+/** Phone-only layout for one card (order / visible / w / h, or pin / y / scale for a sticker).
+ *  Cleaned first like updateMyPhoneTheme (the allowed keys depend on the card type), so a stray
+ *  value never fails the whole save; the database (is_valid_phone_layout) is still the final check.
+ *  {} = fall back to the desktop layout. */
+export async function updateCardPhoneLayout(id, layout) {
+  const card = unwrap(await supabase.from('profile_cards').select('type').eq('id', id).single());
+  return unwrap(await supabase.from('profile_cards').update({ phone_layout: cleanPhoneLayout(card, layout) }).eq('id', id).select().single());
 }
 
 export async function listMine() {
