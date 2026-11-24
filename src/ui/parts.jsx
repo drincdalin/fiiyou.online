@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { House, User, MapPin, ChatCircle, ShieldCheck, Heart, X, CaretLeft, CaretRight, Flag, PencilSimple, Trash, PaperPlaneRight, ImageSquare, CalendarBlank, ShareNetwork, DotsThree, Clock, ImageBroken, UsersThree, Link as LinkIcon, ArrowSquareOut, SlidersHorizontal, Flask, CrownSimple, HandHeart } from '@phosphor-icons/react';
+import { House, User, MapPin, ChatCircle, ShieldCheck, Heart, X, CaretLeft, CaretRight, Flag, PencilSimple, Trash, PaperPlaneRight, ImageSquare, CalendarBlank, ShareNetwork, DotsThree, Clock, ImageBroken, UsersThree, Link as LinkIcon, ArrowSquareOut, SlidersHorizontal, Flask, Star, CrownSimple, HandHeart } from '@phosphor-icons/react';
 import PostShareModal from './PostShare.jsx';
 import { posts, safety } from '../index.js';
 import { friendlyError } from './errors.jsx';
@@ -22,6 +22,7 @@ export const spamMessage = (er) => {
 /** Small profile badges assigned from the control room. */
 export const BADGE_META = {
   beta: ['BETA', 'Beta tester', Flask],
+  og: ['OG', 'Original member', Star],
   founder: ['FOUNDER', 'Founding member', CrownSimple],
   donor: ['DONOR', 'Supporter', HandHeart],
 };

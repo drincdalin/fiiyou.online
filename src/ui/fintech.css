@@ -192,3 +192,9 @@
 
 /* the GIF reply keeps the comment column width on phones */
 .cmgif { max-width: 100% !important; }
+
+/* profile controls still keep their geometry too; only the owner's colours/fonts vary */
+:is(.top button, .page .volbtn, .page .like, .page .gtile img, .page .player .ctrl button):hover,
+:is(.top button, .page .volbtn, .page .like, .page .gtile img, .page .player .ctrl button):active {
+  transform: none !important;
+}

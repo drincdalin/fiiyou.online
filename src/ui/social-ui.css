@@ -104,6 +104,7 @@ button.mention:focus-visible { text-decoration: underline; }
 }
 .profile-badge svg { flex: none; width: .92em; height: .92em; }
 .profile-badge.beta { color: var(--yellow, #ffd84d); }
+.profile-badge.og { color: var(--ink, #f4f4f4); }
 .profile-badge.founder { color: var(--accent-fg, var(--accent, #f4f4f4)); }
 .profile-badge.donor { color: var(--pink, #ff8fb1); }
 
