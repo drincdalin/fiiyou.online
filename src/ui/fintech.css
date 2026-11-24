@@ -35,9 +35,11 @@
 :is(.panel, .authcard, .modal .panel, .modal .mform):not(.page *) {
   padding: 22px;
 }
-.post:not(.page *) { padding: 17px 19px; }
-.composer.panel:not(.page *) { padding: 16px 18px; }
-.snap.panel:not(.page *) { padding: 18px; }
+.post:not(.page *) { padding: var(--s-4); gap: var(--s-3); }
+.composer.panel:not(.page *) { padding: var(--s-4); }
+.snap.panel:not(.page *) { padding: var(--s-4); }
+/* feed: one tighter rhythm between the composer, tabs and post cards (phones keep their own 12px) */
+@media (min-width: 701px) { .homegrid, .homemain { gap: var(--s-4); } }
 .menu:not(.page *), .sresults:not(.page *), .cand:not(.page *) { padding: 6px; }
 
 /* list rows: same quiet edge, slightly tighter than a card */
