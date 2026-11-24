@@ -95,6 +95,12 @@ export async function setProfileLike(profileId, on) {
   else unwrap(await supabase.from('profile_likes').delete().eq('profile_id', profileId).eq('liker_id', user.id));
 }
 
+/** Current like state for one profile (count + did I like it), for a lightweight refetch on window focus. */
+export async function getProfileLikeState(profileId) {
+  const [s] = unwrap(await supabase.rpc('profile_like_state', { p_profile: profileId })) || [];
+  return { count: Number(s?.count || 0), liked: !!s?.liked };
+}
+
 /** Who liked this profile, newest first (privacy and blocks are enforced by the database). */
 export async function listProfileLikers(profileId) {
   return unwrap(await supabase.rpc('profile_likers', { p_profile: profileId })) || [];

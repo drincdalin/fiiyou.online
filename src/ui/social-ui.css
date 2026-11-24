@@ -95,16 +95,17 @@ button.mention:focus-visible { text-decoration: underline; }
 
 /* Profile badges + profile likes */
 .pbadges { display: inline-flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px; margin-left: 6px; vertical-align: middle; }
+/* One pill, one height, one icon size for every badge. Flat fill + hairline, no gradient or glow. */
 .profile-badge {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 3px 7px 3px 6px; border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--pb, var(--ink)) 70%, #000);
-  background: var(--pb, var(--g3)); color: var(--pb-ink, #fff);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 1px 2px rgba(0, 0, 0, .22);
-  font-family: inherit; font-size: .6em; font-weight: 850; line-height: 1;
-  letter-spacing: .06em; text-transform: uppercase; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: .4em;
+  height: 1.5em; padding: 0 .55em;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--pb-ink) 30%, transparent);
+  background: var(--pb, var(--g3)); color: var(--pb-ink, var(--ink));
+  font-family: inherit; font-size: .6em; font-weight: 800; line-height: 1;
+  letter-spacing: .08em; text-transform: uppercase; white-space: nowrap;
 }
-.profile-badge svg { flex: none; width: .95em; height: .95em; color: currentColor; }
+.profile-badge svg { flex: none; width: .85em; height: .85em; color: currentColor; }
 .profile-badge.beta { --pb: #7cc4ff; --pb-ink: #001522; }
 .profile-badge.og { --pb: #f6c86a; --pb-ink: #241600; }
 .profile-badge.founder { --pb: #c3a6ff; --pb-ink: #17002e; }
@@ -116,11 +117,19 @@ button.mention:focus-visible { text-decoration: underline; }
   all: unset; display: inline-flex; align-items: center; gap: 3px; cursor: pointer;
   padding: 2px 6px; border-radius: 99px; color: var(--muted, #a6a6a6);
   font: inherit; font-size: .8em; font-weight: 700; line-height: 1.15;
+  transition: transform .12s var(--ease, ease), color .15s ease, background-color .15s ease;
 }
 .plike-stat:hover, .plike-stat:focus-visible { color: var(--ink, #f4f4f4); background: color-mix(in srgb, var(--ink, #f4f4f4) 8%, transparent); }
+.plike-stat:active { transform: scale(.88); }
 .plike-stat.on { color: var(--accent-fg, var(--accent, #ff6b6b)); background: color-mix(in srgb, var(--accent-fg, var(--accent, #ff6b6b)) 11%, transparent); }
-.plike-stat b { font-variant-numeric: tabular-nums; }
+.plike-stat b { display: inline-block; font-variant-numeric: tabular-nums; transform-origin: 50% 50%; }
 .plike-stat span { opacity: .78; }
 .plike-stat svg { flex: none; }
 .plike-stat.pop svg { animation: plike-pop .48s var(--ease, ease); }
+.plike-stat.pop b { animation: plike-count .34s var(--ease, ease); }
 @keyframes plike-pop { 0% { transform: scale(1); } 32% { transform: scale(1.45) rotate(-8deg); } 65% { transform: scale(.92) rotate(4deg); } 100% { transform: scale(1); } }
+@keyframes plike-count { 0% { transform: scale(1); } 40% { transform: scale(1.4); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .plike-stat { transition: none; }
+  .plike-stat.pop svg, .plike-stat.pop b { animation: none; }
+}
