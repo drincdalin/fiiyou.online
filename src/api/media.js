@@ -1,5 +1,6 @@
 import { supabase, unwrap } from '../lib/client.js';
 import { draftMediaPaths } from '../lib/draftStore.js';
+import { loadImageSource } from '../lib/imageSource.js';
 
 const BUCKET = 'media';
 const MAX_BYTES = 1_500_000;        // keep under bucket limit (1572864)
@@ -14,9 +15,22 @@ export const PRESETS = { avatar: { max: 512, kb: 60 }, sticker: { max: 420, kb: 
 const GIF_MAX = { sticker: 300_000, default: 600_000 };
 const QUALITY = [0.8, 0.68, 0.55, 0.42, 0.32];           // tried in this order at each size
 let webpEncoder = null;                                    // Safari (and some older browsers) silently return PNG for image/webp
+
+/** crypto.randomUUID is missing before iOS 15.4 and outside a secure context; uploads must not stop for that. */
+const uid = () => globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+
+/** OffscreenCanvas where available, document canvas on older iOS/Safari. */
+function makeCanvas(w, h) {
+  if (typeof OffscreenCanvas !== 'undefined') return new OffscreenCanvas(w, h);
+  const c = document.createElement('canvas'); c.width = w; c.height = h; return c;
+}
+function toBlob(canvas, type, quality) {
+  if (canvas.convertToBlob) return canvas.convertToBlob({ type, quality });
+  return new Promise((resolve) => canvas.toBlob((b) => resolve(b), type, quality));
+}
 async function canEncodeWebp() {
   if (webpEncoder !== null) return webpEncoder;
-  try { const b = await new OffscreenCanvas(1, 1).convertToBlob({ type: 'image/webp', quality: 0.8 }); webpEncoder = b.type === 'image/webp'; }
+  try { const b = await toBlob(makeCanvas(1, 1), 'image/webp', 0.8); webpEncoder = b?.type === 'image/webp'; }
   catch { webpEncoder = false; }
   return webpEncoder;
 }
@@ -29,12 +43,12 @@ async function encodeImage(file, preset = 'photo') {
   if (file.type === 'image/gif') {                       // keep animation; must already be small
     const cap = isSticker ? GIF_MAX.sticker : GIF_MAX.default;
     if (file.size > cap) throw new Error(`GIF is over ${Math.round(cap / 1000)} KB. Use a smaller GIF or a still image.`);
-    const g = await createImageBitmap(file); const w = g.width, h = g.height; g.close?.();
+    const g = await loadImageSource(file); const w = g.width, h = g.height; g.close?.();
     if (preset === 'avatar' && Math.abs(w - h) > 1)      // a GIF cannot be cropped here without losing the animation, so it must already be square
       throw new Error('Animated avatars must be square (same width and height). Crop the GIF, or use a still image.');
     return { blob: file, width: w, height: h };
   }
-  const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  const bmp = await loadImageSource(file);
   try {
     // Avatars are stored SQUARE. Everything that shows one (circles, the 5:6 profile frame, chat bubbles, notifications) then looks right
     // without guessing. Landscape: centred. Portrait: the square starts 30% from the top, because faces sit in the upper part of a photo.
@@ -44,13 +58,15 @@ async function encodeImage(file, preset = 'photo') {
     let scale = Math.min(1, max / Math.max(sw, sh)), blob = null, cw = 1, ch = 1;
     for (let round = 0; round < 7; round++) {
       cw = Math.max(1, Math.round(sw * scale)); ch = Math.max(1, Math.round(sh * scale));
-      const c = new OffscreenCanvas(cw, ch); const g = c.getContext('2d');
+      const c = makeCanvas(cw, ch); const g = c.getContext('2d');
+      if (!g) throw new Error('This phone could not prepare the photo. Try a smaller one.');
       g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
-      g.drawImage(bmp, sx, sy, sw, sh, 0, 0, cw, ch);
+      g.drawImage(bmp.source, sx, sy, sw, sh, 0, 0, cw, ch);
       // WebP where it can really be written; JPEG for photos elsewhere; PNG only for stickers, which need transparency.
       const type = useWebp ? 'image/webp' : (isSticker ? 'image/png' : 'image/jpeg');
       for (const q of QUALITY) {
-        const b = type === 'image/png' ? await c.convertToBlob({ type }) : await c.convertToBlob({ type, quality: q });
+        const b = await toBlob(c, type, type === 'image/png' ? undefined : q);
+        if (!b) { blob = null; break; }                 // encoder refused this type: shrink and try again, never read .size of null
         blob = b;
         if (b.size <= kb * 1024) return { blob: b, width: cw, height: ch };
         if (type === 'image/png') break;   // PNG has no quality knob: shrink the picture instead
@@ -78,10 +94,11 @@ async function myId() {
 }
 
 async function store(blob) {
-  const ext = { 'image/gif': 'gif', 'image/png': 'png', 'image/jpeg': 'jpg' }[blob.type] || 'webp';   // normally webp; the others only when a browser cannot write WebP
-  const path = `${await myId()}/${crypto.randomUUID()}.${ext}`;
+  const type = blob.type || 'image/jpeg';
+  const ext = { 'image/gif': 'gif', 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' }[type] || 'jpg';
+  const path = `${await myId()}/${uid()}.${ext}`;
   unwrap(await supabase.storage.from(BUCKET).upload(path, blob, {
-    contentType: blob.type, cacheControl: '31536000', upsert: false,
+    contentType: type, cacheControl: '31536000', upsert: false,
   }));
   return path;
 }
@@ -151,7 +168,7 @@ export async function uploadFont(file) {
   const [ext, type] = FONT_MAGIC[tag(new Uint8Array(buf, 0, 4))] || [];
   if (!ext) throw new Error('Unsupported font. Use a .woff2, .woff, .otf or .ttf file.');
   try { await new FontFace('uf-check', buf).load(); } catch { throw new Error('That font file could not be read. It may be damaged.'); }
-  const path = `${await myId()}/${crypto.randomUUID()}.${ext}`;
+  const path = `${await myId()}/${uid()}.${ext}`;
   unwrap(await supabase.storage.from('fonts').upload(path, new Blob([buf], { type }), { contentType: type, upsert: false }));
   return path;
 }

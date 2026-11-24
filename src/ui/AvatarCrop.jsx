@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { Component, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, X } from '@phosphor-icons/react';
+import { loadImageSource } from '../lib/imageSource.js';
 import './avatarCrop.css';
 
 const VIEW = 300;       // CSS pixels of the square
@@ -18,20 +19,44 @@ function drawSquare(ctx, bmp, zoom, offset) {
   ctx.clearRect(0, 0, VIEW, VIEW);
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(bmp, x0, y0, iw, ih);
+  ctx.drawImage(bmp.source, x0, y0, iw, ih);
 }
 
 function makeBlob(canvas) {
+  // JPEG first: every iPhone Safari can write it. WebP encoding is still unreliable there, and the
+  // server re-encodes the crop anyway, so there is nothing to gain from choosing WebP here.
   return new Promise((resolve) => {
-    canvas.toBlob((b) => {
-      if (b) return resolve(b);
-      canvas.toBlob((png) => resolve(png), 'image/png');
-    }, 'image/webp', 0.92);
+    try {
+      canvas.toBlob((b) => {
+        if (b) return resolve(b);
+        canvas.toBlob((png) => resolve(png || null), 'image/png');   // last resort (no alpha needed, but always works)
+      }, 'image/jpeg', 0.92);
+    } catch { resolve(null); }
   });
 }
 
+/** Anything unexpected inside the dialog stays inside the dialog instead of replacing the whole app with
+ *  "Something broke." The page and the photo the person picked are untouched, and they can simply close it. */
+class CropBoundary extends Component {
+  state = { e: null };
+  static getDerivedStateFromError(e) { return { e }; }
+  render() {
+    if (!this.state.e) return this.props.children;
+    return createPortal(
+      <div className="acmodal" role="presentation">
+        <div className="acpanel" role="dialog" aria-modal="true" aria-label="Profile picture">
+          <div className="achead"><h3>Profile picture</h3><button type="button" className="acclose" aria-label="Close" title="Close" onClick={this.props.onCancel}><X size={18} weight="bold" aria-hidden="true" /></button></div>
+          <p className="acerr" role="alert">That picture could not be prepared on this phone. Try again, or pick a JPEG photo.</p>
+          <div className="acactions"><button type="button" className="ghost" onClick={this.props.onCancel}>Close</button></div>
+        </div>
+      </div>,
+      document.body,
+    );
+  }
+}
+
 /** Square crop for a profile picture. Drag to move, slider (or wheel) to zoom. */
-export default function AvatarCrop({ file, onCancel, onDone, title = 'Crop profile picture' }) {
+function CropDialog({ file, onCancel, onDone, title = 'Crop profile picture' }) {
   const [bmp, setBmp] = useState(null);
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -47,9 +72,7 @@ export default function AvatarCrop({ file, onCancel, onDone, title = 'Crop profi
     let dead = false;
     (async () => {
       try {
-        let image;
-        try { image = await createImageBitmap(file, { imageOrientation: 'from-image' }); }
-        catch { image = await createImageBitmap(file); }
+        const image = await loadImageSource(file);
         if (dead) { image.close?.(); return; }
         bmpRef.current?.close?.();
         bmpRef.current = image;
@@ -57,7 +80,7 @@ export default function AvatarCrop({ file, onCancel, onDone, title = 'Crop profi
         const base = Math.max(VIEW / image.width, VIEW / image.height);
         const ih = image.height * base;
         setOffset({ x: 0, y: ih > VIEW ? -(ih - VIEW) * 0.15 : 0 });   // portraits start a little above the middle
-      } catch { if (!dead) setErr('That picture could not be opened. Try a JPEG or PNG.'); }
+      } catch (e) { if (!dead) setErr(e.message || 'That picture could not be opened. Try a JPEG or PNG.'); }
     })();
     return () => { dead = true; };
   }, [file]);
@@ -66,7 +89,7 @@ export default function AvatarCrop({ file, onCancel, onDone, title = 'Crop profi
 
   useEffect(() => {
     const c = canvas.current; if (!c || !bmp) return;
-    const ctx = c.getContext('2d');
+    const ctx = c.getContext('2d'); if (!ctx) return;
     ctx.setTransform(CANVAS / VIEW, 0, 0, CANVAS / VIEW, 0, 0);
     drawSquare(ctx, bmp, zoom, offset);
   }, [bmp, zoom, offset]);
@@ -120,11 +143,13 @@ export default function AvatarCrop({ file, onCancel, onDone, title = 'Crop profi
       const y0 = (VIEW - bmp.height * s) / 2 + offsetRef.current.y;
       const out = document.createElement('canvas'); out.width = out.height = OUT;
       const ctx = out.getContext('2d');
+      if (!ctx) throw new Error('This phone could not prepare the picture. Try a smaller photo.');
       ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(bmp, (-x0) / s, (-y0) / s, VIEW / s, VIEW / s, 0, 0, OUT, OUT);
+      ctx.drawImage(bmp.source, (-x0) / s, (-y0) / s, VIEW / s, VIEW / s, 0, 0, OUT, OUT);
       const blob = await makeBlob(out);
-      if (!blob) throw new Error('Could not crop that picture.');
+      if (!blob) throw new Error('Could not crop that picture. Try a different photo.');
       await onDone(blob);
+      setSaving(false);
     } catch (e) { setErr(e.message || 'Could not save that crop.'); setSaving(false); }
   };
 
@@ -146,4 +171,8 @@ export default function AvatarCrop({ file, onCancel, onDone, title = 'Crop profi
     </div>,
     document.body,
   );
+}
+
+export default function AvatarCrop(props) {
+  return <CropBoundary onCancel={props.onCancel}><CropDialog {...props} /></CropBoundary>;
 }

@@ -125,8 +125,12 @@ export default function Onboarding({ me, inviter: rawInviter, onDone, notify }) 
   };
   const cropDone = async (blob) => {
     setCrop(null);
-    const file = new File([blob], `avatar.${blob.type === 'image/png' ? 'png' : 'webp'}`, { type: blob.type || 'image/webp' });
-    if (!(await run(async () => { const p = await profiles.setAvatar(file); setAvatar(p.avatar_path); }))) setPreview(null);
+    if (preview) URL.revokeObjectURL(preview);
+    const square = URL.createObjectURL(blob);   // show the real crop, not the original (HEIC) file
+    setPreview(square);
+    if (!(await run(async () => { const p = await profiles.setAvatar(blob); setAvatar(p.avatar_path); }))) {
+      URL.revokeObjectURL(square); setPreview(null);
+    }
   };
   const add = async (p) => {
     setAdding((a) => ({ ...a, [p.id]: 1 }));

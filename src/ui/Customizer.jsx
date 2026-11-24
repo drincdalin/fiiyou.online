@@ -870,7 +870,6 @@ function MusicSection({ ctx }) {
 function ProfileTab({ ctx }) {
   const { draft, setField, locs, run, busy, reload, notify } = ctx;
   const [crop, setCrop] = useState(null);
-  const save = (blob) => new File([blob], `avatar.${blob.type === 'image/png' ? 'png' : 'webp'}`, { type: blob.type || 'image/webp' });
   const pick = (file) => {
     if (!file) return;
     if (file.type === 'image/gif') return run(async () => { await profiles.setAvatar(file); await reload(); notify('Avatar updated'); });   // cropping would freeze the animation
@@ -902,7 +901,7 @@ function ProfileTab({ ctx }) {
 
       <TopFriends ctx={ctx} />
       <MusicSection ctx={ctx} />
-      {crop && <AvatarCrop file={crop} onCancel={() => setCrop(null)} onDone={async (blob) => { setCrop(null); await run(async () => { await profiles.setAvatar(save(blob)); await reload(); notify('Avatar updated'); }); }} />}
+      {crop && <AvatarCrop file={crop} onCancel={() => setCrop(null)} onDone={async (blob) => { setCrop(null); await run(async () => { await profiles.setAvatar(blob); await reload(); notify('Avatar updated'); }); }} />}
     </>
   );
 }
