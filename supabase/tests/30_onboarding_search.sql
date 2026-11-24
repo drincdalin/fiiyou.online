@@ -16,8 +16,9 @@ begin
   perform t.ok((select onboarded_at is null from public.profiles where id = a), 'new account is not onboarded yet');
 
   perform t.as_user(a);
+  update public.profiles set avatar_path = '99999999-9999-4999-8999-999999999999/a.png' where id = a;
   update public.profiles set onboarded_at = now() where id = a;
-  perform t.ok((select onboarded_at is not null from public.profiles where id = a), 'user can mark themselves onboarded');
+  perform t.ok((select onboarded_at is not null from public.profiles where id = a), 'user can mark themselves onboarded (after adding a photo)');
   perform t.affects_none(format('update public.profiles set onboarded_at = null where id = %L', b), 'cannot change someone else''s onboarding flag');
 
   -- search ignores diacritics both ways

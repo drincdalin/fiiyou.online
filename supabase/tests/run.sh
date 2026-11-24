@@ -17,7 +17,7 @@ psql -v ON_ERROR_STOP=1 -d $DB -f tests/10_tests.sql
 # 0022 (spam guard) rate-limits the bulk inserts in 10_tests.sql, so it is applied after them, then tested on its own
 for f in migrations/0022_spam_and_bans.sql migrations/0023_media_read_scope.sql migrations/0024_onboarding_and_search.sql \
          migrations/0025_wall_notifications.sql migrations/0026_hashtags.sql migrations/0027_message_edit_delete.sql migrations/0028_comment_likes_replies_mentions.sql migrations/0029_search_schedule_pins_images.sql \
-         migrations/0030_blocked_list.sql migrations/0031_official_github.sql migrations/0032_hardening.sql migrations/0033_rls_lockdown.sql migrations/0034_message_likes.sql migrations/0035_moderation.sql migrations/0036_moderation_emails.sql migrations/0037_localities_commune_county.sql migrations/0038_egress_diet.sql migrations/0039_remove_audio_uploads.sql migrations/0040_outbox_admin.sql migrations/0041_my_posts.sql migrations/0042_can_see_post_friends.sql migrations/0043_profile_after_email_confirmation.sql migrations/0044_realtime_friendships.sql migrations/0045_theme_custom_fonts.sql migrations/0046_show_on_map_default.sql; do
+         migrations/0030_blocked_list.sql migrations/0031_official_github.sql migrations/0032_hardening.sql migrations/0033_rls_lockdown.sql migrations/0034_message_likes.sql migrations/0035_moderation.sql migrations/0036_moderation_emails.sql migrations/0037_localities_commune_county.sql migrations/0038_egress_diet.sql migrations/0039_remove_audio_uploads.sql migrations/0040_outbox_admin.sql migrations/0041_my_posts.sql migrations/0042_can_see_post_friends.sql migrations/0043_profile_after_email_confirmation.sql migrations/0044_realtime_friendships.sql migrations/0045_theme_custom_fonts.sql migrations/0046_show_on_map_default.sql migrations/0053_require_avatar.sql; do
   psql -v ON_ERROR_STOP=1 -q -d $DB -f "$f"
 done
 psql -v ON_ERROR_STOP=1 -d $DB -f tests/20_media_scope.sql
@@ -30,3 +30,4 @@ psql -v ON_ERROR_STOP=1 -d $DB -f tests/80_audio_removed.sql
 psql -v ON_ERROR_STOP=1 -d $DB -f tests/90_outbox_admin.sql
 psql -v ON_ERROR_STOP=1 -d $DB -f tests/95_my_posts.sql
 psql -v ON_ERROR_STOP=1 -d $DB -f tests/96_confirm_profile.sql
+psql -v ON_ERROR_STOP=1 -d $DB -f tests/97_require_avatar.sql

@@ -207,6 +207,7 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
   const [collapsed, setCollapsed] = useState(false); const [lb, setLb] = useState(null); const [rep, setRep] = useState(false); const frame = useRef(); const pageRef = useRef(); const [sharing, setSharing] = useState(false); const [shareData, setShareData] = useState(null); const [likers, setLikers] = useState(null);
   const [loadErr, setLoadErr] = useState(null); const [missing, setMissing] = useState(false);   // missing = no such profile (or hidden from you)
   const [profileLikers, setProfileLikers] = useState(false); const [likePop, setLikePop] = useState(false);
+  const likeBusy = useRef(false); const popTimer = useRef(null);
   const load = useCallback(() => profiles.getFullProfile(username).then((x) => { setLoadErr(null); if (x) { setMissing(false); setD(x); } else setMissing(true); }).catch((e) => { setLoadErr(e); notify(friendlyError(e), 'err'); }), [username]);
   useEffect(() => { setD(null); setMissing(false); setDraft(null); setSel(null); setLb(null); setLoadErr(null); load(); }, [load]);
   useDraftAutosave(d && d.relationship?.status === 'self' ? d.profile.id : null, draft);   // the editor draft survives a refresh
@@ -215,6 +216,13 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
     if (!d || d.relationship.status === 'self' || viewed.current === d.profile.id) return; const id = d.profile.id; viewed.current = id;
     profiles.recordView(id).then(() => profiles.myViews(id)).then((n) => setD((x) => (x && x.profile.id === id ? { ...x, views: n } : x))).catch(() => {});
   }, [d]);
+  useEffect(() => {   // refetch the like state when the tab is focused again, so a like made from another tab stays correct
+    const id = d?.profile?.id; if (!id) return undefined;
+    const refresh = () => { if (document.hidden) return; profiles.getProfileLikeState(id).then((s) => setD((x) => (x && x.profile.id === id ? { ...x, profileLikes: s } : x))).catch(() => {}); };
+    window.addEventListener('focus', refresh); document.addEventListener('visibilitychange', refresh);
+    return () => { window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); };
+  }, [d?.profile?.id]);
+  useEffect(() => () => clearTimeout(popTimer.current), []);
   useEffect(() => {   // match the page behind a profile background: on touch/fixed backgrounds the viewport edge must not show the app's black body
     const t = draft ? draft.theme : d?.profile?.theme;
     if (!t?.bg_image) return undefined;
@@ -264,8 +272,17 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
   const name = draft?.fields.display_name ?? profile.display_name; const headline = draft?.fields.headline ?? profile.headline;
   const items = d.photos.map((p) => ({ id: p.id, src: img[p.path], caption: p.caption, likes: p.like_count, liked: p.liked }));
   const likeCount = d.profileLikes?.count || 0; const liked = !!d.profileLikes?.liked;
-  const likeProfile = async () => { if (own) return; const before = d.profileLikes; const on = !liked; setD((x) => ({ ...x, profileLikes: { liked: on, count: Math.max(0, likeCount + (on ? 1 : -1)) } })); setLikePop(true); setTimeout(() => setLikePop(false), 500);
-    try { await profiles.setProfileLike(profile.id, on); } catch (e) { setD((x) => ({ ...x, profileLikes: before })); notify(e?.message === 'rate_limit' ? 'Slow down a little.' : 'Could not like this profile.', 'err'); } };
+  const likeProfile = async () => {
+    if (own || likeBusy.current) return;             // no double-taps while a request is in flight
+    const before = d.profileLikes; const on = !liked;
+    likeBusy.current = true;
+    setD((x) => ({ ...x, profileLikes: { liked: on, count: Math.max(0, likeCount + (on ? 1 : -1)) } }));   // optimistic
+    clearTimeout(popTimer.current); setLikePop(false);   // restart the press + count animation even on a fast second tap
+    popTimer.current = setTimeout(() => { setLikePop(true); popTimer.current = setTimeout(() => setLikePop(false), 500); }, 0);
+    try { await profiles.setProfileLike(profile.id, on); }
+    catch (e) { setD((x) => ({ ...x, profileLikes: before })); notify(e?.message === 'rate_limit' ? 'Slow down a little.' : 'Could not like this profile.', 'err'); }
+    finally { likeBusy.current = false; }
+  };
   // Stickers are rendered inside the card they are pinned to (or at the top of the cards column when that card is hidden / gone / they are not pinned yet).
   const flowShown = shown.filter((c) => c.visible && c.type !== 'music' && c.type !== 'sticker'); const flowIds = new Set(flowShown.map((c) => c.id));
   const stickerList = shown.filter((c) => c.type === 'sticker' && c.visible).map((c) => ({ c, m: stickerModel(c, theme) }));
@@ -442,8 +459,9 @@ export default function App() {
   if (!session || !isConfirmed(session)) return <Auth notice={linkNotice} />;
   if (!me) return meErr ? <div className="authwrap"><ErrorState error={meErr} onRetry={loadMe} title="Could not load your account" /></div> : <Boot />;
   const notify = (msg, type = 'ok') => setToast({ msg: type === 'err' ? friendlyError({ message: msg }) : msg, type });
-  // first run after sign-up: the welcome steps (null = not done yet; undefined = the 0024 migration has not run, so nobody is sent through it)
-  if (me.onboarded_at === null) return (<><Onboarding me={me} inviter={session.user?.user_metadata?.invited_by || getInvite()} onDone={async () => setMe(await profiles.getMyProfile())} notify={notify} />{toast && <div className={`toast ${toast.type}`} role="status">{toast.msg}</div>}</>);
+  // first run after sign-up: the welcome steps (null = not done yet; undefined = the 0024 migration has not run, so nobody is sent through it).
+  // A profile photo is mandatory too: anyone with no avatar_path is held here (on the photo step) until they upload one.
+  if (me.onboarded_at === null || !me.avatar_path) return (<><Onboarding me={me} inviter={session.user?.user_metadata?.invited_by || getInvite()} onDone={async () => setMe(await profiles.getMyProfile())} notify={notify} />{toast && <div className={`toast ${toast.type}`} role="status">{toast.msg}</div>}</>);
   const go = (v, username, peer, edit) => {   // go('profile', username?, null, edit?) | go('messages', null, peerId) | go('post', postId)
     const mine = !username || username.toLowerCase() === me.username.toLowerCase();
     const to = v === 'profile' ? `/${encodeURIComponent((username || me.username).toLowerCase())}${mine && edit ? '/edit' : ''}`

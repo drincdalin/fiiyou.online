@@ -71,6 +71,15 @@
 .obcam { position: absolute; right: 2px; bottom: 2px; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: var(--on-accent); border: 3px solid var(--g1); }
 .obcam svg { flex: none; }
 
+/* install offer after the photo is saved: one line of copy, one action, one dismiss */
+.obinstall { display: flex; align-items: center; gap: var(--s-3); width: 100%; box-sizing: border-box; padding: var(--s-3) var(--s-2) var(--s-3) var(--s-4); background: var(--g1); border: 2px solid var(--g3); border-radius: var(--rad-l); text-align: left; }
+.obinstall-copy { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.obinstall-copy b { font-size: var(--fs-md); line-height: var(--lh-snug); }
+.obinstall-copy small { color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-snug); }
+.obinstall .primary.sm { flex: none; }
+.obinstall-x { flex: none; width: 40px; height: 40px; padding: 0; display: grid; place-items: center; background: none; border: 0; border-radius: var(--rad-s); color: var(--muted); cursor: pointer; }
+.obinstall-x:hover { background: var(--hover); color: var(--ink); }
+
 /* people */
 .oblist { display: grid; gap: 8px; }
 .oblist .row { display: flex; align-items: center; gap: 12px; padding: .5rem .7rem; background: var(--g1); border: 1px solid var(--g3); border-radius: 16px; }
