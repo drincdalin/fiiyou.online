@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { House, User, MapPin, ChatCircle, ShieldCheck, Heart, X, CaretLeft, CaretRight, Flag, PencilSimple, Trash, PaperPlaneRight, ImageSquare, CalendarBlank, ShareNetwork, DotsThree, Clock, ImageBroken, UsersThree, Link as LinkIcon, ArrowSquareOut, SlidersHorizontal, Flask, Star, CrownSimple, HandHeart } from '@phosphor-icons/react';
+import { House, User, MapPin, ChatCircle, ShieldCheck, Heart, X, CaretLeft, CaretRight, Flag, PencilSimple, Trash, PaperPlaneRight, ImageSquare, CalendarBlank, ShareNetwork, DotsThree, Clock, ImageBroken, UsersThree, Link as LinkIcon, ArrowSquareOut, SlidersHorizontal, Flask, Sparkle, CrownSimple, HandHeart } from '@phosphor-icons/react';
 import PostShareModal from './PostShare.jsx';
 import { posts, safety } from '../index.js';
 import { friendlyError } from './errors.jsx';
@@ -22,12 +22,14 @@ export const spamMessage = (er) => {
 /** Small profile badges assigned from the control room. */
 export const BADGE_META = {
   beta: ['BETA', 'Beta tester', Flask],
-  og: ['OG', 'Original member', Star],
+  og: ['OG', 'OG: one of the first 100 members', Sparkle],
   founder: ['FOUNDER', 'Founding member', CrownSimple],
   donor: ['DONOR', 'Supporter', HandHeart],
 };
+// OG first, then founder: the rarest badges lead the row
+const BADGE_ORDER = ['og', 'founder', 'donor', 'beta'];
 export function ProfileBadges({ badges = [] }) {
-  const list = (badges || []).filter((k) => BADGE_META[k]);
+  const list = BADGE_ORDER.filter((k) => (badges || []).includes(k));
   if (!list.length) return null;
   return <span className="pbadges">{list.map((k) => {
     const [label, title, Icon] = BADGE_META[k];

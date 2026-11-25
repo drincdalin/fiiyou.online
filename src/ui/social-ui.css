@@ -119,18 +119,38 @@ button.mention:focus-visible { text-decoration: underline; }
 .profile-badge .pb-ico svg { width: .95em; height: .95em; color: currentColor; }
 .profile-badge .pb-txt { padding-top: .04em; }
 .profile-badge:hover { transform: translateY(-1px); box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 18%, transparent), 0 3px 8px -2px color-mix(in srgb, var(--pb) 45%, transparent); }
-/* one hue per kind */
+/* one hue per kind; each kind also has its own emblem silhouette so they are told apart by shape, not only by colour */
 .profile-badge.beta { --pb: #4fb3ff; --pb-ink: #00203a; }
-.profile-badge.og { --pb: #f2b53a; --pb-ink: #2b1b00; }
+.profile-badge.og { --pb: #f5b83d; --pb-ink: #2b1b00; }
 .profile-badge.founder { --pb: #a98bff; --pb-ink: #1c0a45; }
 .profile-badge.donor { --pb: #ff6f8e; --pb-ink: #3a0615; }
-/* Founder and OG are the rare ones: a slow shine sweeps across the capsule. Off for anyone who asked for less motion. */
+.profile-badge.beta .pb-ico { border-radius: 30%; }
+.profile-badge.founder .pb-ico { border-radius: 0; clip-path: polygon(50% 0, 100% 22%, 100% 62%, 50% 100%, 0 62%, 0 22%); }
+.profile-badge.donor .pb-ico { border-radius: 50%; }
+
+/* OG: the first 100 members. The one badge that is a solid gold medal instead of a tinted capsule: metallic fill, a hexagon seal, a warm glow. */
+.profile-badge.og {
+  --pb-2: #b9791a;
+  padding: 0 .8em 0 .2em; gap: .45em;
+  border: 1px solid #ffe08a;
+  background: linear-gradient(180deg, #ffe49a 0%, #f5b83d 46%, #c9861c 100%);
+  color: #2b1b00; text-shadow: 0 1px 0 color-mix(in srgb, #fff 55%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 70%, transparent), inset 0 -1px 0 color-mix(in srgb, #7a4a00 45%, transparent), 0 0 0 1px color-mix(in srgb, #7a4a00 35%, transparent), 0 2px 10px -2px color-mix(in srgb, #f5b83d 70%, transparent);
+  letter-spacing: .14em;
+}
+.profile-badge.og .pb-ico {
+  width: 1.55em; height: 1.55em; border-radius: 0; clip-path: polygon(50% 0, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+  background: linear-gradient(145deg, #5a3500, #2b1b00 70%); color: #ffd966; box-shadow: none;
+}
+.profile-badge.og .pb-ico svg { width: .85em; height: .85em; filter: drop-shadow(0 0 3px color-mix(in srgb, #ffd966 80%, transparent)); }
+.profile-badge.og:hover { box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 70%, transparent), inset 0 -1px 0 color-mix(in srgb, #7a4a00 45%, transparent), 0 0 0 1px color-mix(in srgb, #7a4a00 35%, transparent), 0 4px 14px -2px color-mix(in srgb, #f5b83d 85%, transparent); }
+/* Founder and OG are the rare ones: a slow shine sweeps across. Off for anyone who asked for less motion. */
 .profile-badge.founder::after, .profile-badge.og::after {
   content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background: linear-gradient(105deg, transparent 35%, color-mix(in srgb, #fff 38%, transparent) 50%, transparent 65%);
   transform: translateX(-120%); animation: pbshine 5.5s ease-in-out 1.2s infinite;
 }
-.profile-badge.og::after { animation-delay: 2.6s; }
+.profile-badge.og::after { z-index: 1; background: linear-gradient(105deg, transparent 35%, color-mix(in srgb, #fff 65%, transparent) 50%, transparent 65%); animation-delay: 2.6s; }
 @keyframes pbshine { 0%, 62% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
 @media (prefers-reduced-motion: reduce) { .profile-badge { transition: none; } .profile-badge:hover { transform: none; } .profile-badge.founder::after, .profile-badge.og::after { animation: none; display: none; } }
 
