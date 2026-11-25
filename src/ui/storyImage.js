@@ -123,11 +123,17 @@ function checkBadge(g, cx, cy, r) {
  * @param music     { title, artist, coverSrc } | null
  * @param interests legacy fallback, only used when `cards` is empty
  * @param fontFamily CSS family of the person's uploaded font (from useCustomFont / loadFont), used when theme.font / name_font is 'custom'
+ * @param phone     optional phone render (profile.phone_theme + per-card phone_layout):
+ *                  { cards: { [cardId]: { order, visible, w, h } }, font_size, bgSrc, stickers }
+ *                  With it, cards are drawn in phone order (visible only) at their phone width and
+ *                  minimum height, stickers use their phone pin / y / scale, and the phone background
+ *                  and font size are used. Without it the desktop render is unchanged.
  */
 export async function renderStory({
-  profile, theme, avatarSrc, bgSrc, music = null, interests = [], cards = [], photos = [], topFriends = [], guestbook = [], stickers = [], slug = profile.username, fontFamily = null,
+  profile, theme, avatarSrc, bgSrc, music = null, interests = [], cards = [], photos = [], topFriends = [], guestbook = [], stickers = [], slug = profile.username, fontFamily = null, phone = null,
 }) {
   const t = { ...THEME_DEFAULTS, ...(theme || {}) };
+  if (phone && phone.font_size) t.font_size = phone.font_size;   // phone_theme.font_size (13 to 18); every other theme key is shared
   const nameStack = canvasStack(t.name_font, fontFamily);
   const bodyStack = canvasStack(t.font, fontFamily);
 
@@ -138,7 +144,7 @@ export async function renderStory({
 
   const shownPhotos = photos.slice(0, 12), shownFriends = topFriends.slice(0, 8), shownGuest = guestbook.slice(0, 3);
   const [avatar, bg, cover, photoImgs, friendImgs, stickerImgs, guestImgs] = await Promise.all([
-    loadImg(avatarSrc), loadImg(bgSrc), loadImg(music?.coverSrc),
+    loadImg(avatarSrc), loadImg((phone && phone.bgSrc) || bgSrc), loadImg(music?.coverSrc),
     Promise.all(shownPhotos.map((p) => loadImg(p.src))), Promise.all(shownFriends.map((f) => loadImg(f.src))), Promise.all(stickers.map((s) => loadImg(s.src))),
     Promise.all(shownGuest.map((e) => loadImg(e.src || e.avatarSrc || e.avatar_url || e.avatar || (e.username && e.username === profile.username ? avatarSrc : null)))),
   ]);
@@ -155,7 +161,7 @@ export async function renderStory({
   const blurPx = num(t.blur, 0), overlay = clamp(num(t.overlay, 0) / 100, 0, 1);
   const cardGap = clamp(Math.round(num(t.card_gap, 20) * 0.95), 12, 30);
   const fpad = clamp(Math.round(step * 3 * 1.3), 24, 40), cpad = clamp(Math.round(step * 2 * 1.4), 20, 32);
-  const CW = FW - fpad * 2, CIW = CW - cpad * 2;     // content width of the frame / of a card
+  const CW = FW - fpad * 2; let CIW = CW - cpad * 2;     // content width of the frame / of a card (per card on the phone)
   const ink = t.text_color, soft = rgba(t.text_color, 0.62);
   const caseOf = (s) => (t.name_case === 'upper' ? s.toUpperCase() : t.name_case === 'lower' ? s.toLowerCase() : s);
   const onAccent = onColor(rgbOf(t.accent_color));
@@ -208,8 +214,8 @@ export async function renderStory({
 
   /* ---- card chrome: panel + border + title, with a measured inner block ---- */
   const TITLE_SIZE = Math.round(base * 1.05), TITLE_H = Math.round(TITLE_SIZE * 1.25) + 8;
-  function card(title, body) {
-    const th = title ? TITLE_H : 0, h = cpad * 2 + th + body.h;
+  function card(title, body, minH = 0) {
+    const th = title ? TITLE_H : 0, h = Math.max(minH, cpad * 2 + th + body.h);   // on the phone h is a minimum: the card grows with its text
     return { h, draw(x, y, w) {
       panel(x, y, w, h, r2, t.card_color, cardAlpha); outline(x, y, w, h, r2, t.border_color);
       if (title) { g.font = `700 ${TITLE_SIZE}px ${bodyStack}`; text(ellipsize(g, title, w - cpad * 2), x + cpad, y + cpad, g.font, ink); }
@@ -249,11 +255,11 @@ export async function renderStory({
   const makers = {
     about: textBlock, text: textBlock,
     interests: (c) => { const l = (c.content?.interests || []).filter(Boolean); if (!l.length) return null;
-      return { levels: 3, make: (lv) => card(c.title, flow(l, [1, 2, 4][lv], { color: ink, border: t.border_color })) }; },
+      return { levels: 3, make: (lv, minH) => card(c.title, flow(l, [1, 2, 4][lv], { color: ink, border: t.border_color }), minH) }; },
     links: (c) => { const l = (c.content?.links || []).map((x) => x.label || String(x.url || '').replace(/^https?:\/\//, '').replace(/\/$/, '')).filter(Boolean); if (!l.length) return null;
-      return { levels: 3, make: (lv) => card(c.title, flow(l, [1, 2, 4][lv], { color: t.link_color, border: rgba(t.link_color, 0.55) })) }; },
+      return { levels: 3, make: (lv, minH) => card(c.title, flow(l, [1, 2, 4][lv], { color: t.link_color, border: rgba(t.link_color, 0.55) }), minH) }; },
     gallery: (c) => { if (!photos.length) return null;
-      return { levels: 2, make: (lv) => {
+      return { levels: 2, make: (lv, minH) => {
         const cols = 6, gap = 10, rows = lv ? 2 : 1, tile = Math.floor((CIW - gap * (cols - 1)) / cols);
         const count = Math.min(photos.length, cols * rows, shownPhotos.length), nrows = Math.ceil(count / cols), extra = photos.length - count;
         return card(c.title, inner(nrows * tile + (nrows - 1) * gap, (x, y) => {
@@ -265,9 +271,9 @@ export async function renderStory({
               g.font = `800 ${base}px ${nameStack}`; g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(`+${extra + 1}`, tx + tile / 2, ty + tile / 2 + 2); }
             g.restore(); outline(tx, ty, tile, tile, Math.min(r3, tile / 2), t.border_color, Math.min(lw, 2));
           }
-        })); } }; },
+        }), minH); } }; },
     top_friends: (c) => { if (!topFriends.length) return null;
-      return { levels: 2, make: (lv) => {
+      return { levels: 2, make: (lv, minH) => {
         const cols = lv ? 6 : 8, gap = 14, rowGap = 16, cell = Math.floor((CIW - gap * (cols - 1)) / cols), av = Math.min(cell, 92), ns = base - 7, labelH = Math.round(ns * 1.4), rowH = av + 8 + labelH;
         const count = Math.min(shownFriends.length, cols * (lv ? 2 : 1)), nrows = Math.ceil(count / cols);
         return card(c.title, inner(nrows * rowH + (nrows - 1) * rowGap, (x, y) => {
@@ -277,16 +283,16 @@ export async function renderStory({
             outline(ax, cy0, av, av, Math.min(r3, av / 2), t.border_color, Math.min(lw, 2));
             g.font = `600 ${ns}px ${bodyStack}`; text(ellipsize(g, f.name || '', av + gap - 2), cx0 + av / 2, cy0 + av + 8, g.font, ink, 'center');
           }
-        })); } }; },
+        }), minH); } }; },
     guestbook: (c) => {
-      if (!shownGuest.length) return { levels: 1, make: () => card(c.title, inner(60, (x, y, w) => {            // empty wall: show the input like the real page does
+      if (!shownGuest.length) return { levels: 1, make: (lv, minH) => card(c.title, inner(60, (x, y, w) => {            // empty wall: show the input like the real page does
         const bw2 = 130, iw = w - bw2 - 14;
         g.save(); rr(g, x, y, iw, 60, r3); g.fillStyle = rgba(t.card_color, 0.9); g.fill(); g.restore(); outline(x, y, iw, 60, r3, t.border_color, Math.min(lw, 2));
         text('Write something…', x + 20, y + 16, `500 ${base - 2}px ${bodyStack}`, rgba(t.text_color, 0.4));
         rr(g, x + iw + 14, y, bw2, 60, r3); g.fillStyle = t.accent_color; g.fill();
         g.font = `700 ${base - 2}px ${bodyStack}`; g.fillStyle = onAccent; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Send', x + iw + 14 + bw2 / 2, y + 31);
-      })) };
-      return { levels: shownGuest.length, make: (lv) => {
+      }), minH) };
+      return { levels: shownGuest.length, make: (lv, minH) => {
         const n = lv + 1, AV = 48, tx = AV + 16, tw = CIW - tx, fs = base - 2, lh = Math.round(fs * 1.4), nameH = Math.round(fs * 1.35), lines = lv === 0 && shownGuest.length > 1 ? 1 : 2, gap = 20;
         g.font = `500 ${fs}px ${bodyStack}`;
         const ents = shownGuest.slice(0, n).map((e, ei) => { const ls = wrap(g, e.body, tw, lines); return { e, im: guestImgs[ei], ls, h: Math.max(AV, nameH + 4 + ls.length * lh) }; });
@@ -300,16 +306,27 @@ export async function renderStory({
             ls.forEach((l, i) => text(l, x + tx, yy + nameH + 4 + i * lh, `500 ${fs}px ${bodyStack}`, rgba(t.text_color, 0.88)));
             yy += h + gap;
           }
-        })); } }; },
+        }), minH); } }; },
   };
 
   function textBlock(c) {
     const body = c.content?.body; if (!String(body || '').trim()) return null;
-    return { levels: 3, make: (lv) => {
+    return { levels: 3, make: (lv, minH) => {
       g.font = `500 ${base}px ${bodyStack}`;
       const lines = wrap(g, body, CIW, [4, 7, 12][lv]), lh = Math.round(base * 1.45), ys = []; let yy = 0;
       for (const s of lines) { ys.push(yy); yy += s ? lh : Math.round(lh * 0.6); }
-      return card(c.title, inner(yy, (x, y) => lines.forEach((s, i) => s && text(s, x, y + ys[i], `500 ${base}px ${bodyStack}`, ink))));
+      return card(c.title, inner(yy, (x, y) => lines.forEach((s, i) => s && text(s, x, y + ys[i], `500 ${base}px ${bodyStack}`, ink))), minH);
+    } };
+  }
+
+  /** Phone: the live page keeps a visible card even when it has no content, so it is never dropped from the
+   *  phone flow. Gallery and top friends show the same empty line the page does; the rest just show the title. */
+  function phoneEmpty(c) {
+    const msg = c.type === 'gallery' ? 'No photos yet.' : c.type === 'top_friends' ? 'No top friends yet.' : '';
+    return { levels: 1, make: (lv, minH) => {
+      if (!msg) return card(c.title, inner(0, () => {}), minH);
+      const f = `500 ${base - 2}px ${bodyStack}`, h = Math.round((base - 2) * 1.5);
+      return card(c.title, inner(h, (x, y) => text(msg, x, y + 2, f, rgba(t.text_color, 0.5))), minH);
     } };
   }
 
@@ -383,46 +400,92 @@ export async function renderStory({
   const header = makeHeader();
   const flowCards = cards.length ? cards : (interests.length ? [{ id: 'interests', type: 'interests', title: 'Interests', content: { interests } }] : []);
   const RANK = { guestbook: 1, links: 2, top_friends: 3, interests: 4, gallery: 5, text: 6, about: 7 };   // higher = kept longer when space runs out
-  let blocks = flowCards.map((c) => { const m = makers[c.type]?.(c); return m && { ...m, rank: RANK[c.type] ?? 0, id: c.id }; }).filter(Boolean);
-  let lv = blocks.map((b) => b.levels - 1), built = blocks.map((b, i) => b.make(lv[i]));
+  /* Phone order, like the page: visible first, then CSS `order` (default 0, stable on ties). */
+  const phoneMode = !!phone;
+  const phoneLayouts = (phone && phone.cards) || {};
+  const orderedCards = phoneMode
+    ? flowCards
+      .filter((c) => { const pl = phoneLayouts[c.id]; return pl && typeof pl.visible === 'boolean' ? pl.visible : c.visible !== false; })
+      .map((c, i) => ({ c, i, order: phoneLayouts[c.id] && phoneLayouts[c.id].order != null ? phoneLayouts[c.id].order : 0 }))
+      .sort((a, b) => (a.order - b.order) || (a.i - b.i))
+      .map((x) => x.c)
+    : flowCards;
+  /* w / h are units of 1/1000 of the column width; w caps at the column, h is a minimum (see card()). */
+  const widthOf = (c) => { const pl = phoneLayouts[c.id]; return phoneMode && pl && pl.w != null ? Math.min(CW, Math.round((CW * pl.w) / 1000)) : CW; };
+  const minHeightOf = (c) => { const pl = phoneLayouts[c.id]; return phoneMode && pl && pl.h != null ? Math.round((CW * pl.h) / 1000) : 0; };
+  let blocks = orderedCards.map((c) => { const m = makers[c.type]?.(c) || (phoneMode ? phoneEmpty(c) : null); return m && { ...m, rank: RANK[c.type] ?? 0, id: c.id, width: widthOf(c), minH: minHeightOf(c) }; }).filter(Boolean);
+  const makeCard = (b, level) => { const keep = CIW; if (phoneMode) CIW = Math.max(1, b.width - cpad * 2); const out = b.make(level, b.minH); CIW = keep; return out; };
+  let lv = blocks.map((b) => b.levels - 1), built = blocks.map((b) => makeCard(b, b.levels - 1));
   const fixedH = header.h;
   const contentH = () => fixedH + built.reduce((a, b) => a + cardGap + b.h, 0);
-  while (contentH() > maxContent && built.length) {
+  while (!phoneMode && contentH() > maxContent && built.length) {
     let idx = -1, best = -1; built.forEach((b, i) => { if (lv[i] > 0 && b.h > best) { best = b.h; idx = i; } });
-    if (idx >= 0) { lv[idx]--; built[idx] = blocks[idx].make(lv[idx]); }
+    if (idx >= 0) { lv[idx]--; built[idx] = makeCard(blocks[idx], lv[idx]); }
     else {                                                  // nothing left to shrink: drop the least important card (guestbook first, text/about last)
       let drop = 0; for (let i = 0; i < blocks.length; i++) if (blocks[i].rank <= blocks[drop].rank) drop = i;
       blocks.splice(drop, 1); lv.splice(drop, 1); built.splice(drop, 1);
     }
   }
 
-  const frameH = Math.min(maxFrame, contentH() + fpad * 2), groupH = frameH + CTA_GAP + CTA_H;
-  const FX = SIDE, FY = Math.round(SAFE_TOP + (SAFE_BOT - SAFE_TOP - groupH) / 2);
-
-  frameShadow(FX, FY, FW, frameH, r1);
-  panel(FX, FY, FW, frameH, r1, t.frame_color, frameAlpha); outline(FX, FY, FW, frameH, r1, t.border_color);
-
-  let y = FY + fpad; const x = FX + fpad;
   const spots = new Map();                                  // anchors for stickers: the avatar and every card that made it onto the story
-  header.draw(x, y, CW); y += header.h + cardGap;
-  const colTop = y;
-  built.forEach((b, i) => { spots.set(blocks[i].id, { x, y, w: CW, h: b.h }); b.draw(x, y, CW); y += b.h + cardGap; });
+  let ctaY;
 
-  /* ---- stickers sit on top of the frame, pinned to their avatar / card exactly like on the web page (1 unit = 1/1000 of the anchor's width) ---- */
-  stickers.map((s, i) => ({ s, im: stickerImgs[i] })).filter((o) => o.im).sort((a, b) => (a.s.z || 0) - (b.s.z || 0)).forEach(({ s, im }) => {
-    const sp = spots.get(s.card), ux = (sp ? sp.w : CW) / 1000, sw = s.w * ux, sh = s.h * ux, sx = (sp ? sp.x : x) + s.x * ux;
-    const sy = sp ? (s.v === 'b' ? sp.y + sp.h - s.y * ux - sh : sp.y + s.y * ux)               // pinned to an anchor that is on the story
-      : (s.v === 'b' ? FY + frameH - fpad - s.y * ux - sh : colTop + s.y * ux);                   // anchor not on the story: fall back to the cards column
-    const cx0 = sx + sw / 2, cy0 = sy + sh / 2;
-    if (cx0 < 0 || cx0 > W || cy0 < SAFE_TOP - 60 || cy0 > SAFE_BOT + 60) return;
-    g.save(); g.translate(cx0, cy0); g.rotate(((s.rotation || 0) * Math.PI) / 180); drawContain(g, im, -sw / 2, -sh / 2, sw, sh); g.restore();
-  });
+  if (phoneMode) {
+    /* Phone: every visible card keeps its own width and full content height. If the page is taller than the
+       story, the whole frame shrinks as one piece, so no card is dropped and no text is shortened. */
+    const naturalFrameH = contentH() + fpad * 2;
+    const scale = naturalFrameH > maxFrame ? maxFrame / naturalFrameH : 1;
+    const fw = FW * scale, fh = naturalFrameH * scale;
+    const FXp = Math.round((W - fw) / 2);
+    const groupH = fh + CTA_GAP + CTA_H;
+    const FYp = Math.round(SAFE_TOP + (SAFE_BOT - SAFE_TOP - groupH) / 2);
+    g.save();
+    g.translate(FXp, FYp); g.scale(scale, scale);
+    frameShadow(0, 0, FW, naturalFrameH, r1);
+    panel(0, 0, FW, naturalFrameH, r1, t.frame_color, frameAlpha); outline(0, 0, FW, naturalFrameH, r1, t.border_color);
+    let y = fpad;
+    header.draw(fpad, y, CW); y += header.h + cardGap;
+    const colTop = y;
+    built.forEach((b, i) => { const w = blocks[i].width; spots.set(blocks[i].id, { x: fpad, y, w, h: b.h }); b.draw(fpad, y, w); y += b.h + cardGap; });
+    const colBot = y - cardGap;
+    stickers.map((s, i) => ({ s, im: stickerImgs[i] })).filter((o) => o.im).sort((a, b) => (a.s.z || 0) - (b.s.z || 0)).forEach(({ s, im }) => {
+      const sp = spots.get(s.card), ux = (sp ? sp.w : CW) / 1000, sw = s.w * ux, sh = s.h * ux, sx = (sp ? sp.x : fpad) + s.x * ux;
+      const sy = sp ? (s.v === 'b' ? sp.y + sp.h - s.y * ux - sh : sp.y + s.y * ux)
+        : (s.v === 'b' ? colBot - s.y * ux - sh : colTop + s.y * ux);   // anchor not drawn on phone: fall back to the cards column
+      const cx0 = sx + sw / 2, cy0 = sy + sh / 2;
+      g.save(); g.translate(cx0, cy0); g.rotate(((s.rotation || 0) * Math.PI) / 180); drawContain(g, im, -sw / 2, -sh / 2, sw, sh); g.restore();
+    });
+    g.restore();
+    ctaY = FYp + fh + CTA_GAP;
+  } else {
+    const frameH = Math.min(maxFrame, contentH() + fpad * 2), groupH = frameH + CTA_GAP + CTA_H;
+    const FX = SIDE, FY = Math.round(SAFE_TOP + (SAFE_BOT - SAFE_TOP - groupH) / 2);
+
+    frameShadow(FX, FY, FW, frameH, r1);
+    panel(FX, FY, FW, frameH, r1, t.frame_color, frameAlpha); outline(FX, FY, FW, frameH, r1, t.border_color);
+
+    let y = FY + fpad; const x = FX + fpad;
+    header.draw(x, y, CW); y += header.h + cardGap;
+    const colTop = y;
+    built.forEach((b, i) => { const w = blocks[i].width; spots.set(blocks[i].id, { x, y, w, h: b.h }); b.draw(x, y, w); y += b.h + cardGap; });
+
+    /* ---- stickers sit on top of the frame, pinned to their avatar / card exactly like on the web page (1 unit = 1/1000 of the anchor's width) ---- */
+    stickers.map((s, i) => ({ s, im: stickerImgs[i] })).filter((o) => o.im).sort((a, b) => (a.s.z || 0) - (b.s.z || 0)).forEach(({ s, im }) => {
+      const sp = spots.get(s.card), ux = (sp ? sp.w : CW) / 1000, sw = s.w * ux, sh = s.h * ux, sx = (sp ? sp.x : x) + s.x * ux;
+      const sy = sp ? (s.v === 'b' ? sp.y + sp.h - s.y * ux - sh : sp.y + s.y * ux)               // pinned to an anchor that is on the story
+        : (s.v === 'b' ? FY + frameH - fpad - s.y * ux - sh : colTop + s.y * ux);                   // anchor not on the story: fall back to the cards column
+      const cx0 = sx + sw / 2, cy0 = sy + sh / 2;
+      if (cx0 < 0 || cx0 > W || cy0 < SAFE_TOP - 60 || cy0 > SAFE_BOT + 60) return;
+      g.save(); g.translate(cx0, cy0); g.rotate(((s.rotation || 0) * Math.PI) / 180); drawContain(g, im, -sw / 2, -sh / 2, sw, sh); g.restore();
+    });
+    ctaY = FY + frameH + CTA_GAP;
+  }
 
   /* ---- call to action under the frame (free promo: it names the app and shows the profile link) ---- */
   { // Deliberately quiet: the profile is the star. A glass pill in the theme's own surface colours, with only a thin accent edge.
     const l1 = 'Find me on fiiyou', url = displayUrl(slug), F1 = `700 32px ${nameStack}`, F2 = `500 23px ${bodyStack}`;
     g.font = F1; const w1 = g.measureText(l1).width; g.font = F2; const w2 = Math.min(g.measureText(url).width, FW - 140);
-    const cw = clamp(Math.max(w1, w2) + 100, 480, FW), cx0 = Math.round((W - cw) / 2), cy0 = FY + frameH + CTA_GAP, cr = Math.min(CTA_H / 2, Math.max(r1, 12));
+    const cw = clamp(Math.max(w1, w2) + 100, 480, FW), cx0 = Math.round((W - cw) / 2), cy0 = ctaY, cr = Math.min(CTA_H / 2, Math.max(r1, 12));
     panel(cx0, cy0, cw, CTA_H, cr, t.frame_color, Math.max(frameAlpha, 0.6)); outline(cx0, cy0, cw, CTA_H, cr, rgba(t.accent_color, 0.4), Math.min(lw || 2, 2));
     g.textAlign = 'center'; g.textBaseline = 'middle';                    // both lines centred as a pair inside the pill
     g.font = F1; g.fillStyle = rgba(t.text_color, 0.9); g.fillText(l1, W / 2, cy0 + CTA_H * 0.37);

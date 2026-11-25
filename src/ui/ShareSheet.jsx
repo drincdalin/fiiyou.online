@@ -2,7 +2,9 @@ import { useSheetDrag } from './shared.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ShareNetwork, DownloadSimple, LinkSimple, X, Check } from '@phosphor-icons/react';
 import { renderPromo, availablePromos, promoShareText } from './promoImage.js';
-import { profileUrl } from './storyImage.js';
+import { profileUrl, renderStory } from './storyImage.js';
+import { cleanPhoneLayout, cleanPhoneTheme } from '../lib/phoneLayout.js';
+import { stickerModel } from './stickerAnchor.js';
 import { supabase } from '../lib/client.js';
 import { signedUrls } from '../api/media.js';
 import './ShareSheet.css';
@@ -35,7 +37,10 @@ export default function ShareSheet({ data: incoming, onClose }) {
   const slug = data.slug || data.profile.username;
 
   const options = useMemo(
-    () => availablePromos({ music: data.music, topFriends: data.topFriends || [], guestbook: data.guestbook || [] }),
+    () => [
+      ...availablePromos({ music: data.music, topFriends: data.topFriends || [], guestbook: data.guestbook || [] }),
+      { id: 'phone', label: 'Phone', hint: 'Your profile as it looks on a phone.' },
+    ],
     [data.music, data.topFriends, data.guestbook],
   );
 
@@ -80,6 +85,54 @@ export default function ShareSheet({ data: incoming, onClose }) {
     [data.guestbook, avatars],
   );
 
+  // The saved phone data (phone_theme + per-card phone_layout). The sheet is only opened from the owner's own
+  // profile, and openShare() sends the desktop card list, so the phone values are read here.
+  const [phone, setPhone] = useState(null); // { cards, font_size, bgSrc, stickers } or null while loading
+  const [phoneReady, setPhoneReady] = useState(false);
+  useEffect(() => {
+    let stale = false;
+    const fallback = { cards: {}, font_size: null, bgSrc: null, stickers: data.stickers || [] };
+    (async () => {
+      try {
+        const { data: prof } = await supabase.from('profiles').select('id, phone_theme').eq('username', String(slug).toLowerCase()).maybeSingle();
+        if (!prof) throw new Error('no profile');
+        const { data: rows } = await supabase.from('profile_cards')
+          .select('id, type, visible, phone_layout, x, y, w, h, rotation, z, content')
+          .eq('profile_id', prof.id).eq('visible', true);
+        const theme = data.theme || {};
+        const pt = cleanPhoneTheme(prof.phone_theme);
+        const cards = {}, stickers = [], paths = [];
+        for (const row of rows || []) {
+          const layout = cleanPhoneLayout(row, row.phone_layout);
+          cards[row.id] = layout;
+          if (row.type !== 'sticker' || layout.visible === false) continue;
+          const m = stickerModel(row, theme);                                   // same model the live page starts from
+          if (layout.pin) { m.card = layout.pin.card; m.v = layout.pin.v; }
+          if (typeof layout.y === 'number') m.y = layout.y;
+          if (typeof layout.scale === 'number') { m.w *= layout.scale; m.h *= layout.scale; }
+          const path = row.content?.images?.[0] || null;
+          if (path) paths.push(path);
+          stickers.push({ path, card: m.card, v: m.v, x: m.x, y: m.y, w: m.w, h: m.h, rotation: row.rotation || 0, z: row.z || 0 });
+        }
+        if (pt.bg_image) paths.push(pt.bg_image);
+        const urls = paths.length ? await signedUrls(paths) : {};
+        if (stale) return;
+        setPhone({
+          cards, font_size: pt.font_size || null,
+          bgSrc: pt.bg_image ? urls[pt.bg_image] || null : null,
+          stickers: stickers.map((s) => ({ ...s, src: s.path ? urls[s.path] || null : null })).filter((s) => s.src),
+        });
+      } catch {
+        if (!stale) setPhone(fallback);   // unreadable phone data: render the desktop content, never an empty image
+      }
+      if (!stale) setPhoneReady(true);
+    })();
+    return () => { stale = true; };
+  }, [slug, data.theme, data.stickers]);
+
+  // Only the Phone tab reacts to the phone data, so the desktop previews are not rebuilt when it arrives.
+  const phoneKey = template === 'phone' ? (phoneReady ? `ready:${JSON.stringify(phone)}` : 'loading') : 'off';
+
   const [preview, setPreview] = useState(null); // { url, ratio }
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
@@ -92,11 +145,20 @@ export default function ShareSheet({ data: incoming, onClose }) {
   // Re-render the preview whenever the style (or the featured guestbook message) changes. `stale` drops outdated results.
   useEffect(() => {
     if (!avatarsReady) return undefined;          // wait for the pictures so the card is drawn once, with them
+    if (template === 'phone' && !phoneReady) return undefined;   // the phone image needs the saved phone layout first
     let stale = false;
     setBusy(true); setError(''); setNote('');
     (async () => {
       try {
-        const canvas = await renderPromo({ ...data, guestbook, template, guestIndex: safeGuest, slug });
+        const canvas = template === 'phone'
+          ? await renderStory({
+              profile: data.profile, theme: data.theme, avatarSrc: data.avatarSrc, bgSrc: data.bgSrc,
+              music: data.music, interests: data.interests || [], cards: data.cards || [], photos: data.photos || [],
+              topFriends: data.topFriends || [], guestbook, slug, fontFamily: data.fontFamily,
+              stickers: phone?.stickers || [],
+              phone: { cards: phone?.cards || {}, font_size: phone?.font_size || null, bgSrc: phone?.bgSrc || null },
+            })
+          : await renderPromo({ ...data, guestbook, template, guestIndex: safeGuest, slug });
         const blob = await new Promise((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej(new Error('Could not create the image.'))), 'image/png'));
         if (stale) return;
         const file = new File([blob], `fiiyou-${template}-${slug}.png`, { type: 'image/png' });
@@ -111,7 +173,7 @@ export default function ShareSheet({ data: incoming, onClose }) {
       }
     })();
     return () => { stale = true; };
-  }, [data, guestbook, avatarsReady, template, safeGuest, slug]);
+  }, [data, guestbook, avatarsReady, template, safeGuest, slug, phoneKey]);
 
   useEffect(() => () => { if (built.current) URL.revokeObjectURL(built.current.url); }, []);
 
@@ -150,7 +212,7 @@ export default function ShareSheet({ data: incoming, onClose }) {
     const cur = built.current; if (!cur) return;
     if (navigator.canShare?.({ files: [cur.file] })) {
       try {
-        await navigator.share({ files: [cur.file], text: promoShareText(template, slug) });
+        await navigator.share({ files: [cur.file], text: template === 'phone' ? `My fiiyou profile → ${profileUrl(slug)}` : promoShareText(template, slug) });
         setNote('Shared.');
         return;
       } catch (e) {
