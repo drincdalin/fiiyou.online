@@ -24,6 +24,7 @@ import './system.css';      // design system: type, spacing, motion and elevatio
 import './composer.css';    // the post composer (after system.css so it has the last word on the older composer rules)
 import './refine.css';      // final polish: input + button pairs, icon centring, press feedback, tabular numbers
 import './fintech.css';     // final app-chrome polish: hairlines, radii, soft depth, control states (profiles excluded)
+import './phoneProfile.css';// phone profile per-device layout/theme (loads last so it has the final word)
 
 bootRouter();       // old /#/... links become real paths
 const inviter = captureInvite({ base: import.meta.env.BASE_URL.replace(/\/$/, '') });   // /invite/<username>: remember who invited you, then show the normal page

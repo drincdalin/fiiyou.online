@@ -1,0 +1,18 @@
+/* ======================================================================
+   Phone profile (per-device customisation); see docs/PHONE_PROFILE.md.
+   The classes here are added by ProfileView ONLY while the phone view is
+   on (viewport <= 700px, or ?view=phone), so the desktop render is untouched.
+
+   Cards that use phone_layout (order / w / h) get the `.ph-card` marker
+   class; `order`, `width` and `height` are set inline from the saved values
+   (1 unit = 1/1000 of the cards column width, capped to 100% width).
+   A card hidden on phone (visible: false) is simply not rendered, and its
+   stickers re-pin per their own phone_layout or sit at the top of the column.
+   ====================================================================== */
+
+.cw.ph-card { min-width: 0; }
+
+/* Phone preview editing (App.jsx): a sticker is focusable there and can be dragged, or nudged with the
+   arrow keys, to set its phone position. The grab cursor comes from .sticker.edit; this is its focus ring. */
+.sticker.edit:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+

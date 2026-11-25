@@ -100,6 +100,21 @@ export function nearestAnchor(el, root, only) {
   return nearestTo(root, r.left + r.width / 2, r.top + r.height / 2, only);
 }
 
+/** The nearest anchor to a point, restricted to the ids given (only anchors on the page count).
+ *  The phone preview drag uses it to find the card a sticker was dropped over. Returns { n, b } or null. */
+export function nearestOf(root, ids, cx, cy) {
+  const want = new Set(ids);
+  let best = null, gap = Infinity;
+  for (const n of anchorNodes(root)) {
+    if (!want.has(n.dataset.cid)) continue;
+    const b = n.getBoundingClientRect();
+    if (b.width < 1 || b.height < 1) continue;   // hidden anchors do not count
+    const d = Math.hypot(cx < b.left ? b.left - cx : cx > b.right ? cx - b.right : 0, cy < b.top ? b.top - cy : cy > b.bottom ? cy - b.bottom : 0);
+    if (d < gap) { gap = d; best = { n, b }; }
+  }
+  return best;
+}
+
 /** Pin a box (centre cx, cy and size wpx x hpx, all in screen px) to the nearest anchor (or to `only`).
  *  Returns { card, v, x, y, w, h } in that anchor's units, or null. */
 export function pinBox(root, cx, cy, wpx, hpx, only) {
