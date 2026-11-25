@@ -16,7 +16,8 @@ import { themeStyle } from './theme.js';
 import { useCustomFont } from './fonts.js';
 import { applyAppTheme } from './appTheme.js';
 import Player from './Player.jsx';
-import { stickerModel, stickerStyle, withModel, reanchor, nearestAnchor, settleSticker, pinStray, rehome, unitsOf, spansOf } from './stickerAnchor.js';
+import { stickerModel, stickerStyle, withModel, reanchor, nearestAnchor, nearestOf, pinBox, settleSticker, pinStray, rehome, unitsOf, spansOf, POS_MAX } from './stickerAnchor.js';
+import { usePhoneView, usePhoneDraft, isPreviewDoc, isPhoneEdit } from './phoneView.js';
 // Loaded on demand: the editor and the share-image generators are big and most visits never open them.
 const Customizer = lazy(() => import('./Customizer.jsx'));
 const ContentView = lazy(() => import('./ContentView.jsx'));   // "Your posts", at /settings/content
@@ -156,7 +157,7 @@ function Guestbook({ profileId, go, own, meName, notify }) {
   </>);
 }
 
-function CardView({ c, d, img, go, openPhoto, own, meName, notify, children }) {
+function CardView({ c, d, img, go, openPhoto, own, meName, notify, children, phClass, phStyle }) {
   const body = {
     about: () => <p className="pre"><Rich text={c.content.body} onUser={(u) => go('profile', u)} /></p>, text: () => <p className="pre"><Rich text={c.content.body} onUser={(u) => go('profile', u)} /></p>,
     gallery: () => d.photos.length ? <div className="gal">{d.photos.map((p, i) => img[p.path] && (
@@ -175,11 +176,11 @@ function CardView({ c, d, img, go, openPhoto, own, meName, notify, children }) {
     },
     guestbook: () => <Guestbook profileId={d.profile.id} go={go} own={own} meName={meName} notify={notify} />,
   }[c.type];
-  return body ? <div className="cw" data-cid={c.id}><section className="card"><h2>{c.title}</h2>{body()}</section>{children}</div> : null;   // children = the stickers pinned to this card
+  return body ? <div className={`cw${phClass ? ` ${phClass}` : ''}`} data-cid={c.id} style={phStyle}><section className="card"><h2>{c.title}</h2>{body()}</section>{children}</div> : null;   // children = the stickers pinned to this card
 }
 
 const cl = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-function Sticker({ c, m, unit, edge, getRoot, src, edit, selected, onSelect, onChange, onLoad }) {
+function Sticker({ c, m, unit, edge, getRoot, src, edit, selected, onSelect, onChange, onLoad, phone, onPhoneMove, onPhoneDrop }) {
   // m = { card, v, x, y, w, h } in units (1 unit = 1/1000 of the cards column width), unit = px per unit right now.
   const el = useRef();
   const drag = (e, mode) => {
@@ -195,8 +196,44 @@ function Sticker({ c, m, unit, edge, getRoot, src, edit, selected, onSelect, onC
       if (mode === 'move') requestAnimationFrame(() => { const root = getRoot(); const at = el.current && root && reanchor(el.current, root, o, unit); if (at) onChange(at); }); };
     addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up);
   };
-  return (<div ref={el} data-sid={c.id} data-edge={edge ? '' : undefined} className={`sticker${edit ? ' edit' : ''}${selected ? ' sel' : ''}`} onPointerDown={(e) => drag(e, 'move')} style={stickerStyle(c, m, unit)}>
-    {src && <img src={src} alt="" draggable={false} loading="eager" decoding="sync" onLoad={onLoad} />}{edit && selected && <b className="grip" onPointerDown={(e) => drag(e, 'size')} />}</div>);
+  // Phone mode (the customizer's preview): a drag sets the PHONE position only. Vertical movement changes
+  // the offset inside the card, and a drop over another card re-pins the sticker to that card's top or
+  // bottom edge. The desktop x / y / w / h columns are never written from here.
+  const dragPhone = (e) => {
+    if (!edit) return; e.preventDefault(); e.stopPropagation(); onSelect(c.id);
+    const sx = e.clientX, sy = e.clientY, o = { ...m }, dir = m.v === 'b' ? -1 : 1;
+    const cardAt = (node) => {   // the flow card nearest to the sticker, among the cards on the page
+      const root = getRoot(); if (!root || !node) return null;
+      const r = node.getBoundingClientRect();
+      const ids = [...root.querySelectorAll('.cards > [data-cid]')].map((n) => n.dataset.cid);
+      return nearestOf(root, ids, r.left + r.width / 2, r.top + r.height / 2);
+    };
+    let hot = null; const light = (n) => { if (hot !== n) { hot?.classList.remove('anchor-hot'); n?.classList.add('anchor-hot'); hot = n; } };
+    let moved = false;
+    const mv = (ev) => {
+      moved = true;
+      const y = cl(Math.round(o.y + dir * ((ev.clientY - sy) / unit)), -POS_MAX, POS_MAX);
+      onPhoneMove(c.id, { pin: { card: o.card, v: o.v }, y });
+      requestAnimationFrame(() => light(cardAt(el.current)?.n || null));
+    };
+    const up = () => { light(null); removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
+      const root = getRoot(), node = el.current; if (!moved || !root || !node) return;
+      const hit = cardAt(node); const r = node.getBoundingClientRect();
+      const at = hit && pinBox(root, r.left + r.width / 2, r.top + r.height / 2, r.width, r.height, hit.n.dataset.cid);
+      if (at) onPhoneDrop(c.id, { pin: { card: at.card, v: at.v }, y: at.y }); };
+    addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+  };
+  // Keyboard: arrows nudge the same phone offset the drag writes, so the focus ring leads somewhere.
+  const phoneKeys = (e) => {
+    const step = e.shiftKey ? 100 : 10, dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+    if (!dy) return;
+    e.preventDefault();
+    onPhoneDrop(c.id, { pin: { card: m.card, v: m.v }, y: cl(Math.round(m.y + (m.v === 'b' ? -dy : dy)), -POS_MAX, POS_MAX) });
+  };
+  return (<div ref={el} data-sid={c.id} data-edge={edge ? '' : undefined} className={`sticker${edit ? ' edit' : ''}${selected ? ' sel' : ''}`}
+    tabIndex={phone ? 0 : undefined} role={phone ? 'button' : undefined} aria-label={phone ? 'Sticker: drag, or use the arrow keys, to set its phone position' : undefined}
+    onKeyDown={phone ? phoneKeys : undefined} onPointerDown={(e) => (phone ? dragPhone(e) : drag(e, 'move'))} style={stickerStyle(c, m, unit)}>
+    {src && <img src={src} alt="" draggable={false} loading="eager" decoding="sync" onLoad={onLoad} />}{edit && selected && !phone && <b className="grip" onPointerDown={(e) => drag(e, 'size')} />}</div>);
 }
 
 const makeDraft = (d) => { const profile = d.profile; return { theme: { ...profile.theme }, origBg: profile.theme.bg_image, origFont: profile.theme.font_file, cards: d.cards.map((c) => ({ ...c })), top: d.topFriends.map((f) => f.id), origMusic: profile.music || {}, css: profile.custom_css || [],
@@ -211,6 +248,10 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
   const load = useCallback(() => profiles.getFullProfile(username).then((x) => { setLoadErr(null); if (x) { setMissing(false); setD(x); } else setMissing(true); }).catch((e) => { setLoadErr(e); notify(friendlyError(e), 'err'); }), [username]);
   useEffect(() => { setD(null); setMissing(false); setDraft(null); setSel(null); setLb(null); setLoadErr(null); load(); }, [load]);
   useDraftAutosave(d && d.relationship?.status === 'self' ? d.profile.id : null, draft);   // the editor draft survives a refresh
+  const phoneView = usePhoneView();   // phone render (narrow viewport, or the customizer's ?view=phone preview)
+  const previewDoc = isPreviewDoc();   // this page IS a preview (inside another page's iframe, or ?view=phone): it never edits itself
+  const phoneEdit = isPhoneEdit();     // the customizer's phone preview: stickers can be dragged to set their phone position
+  const [phoneDrag, setPhoneDrag] = useState({});   // live phone position of a sticker being dragged in the preview ({ [cardId]: phone_layout })
   const viewed = useRef(null);
   useEffect(() => {   // one visit = one view: recorded once per profile page open (not on reloads after friend / wall actions), then the shown count is refreshed
     if (!d || d.relationship.status === 'self' || viewed.current === d.profile.id) return; const id = d.profile.id; viewed.current = id;
@@ -234,7 +275,10 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
   }, [d?.profile?.theme?.bg_image, d?.profile?.theme?.bg_color, draft?.theme?.bg_image, draft?.theme?.bg_color]);
   useEffect(() => { const c = cardsRef.current, a = avRef.current; if (!c) return; const upd = () => { setColW(c.clientWidth || 920); setAvW((a && a.clientWidth) || 190); }; const ro = new ResizeObserver(upd); ro.observe(c); if (a) ro.observe(a); upd(); return () => ro.disconnect(); }, [d]);   // widths the sticker units are measured against (cards column, avatar)
   const shown = draft ? draft.cards : d?.cards; const theme = draft ? draft.theme : d?.profile.theme; const music = (draft ? draft.fields.music : d?.profile.music) || {};
-  const img = useImages(d ? [d.profile.avatar_path, theme.bg_image, music.cover, ...shown.flatMap((c) => c.content.images || []), ...d.photos.map((p) => p.path), ...d.topFriends.map((f) => f.avatar_path), ...(d.friendProfiles || []).map((f) => f.avatar_path)] : []);
+  const phoneDraft = usePhoneDraft(shown, phoneView);   // live unsaved phone overrides from the customizer's preview iframe (null outside an iframe)
+  useEffect(() => { setPhoneDrag((cur) => (Object.keys(cur).length ? {} : cur)); }, [phoneDraft]);   // a fresh draft supersedes the drag we drew locally
+  const phoneTheme = phoneView ? (phoneDraft?.phoneTheme ?? d?.profile?.phone_theme ?? {}) : null;   // only bg_image and font_size may differ on a phone (the accent is shared)
+  const img = useImages(d ? [d.profile.avatar_path, theme.bg_image, phoneTheme?.bg_image, music.cover, ...shown.flatMap((c) => c.content.images || []), ...d.photos.map((p) => p.path), ...d.topFriends.map((f) => f.avatar_path), ...(d.friendProfiles || []).map((f) => f.avatar_path)] : []);
   const fontFamily = useCustomFont(theme?.font_file);   // registers the uploaded font (draft or saved) so the page can use it
   const [spans, setSpans] = useState({});   // width of each anchor in its own units
   const [, bump] = useState(0);   // bumped when a sticker image finishes loading: re-renders, and the measuring effect below runs again
@@ -259,11 +303,11 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
       if (ok.size) setD((x) => ({ ...x, cards: x.cards.map((c) => (ok.has(c.id) ? { ...c, ...ok.get(c.id) } : c)) })); }, 1500);
     return () => clearTimeout(t);
   }, [d]);   // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (autoEdit && d && d.relationship.status === 'self' && !draft) { setCollapsed(false); setDraft(makeDraft(d)); navigate(`/${meName.toLowerCase()}`, { replace: true }); } }, [d, autoEdit]);   // "Edit my profile" on Home opens the editor straight away
+  useEffect(() => { if (!previewDoc && autoEdit && d && d.relationship.status === 'self' && !draft) { setCollapsed(false); setDraft(makeDraft(d)); navigate(`/${meName.toLowerCase()}`, { replace: true }); } }, [d, autoEdit, previewDoc]);   // "Edit my profile" on Home opens the editor straight away
   if (missing) return <div className="plain view"><p className="empty">This profile does not exist, or it is not available to you.</p></div>;
   if (!d) return loadErr ? <ErrorState error={loadErr} onRetry={() => { setLoadErr(null); return load(); }} title="Could not load this profile" /> : <Boot />;
   const { profile, relationship: rel } = d; const own = rel.status === 'self';
-  const startEdit = () => { setCollapsed(false); setDraft(makeDraft(d)); };
+  const startEdit = () => { if (previewDoc) return; setCollapsed(false); setDraft(makeDraft(d)); };   // a preview page never opens the editor
   const patch = (id, p) => setDraft((x) => ({ ...x, cards: x.cards.map((c) => (c.id === id ? { ...c, ...p } : c)) }));
   const patchSticker = (id, p) => setDraft((x) => ({ ...x, cards: x.cards.map((c) => (c.id === id ? { ...c, ...withModel(c, x.theme, p) } : c)) }));
   const act = (fn, msg) => fn().then(() => { notify(msg); load(); }).catch((e) => notify(e.message, 'err'));
@@ -284,12 +328,39 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
     finally { likeBusy.current = false; }
   };
   // Stickers are rendered inside the card they are pinned to (or at the top of the cards column when that card is hidden / gone / they are not pinned yet).
-  const flowShown = shown.filter((c) => c.visible && c.type !== 'music' && c.type !== 'sticker'); const flowIds = new Set(flowShown.map((c) => c.id));
-  const stickerList = shown.filter((c) => c.type === 'sticker' && c.visible).map((c) => ({ c, m: stickerModel(c, theme) }));
+  const phoneLayout = (c) => {
+    if (!phoneView) return null;
+    const base = phoneDraft?.cards?.[c.id] ?? c.phone_layout;
+    const over = phoneDrag[c.id];   // the drag in progress (or just dropped) draws on top of the saved / streamed layout
+    const pl = over ? { ...(base && typeof base === 'object' && !Array.isArray(base) ? base : {}), ...over } : base;
+    return pl && typeof pl === 'object' && !Array.isArray(pl) && Object.keys(pl).length ? pl : null;
+  };
+  // Phone drag in the preview: draw it here at once, then (on drop) tell the customizer, which owns the draft.
+  const phoneStickerMove = (id, change) => setPhoneDrag((cur) => ({ ...cur, [id]: change }));
+  const phoneStickerDrop = (id, change) => {
+    const card = shown.find((x) => x.id === id);
+    if (!card || card.type !== 'sticker' || window.parent === window) return;
+    const pl = phoneLayout(card) || {};
+    const layout = { pin: change.pin, y: change.y, scale: typeof pl.scale === 'number' ? pl.scale : 1 };   // scale stays on the slider
+    setPhoneDrag((cur) => ({ ...cur, [id]: { pin: change.pin, y: change.y } }));   // draw it without a scale, so a later slider move is never masked
+    window.parent.postMessage({ type: 'fiiyou:phone-sticker', id, phone_layout: layout }, window.location.origin);
+  };
+  const flowShown = shown.filter((c) => { if (c.type === 'music' || c.type === 'sticker') return false; const pl = phoneLayout(c); return pl && typeof pl.visible === 'boolean' ? pl.visible : c.visible; });
+  const flowIds = new Set(flowShown.map((c) => c.id));
+  const stickerList = shown.filter((c) => c.type === 'sticker' && c.visible).map((c) => {
+    const m = stickerModel(c, theme); const pl = phoneLayout(c);
+    if (pl) {
+      if (typeof pl.visible === 'boolean' && !pl.visible) return null;   // hidden on phone only
+      if (pl.pin) { m.card = pl.pin.card; m.v = pl.pin.v === 'b' ? 'b' : 't'; }
+      if (typeof pl.y === 'number') m.y = pl.y;
+      if (typeof pl.scale === 'number') { m.w *= pl.scale; m.h *= pl.scale; }
+    }
+    return { c, m };
+  }).filter(Boolean);
   const hasPlayer = !!music.url;
   const rendered = new Set([...flowIds, 'avatar', 'nameplate', 'actions', 'frame', ...(hasPlayer ? ['player'] : [])]);   // anchors that exist on the page; stickers pinned to anything else sit at the top of the cards column
   const stickersOn = (cardId) => stickerList.filter(({ m }) => (cardId ? m.card === cardId : !rendered.has(m.card))).map(({ c, m }) => (
-    <Sticker key={c.id} c={c} m={m} unit={units[m.card] || colW / 1000} edge={(m.x + m.w / 2 < 0) || (m.x + m.w / 2 > (spans[m.card] ?? 1000))} getRoot={() => frame.current} src={img[c.content.images?.[0]]} edit={!!draft} selected={sel === c.id} onSelect={setSel} onLoad={() => bump((n) => n + 1)} onChange={(p) => patchSticker(c.id, p)} />));
+    <Sticker key={c.id} c={c} m={m} unit={units[m.card] || colW / 1000} edge={(m.x + m.w / 2 < 0) || (m.x + m.w / 2 > (spans[m.card] ?? 1000))} getRoot={() => frame.current} src={img[c.content.images?.[0]]} edit={!!draft || phoneEdit} selected={sel === c.id} onSelect={setSel} onLoad={() => bump((n) => n + 1)} onChange={(p) => patchSticker(c.id, p)} phone={phoneEdit} onPhoneMove={phoneStickerMove} onPhoneDrop={phoneStickerDrop} />));
   const openShare = async () => { if (sharing) return; setSharing(true);
     try {
       const flowCards = shown.filter((c) => c.visible && c.type !== 'music' && c.type !== 'sticker');
@@ -308,10 +379,23 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
     } catch (e) { notify('Could not open sharing', 'err'); } finally { setSharing(false); } };
   const likePhoto = async (it) => { const on = !it.liked; const upd = (liked, n) => setD((x) => ({ ...x, photos: x.photos.map((p) => (p.id === it.id ? { ...p, liked, like_count: p.like_count + n } : p)) }));
     upd(on, on ? 1 : -1); try { await social.setPhotoLike(it.id, on); } catch (e) { upd(!on, on ? -1 : 1); notify(e.message, 'err'); } };
+  // Phone theme: only bg_image and font_size may differ (the accent is shared). {} falls back to the desktop theme.
+  const phoneBg = phoneTheme?.bg_image ? img[phoneTheme.bg_image] : img[theme.bg_image];
+  const effTheme = phoneTheme?.font_size ? { ...theme, font_size: phoneTheme.font_size } : theme;
+  // Phone card geometry: order -> CSS order, w/h -> width/height in units (capped so a card never overflows the column width).
+  const phoneCard = (c) => {
+    const pl = phoneLayout(c); if (!pl) return {};
+    const style = {};
+    if (pl.order != null) style.order = pl.order;
+    if (pl.w != null) style.width = `min(100%, ${Math.round((colW * pl.w) / 1000)}px)`;
+    if (pl.h != null) style.minHeight = `${Math.round((colW * pl.h) / 1000)}px`;
+    const has = Object.keys(style).length > 0;
+    return { cls: has ? 'ph-card' : '', style: has ? style : undefined };
+  };
   return (
     <>
-    {own && !draft && <DraftRestoreBar userId={profile.id} buildFresh={() => makeDraft(d)} onRestore={(x) => { setCollapsed(false); setDraft(x); }} />}
-    <div ref={pageRef} className={`page view${draft ? ' editing' : ''}${draft && collapsed ? ' collapsed' : ''}`} style={{ ...themeStyle(theme, img[theme.bg_image], fontFamily), '--u-cards': `${colW / 1000}px`, '--u-avatar': `${avW / 1000}px` }} onPointerDown={() => draft && setSel(null)}>
+    {own && !draft && !previewDoc && <DraftRestoreBar userId={profile.id} buildFresh={() => makeDraft(d)} onRestore={(x) => { setCollapsed(false); setDraft(x); }} />}
+    <div ref={pageRef} className={`page view${draft ? ' editing' : ''}${draft && collapsed ? ' collapsed' : ''}`} style={{ ...themeStyle(effTheme, phoneBg, fontFamily), '--u-cards': `${colW / 1000}px`, '--u-avatar': `${avW / 1000}px` }} onPointerDown={() => draft && setSel(null)}>
       <style>{toCss(draft ? draft.css : profile.custom_css)}</style>
       <div className="dim" />
       <main className="frame" ref={frame} data-cid="frame" data-layout={theme.layout || 'side-left'}>
@@ -334,13 +418,13 @@ function ProfileView({ username, go, notify, refreshMe, meName, autoEdit }) {
               <button className="link" onClick={async () => (await ask({ title: 'Block this person?', message: `${name} will no longer be able to interact with you.`, confirmLabel: 'Block', danger: true })) && safety.blockUser(profile.id).then(() => go('people')).catch((e) => notify(e.message || 'Could not block', 'err'))}>Block</button></div></div>{stickersOn('actions')}</div>}
         </aside>
         <div className="divider" />
-        <div className="cards" ref={cardsRef}>{flowShown.map((c) => <CardView key={c.id} c={c} d={d} img={img} go={go} openPhoto={setLb} own={own} meName={meName} notify={notify}>{stickersOn(c.id)}</CardView>)}
+        <div className="cards" ref={cardsRef}>{flowShown.map((c) => { const ph = phoneCard(c); return <CardView key={c.id} c={c} d={d} img={img} go={go} openPhoto={setLb} own={own} meName={meName} notify={notify} phClass={ph.cls} phStyle={ph.style}>{stickersOn(c.id)}</CardView>; })}
           {profile.github_repo && <div className="cw"><GithubActivity repo={profile.github_repo} /></div>}
           {stickersOn(null)}</div>
       {stickersOn('frame')}
       </main>
     </div>
-    {draft && <Suspense fallback={null}><Customizer draft={draft} setDraft={setDraft} onClose={() => { clearDraft(profile.id); setDraft(null); }} reload={async () => { await load(); refreshMe(); }} sel={sel} setSel={setSel} notify={notify} photos={d.photos} img={img} collapsed={collapsed} setCollapsed={setCollapsed} /></Suspense>}
+    {draft && !previewDoc && <Suspense fallback={null}><Customizer draft={draft} setDraft={setDraft} onClose={() => { clearDraft(profile.id); setDraft(null); }} reload={async () => { await load(); refreshMe(); }} sel={sel} setSel={setSel} notify={notify} photos={d.photos} img={img} collapsed={collapsed} setCollapsed={setCollapsed} /></Suspense>}
     {rep && <ReportModal target={{ type: 'profile', id: profile.id }} onClose={() => setRep(false)} notify={notify} />}
     {shareData && <Suspense fallback={null}><ShareSheet data={shareData} onClose={() => setShareData(null)} /></Suspense>}
     {lb != null && <Lightbox items={items} index={lb} onClose={() => setLb(null)} onIndex={setLb} onLike={own ? undefined : likePhoto} onLikers={own ? (it) => setLikers(it) : undefined} />}
