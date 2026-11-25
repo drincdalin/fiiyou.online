@@ -3,6 +3,10 @@
    at the bottom. Before, a tall step (themes) pushed Next below the fold on every phone and laptop. */
 .authwrap.obwrap { min-height: 100vh; min-height: 100dvh; box-sizing: border-box; align-items: center; padding: max(12px, env(safe-area-inset-top)) 12px max(12px, var(--sab, 0px)); }
 .obcard { display: flex; flex-direction: column; gap: 0; width: 100%; max-width: 460px; box-sizing: border-box; padding: 22px 20px 16px; max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow: hidden; }
+/* The generic auth card is a grid with gaps and it loads after this file, so it was quietly laying the onboarding card out: every row
+   stretched and the footer drifted up or down with the height of the step. This keeps the shell this file means to have: a column
+   where only the middle row grows, so the footer sits in the same place on every step. */
+.authwrap.obwrap .obcard { display: flex; flex-direction: column; gap: 0; }
 .obhead { flex: none; display: grid; gap: 12px; padding-bottom: 14px; }
 .obhead .authhead { display: grid; gap: 2px; }
 .obhead .brand { margin: 0; font-size: 1.6rem; line-height: 1.1; }
@@ -71,14 +75,9 @@
 .obcam { position: absolute; right: 2px; bottom: 2px; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: var(--on-accent); border: 3px solid var(--g1); }
 .obcam svg { flex: none; }
 
-/* install offer after the photo is saved: one line of copy, one action, one dismiss */
-.obinstall { display: flex; align-items: center; gap: var(--s-3); width: 100%; box-sizing: border-box; padding: var(--s-3) var(--s-2) var(--s-3) var(--s-4); background: var(--g1); border: 2px solid var(--g3); border-radius: var(--rad-l); text-align: left; }
-.obinstall-copy { display: grid; gap: 2px; flex: 1; min-width: 0; }
-.obinstall-copy b { font-size: var(--fs-md); line-height: var(--lh-snug); }
-.obinstall-copy small { color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-snug); }
-.obinstall .primary.sm { flex: none; }
-.obinstall-x { flex: none; width: 40px; height: 40px; padding: 0; display: grid; place-items: center; background: none; border: 0; border-radius: var(--rad-s); color: var(--muted); cursor: pointer; }
-.obinstall-x:hover { background: var(--hover); color: var(--ink); }
+/* the app step: one line of copy, then the browser's install button or the two taps to do by hand, centred like the photo step */
+.obapp { display: grid; gap: var(--s-4); justify-items: center; align-content: start; text-align: center; padding: var(--s-2) 0; }
+.obapp-how { color: var(--ink2); max-width: 32ch; }
 
 /* people */
 .oblist { display: grid; gap: 8px; }
@@ -87,10 +86,11 @@
 .obsent { display: inline-flex; align-items: center; gap: 4px; color: var(--ink2); font-size: var(--fs-sm); font-weight: 650; }
 .oblist .primary.sm { min-width: 64px; }
 
-/* navigation: big primary action, small round back */
-.obnav { display: flex; align-items: center; gap: 8px; }
-.obnav .primary { flex: 1; }
-.obnav .obback { flex: none; width: 48px; min-height: 48px; padding: 0; }
+/* navigation: one row of one fixed height on every step. The back slot is always there (empty on step 0, invisible on the returning
+   path) and the primary takes the rest of the width, so neither button moves when the step or the label changes. */
+.obnav { display: flex; align-items: center; gap: var(--s-2); height: var(--s-12); }
+.obnav .primary { flex: 1; height: var(--s-12); }
+.obnav .ghost.obback, .obnav .obback-gap { flex: none; align-self: center; width: var(--s-12); height: var(--s-12); min-height: var(--s-12); padding: 0; }
 .obskip { justify-self: center; font-size: var(--fs-sm); }
 
 .obsearch { display: flex; align-items: center; gap: 8px; padding: 0 12px; background: var(--g1); border: 1px solid var(--g3); border-radius: 12px; transition: border-color .15s, box-shadow .15s; }

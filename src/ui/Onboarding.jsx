@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { ArrowRight, BookOpen, Bicycle, Camera, CaretLeft, Check, Code, CookingPot, DownloadSimple, FilmSlate, GameController, MagnifyingGlass, Mountains, MusicNotes, PaintBrush, PawPrint, PencilSimple, SoccerBall, X } from '@phosphor-icons/react';
+import { ArrowRight, BookOpen, Bicycle, Camera, CaretLeft, Check, Code, CookingPot, DownloadSimple, FilmSlate, GameController, MagnifyingGlass, Mountains, MusicNotes, PaintBrush, PawPrint, PencilSimple, SoccerBall } from '@phosphor-icons/react';
 import { profiles, cards as cardsApi, friends, discover } from '../index.js';
 import { Avatar, useImages } from './shared.jsx';
 import { RowsSkeleton } from './states.jsx';
@@ -14,7 +14,7 @@ import AvatarCrop from './AvatarCrop.jsx';
 import { useInstallState, promptInstall } from './install.js';
 const InviteModal = lazy(() => import('./InviteModal.jsx'));
 
-const STEPS = ['Who are you?', 'Pick your vibe', 'Add a photo', 'What are you into?', 'Find your people'];
+const STEPS = ['Who are you?', 'Pick your vibe', 'Add a photo', 'Get the app', 'What are you into?', 'Find your people'];
 const LAST = STEPS.length - 1;
 const VIBES = VIBE_IDS.map((id) => PRESETS.find((p) => p.id === id)).filter(Boolean);
 /** Short names for the cramped swatch grid. The full name still labels the radio for screen readers and shows in the line below. */
@@ -44,33 +44,27 @@ function VibeCard({ preset, checked, onPick }) {
   </label>);
 }
 
-/** First-run welcome after sign-up: name and place, a look, a photo, a few taps about you, then people to add.
+/** First-run welcome after sign-up: name and place, a look, a photo, the app, a few taps about you, then people to add.
  *  Almost everything is a tap. Every step can be skipped except the photo, which is mandatory (the database refuses to finish without
  *  it): finishing sets profiles.onboarded_at so it never shows again. A person who already onboarded but never added a photo sees
  *  only the photo step. */
-const INSTALL_DISMISSED = 'fiiyou:install:dismissed';
 
-/** One short card shown right after the photo is saved: offer the app install (Chromium) or the two-tap iOS steps. Dismissed once, it stays gone. */
-function InstallCard({ notify }) {
+/** The app step, right after the photo: one line of copy, then either the browser's own install question (Chromium) or the two taps
+ *  the person has to do themselves (iPhone has no prompt). Nothing is saved here, so Next always works. */
+function InstallStep({ notify }) {
   const st = useInstallState();
   const [busy, setBusy] = useState(false);
-  const [hidden, setHidden] = useState(() => { try { return localStorage.getItem(INSTALL_DISMISSED) === '1'; } catch { return false; } });
-  const dismiss = () => { setHidden(true); try { localStorage.setItem(INSTALL_DISMISSED, '1'); } catch { /* private mode */ } };
   const install = async () => {
     setBusy(true);
     const r = await promptInstall();
     setBusy(false);
-    if (r === 'accepted') { dismiss(); notify('Installing fiiyou…'); }
+    if (r === 'accepted') notify('Installing fiiyou…');
   };
-  if (hidden || st === 'installed') return null;
   const ios = st === 'ios';
-  return (<div className="obinstall" role="region" aria-label="Install the app">
-    <div className="obinstall-copy">
-      <b>{ios ? 'Add fiiyou to your Home Screen' : 'Install the app'}</b>
-      <small>{ios ? 'Tap Share, then Add to Home Screen.' : st === 'ready' ? 'Open fiiyou from your home screen. It loads faster.' : 'Use your browser menu and choose Install or Add to Home Screen.'}</small>
-    </div>
-    {st === 'ready' && <button type="button" className="primary sm" onClick={install} aria-busy={busy || undefined}><DownloadSimple size={16} weight="bold" aria-hidden="true" />Install</button>}
-    <button type="button" className="obinstall-x" onClick={dismiss} aria-label="Dismiss"><X size={16} weight="bold" aria-hidden="true" /></button>
+  return (<div className="obapp">
+    <p className="muted obhint">{st === 'installed' ? 'You already have it on this device.' : 'It opens full screen, without the browser bars.'}</p>
+    {st === 'ready' && <button type="button" className="ghost" onClick={install} aria-busy={busy || undefined}><DownloadSimple size={16} weight="bold" aria-hidden="true" />Install the app</button>}
+    {(ios || st === 'manual') && <p className="obhint obapp-how">{ios ? 'Share, then Add to Home Screen.' : 'Use your browser menu, then Install or Add to Home Screen.'}</p>}
   </div>);
 }
 
@@ -100,7 +94,7 @@ export default function Onboarding({ me, inviter: rawInviter, onDone, notify }) 
     }).catch(() => {});
   }, []);
 
-  // step 5 data: the person who invited you first, then recent people in your locality (or anywhere if nobody is there yet)
+  // last step data: the person who invited you first, then recent people in your locality (or anywhere if nobody is there yet)
   const loadPeople = async () => {
     setPeople(null); setErr('');
     try {
@@ -144,7 +138,7 @@ export default function Onboarding({ me, inviter: rawInviter, onDone, notify }) 
   const next = async () => {
     if (step === 0 && !(await run(() => profiles.updateMyProfile({ display_name: name.trim() || me.username, headline: mood.trim() || null, locality_id: loc ? +loc : null })))) return;
     if (step === 1 && !(await run(saveVibe))) return;
-    if (step === 3 && !(await run(saveAbout))) return;
+    if (step === 4 && !(await run(saveAbout))) return;
     go(step + 1);
   };
   const pickAvatar = async (e) => {
@@ -170,7 +164,8 @@ export default function Onboarding({ me, inviter: rawInviter, onDone, notify }) 
   const toggleInterest = (id) => setPicks((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]));
   const pickMood = (m) => { setOwnMood(false); setMood((cur) => (cur === m ? '' : m)); };
   const lastStep = returning ? 2 : LAST;   // a returning account only has the photo step
-  const ctaLabel = step === lastStep ? 'Go to fiiyou' : (step === 2 && !avatar) ? 'Add a photo' : (step === 3 && !body) ? 'Skip' : 'Next';
+  const canBack = step > 0 && !returning;
+  const ctaLabel = step === lastStep ? 'Go to fiiyou' : (step === 2 && !avatar) ? 'Add a photo' : 'Next';
 
   return (<div className="authwrap obwrap"><div className="authcard obcard" role="dialog" aria-labelledby="ob-h">
     <div className="obhead">
@@ -205,10 +200,14 @@ export default function Onboarding({ me, inviter: rawInviter, onDone, notify }) 
             <Avatar src={preview || undefined} size={128} name={name} /><span className="obcam" aria-hidden="true"><Camera size={18} weight="bold" /></span></label>
           <p className="muted obhint">{avatar ? 'Looking good. Tap the photo to change it.' : 'Tap the circle. A face, or anything that feels like you.'}</p>
         </div>
-        {avatar && <InstallCard notify={notify} />}
       </>}
 
       {step === 3 && <>
+        <InstallStep notify={notify} />
+        <button type="button" className="link muted obskip" onClick={finish} disabled={busy}>Skip setup for now</button>
+      </>}
+
+      {step === 4 && <>
         <div className="obchips" role="group" aria-label="Things you are into">
           {INTERESTS.map((i) => <Chip key={i.id} on={picks.includes(i.id)} icon={INTEREST_ICON[i.id]} onClick={() => toggleInterest(i.id)}>{i.label}</Chip>)}
         </div>
@@ -230,12 +229,13 @@ export default function Onboarding({ me, inviter: rawInviter, onDone, notify }) 
     <footer className="obfoot">
     {err && <p className="err" role="alert">{err}{step === LAST && <> <button type="button" className="link" onClick={loadPeople}>Try again</button></>}</p>}
     <div className="obnav">
-      {step > 0 && !returning && <button type="button" className="ghost obback" onClick={() => go(step - 1)} disabled={busy} aria-label="Back"><CaretLeft size={18} weight="bold" aria-hidden="true" /></button>}
+      {canBack
+        ? <button type="button" className="ghost obback" onClick={() => go(step - 1)} disabled={busy} aria-label="Back"><CaretLeft size={18} weight="bold" aria-hidden="true" /></button>
+        : <span className="obback-gap" aria-hidden="true" />}
       {step < lastStep
         ? <button type="button" className="primary" onClick={next} disabled={(step === 0 && !name.trim()) || (step === 2 && !avatar)} aria-busy={busy || undefined}>{ctaLabel}{ctaLabel === 'Next' && <ArrowRight size={18} weight="bold" aria-hidden="true" />}</button>
         : <button type="button" className="primary" onClick={finish} disabled={!avatar} aria-busy={busy || undefined}>{ctaLabel}<ArrowRight size={18} weight="bold" aria-hidden="true" /></button>}
     </div>
-    {!returning && avatar && <button type="button" className="link muted obskip" onClick={finish} disabled={busy}>Skip setup for now</button>}
     </footer>
     {inv && <Suspense fallback={null}><InviteModal me={me} onClose={() => setInv(false)} notify={notify} /></Suspense>}
     {crop && <AvatarCrop file={crop} onCancel={() => { setCrop(null); setPreview(null); }} onDone={cropDone} />}
