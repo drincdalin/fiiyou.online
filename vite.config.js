@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
   // YouTube music player: the IFrame API script (www.youtube.com, s.ytimg.com), cover art (i.ytimg.com) and the nocookie player frame. Nothing is requested until a visitor presses play (see src/lib/musicConfig.js).
   const yt = ' https://www.youtube.com https://s.ytimg.com';
   const csp = ["default-src 'self'", `script-src 'self'${yt}${ts}`, "style-src 'self' 'unsafe-inline'", `img-src 'self' data: blob: ${sb} https://tile.openstreetmap.org https://avatars.githubusercontent.com https://i.ytimg.com https://gifjif.com`,
-    "media-src 'self' blob: https:", "font-src 'self'", `connect-src 'self' ${sb} ${ws} https://nominatim.openstreetmap.org https://api.github.com https://www.youtube.com https://gifjif.com${ts}`, `frame-src https://www.youtube-nocookie.com${ts}`,
+    "media-src 'self' blob: https:", "font-src 'self'", `connect-src 'self' ${sb} ${ws} https://nominatim.openstreetmap.org https://api.github.com https://www.youtube.com https://gifjif.com${ts}`, `frame-src 'self' https://www.youtube-nocookie.com${ts}`,
     "object-src 'none'", "base-uri 'self'", "form-action 'self'"].join('; ');
   // No canonical / og:url here: index.html is served for every path (/map, /<username>, ...), so a fixed "/" would mark every page as a copy of the home page.
   const seo = site ? `<meta property="og:image" content="${site}/og-image.png"><meta name="twitter:image" content="${site}/og-image.png">` : '';
