@@ -1,13 +1,12 @@
 // Web Push for fiiyou: registers the service worker (public/sw.js) and subscribes this device.
 // Needs VITE_VAPID_PUBLIC_KEY in .env (the public half of the VAPID key pair). Without it the toggle stays hidden.
 import { social } from '../index.js';
+import { isStandalone as standalone, isIOS as ios } from './install.js';
 
 const BASE = import.meta.env.BASE_URL;
 const KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
 
 const toBytes = (s) => { const p = '='.repeat((4 - (s.length % 4)) % 4); return Uint8Array.from(atob((s + p).replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0)); };
-const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-const ios = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
 /** Call once when the app starts. Also what makes the site installable. */
 export function registerSW() {

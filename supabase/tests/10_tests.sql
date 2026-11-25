@@ -271,7 +271,7 @@ begin
   perform t.ok(not is_admin(), 'regular member is not admin');
   perform t.fails('select admin_stats()', 'non-admin blocked from stats', 'forbidden');
   perform t.fails(format($q$select admin_set_verified(%L, true)$q$, bob), 'non-admin cannot verify', 'forbidden');
-  perform t.fails(format($q$select admin_delete_user(%L)$q$, carol), 'non-admin cannot delete users', 'forbidden');
+  perform t.fails(format($q$select admin_delete_user(%L, 'a valid reason')$q$, carol), 'non-admin cannot delete users', 'forbidden');
   perform t.ok((select count(*) from admin_emails) = 0, 'admin list invisible to members');
   perform t.fails('select log_admin(''x'', ''y'')', 'members cannot forge audit log entries', 'forbidden');
   insert into reports (reporter_id, target_type, target_id, reason) select bob, 'post', id, 'spam' from posts where body = 'at the spot';
@@ -286,7 +286,7 @@ begin
   perform t.ok(ipath like '%3333%', 'admin_delete_post returns the image path for storage clean-up');
   perform t.ok(not exists (select 1 from posts where body = 'at the spot'), 'post removed');
   perform admin_set_report((select id from reports limit 1), 'reviewed');
-  perform t.fails(format($q$select admin_delete_user(%L)$q$, carol), 'admin cannot delete themselves', 'cannot_delete_self');
+  perform t.fails(format($q$select admin_delete_user(%L, 'a valid reason')$q$, carol), 'admin cannot delete themselves', 'cannot_delete_self');
   perform t.ok((select count(*) from admin_log(10)) >= 3, 'actions are logged');
   perform t.ok((select count(*) from admin_referenced_paths()) >= 1, 'referenced paths listed');
   perform t.as_admin();

@@ -150,9 +150,32 @@ function accountBanned(row: { username?: string; payload: Record<string, unknown
   return { subject, html, text };
 }
 
+/** d) The account was deleted by a moderator (not banned). The address is NOT blocked, so the wording says the person may sign up again. */
+function accountDeleted(row: { username?: string; payload: Record<string, unknown> }, cfg: Cfg): Rendered {
+  const who = oneLine(row.username, 40);
+  const reason = oneLine(row.payload.reason_text, 500) || 'Your account did not follow our Terms of Use.';
+  const subject = 'Your fiiyou account has been deleted';
+  const html = shell(subject, `
+    <p style="margin:0 0 12px;">Hi${who ? ` ${esc(who)}` : ''},</p>
+    <p style="margin:0 0 12px;">A moderator deleted your fiiyou account${who ? ` <b>@${esc(who)}</b>` : ''}. Its profile, posts and photos have been removed.</p>
+    <p style="margin:0 0 4px;font-weight:700;">Reason</p>
+    ${box(`<div>${esc(reason)}</div>`)}
+    <p style="margin:0 0 12px;">This email address is not blocked. You are welcome to create a new account if you follow our <a href="${esc(cfg.siteUrl)}/terms.html" style="color:${ACCENT};">Terms</a>.</p>
+    <p style="margin:0;"><b>If you think this was a mistake,</b> write to <a href="mailto:${esc(cfg.supportEmail)}" style="color:${ACCENT};">${esc(cfg.supportEmail)}</a> within ${cfg.appealDays} days from the email address you signed up with. Tell us your username and why you think the decision was wrong. A different person will look at it.</p>`, cfg);
+  const text = [
+    `Hi${who ? ` ${who}` : ''},`, '',
+    `A moderator deleted your fiiyou account${who ? ` @${who}` : ''}. Its profile, posts and photos have been removed.`, '',
+    `Reason: ${reason}`, '',
+    `This email address is not blocked. You are welcome to create a new account if you follow our Terms: ${cfg.siteUrl}/terms.html`, '',
+    `If you think this was a mistake, write to ${cfg.supportEmail} within ${cfg.appealDays} days from the email address you signed up with. Include your username and why you think the decision was wrong.`,
+  ].join('\n');
+  return { subject, html, text };
+}
+
 function render(kind: string, row: { username?: string; payload: Record<string, unknown> }, cfg: Cfg): Rendered {
   if (kind === 'content_removed') return contentRemoved(row, cfg);
   if (kind === 'account_banned') return accountBanned(row, cfg);
+  if (kind === 'account_deleted') return accountDeleted(row, cfg);
   if (kind === 'post_removed' || kind === 'comment_removed') return itemRemoved(kind, row, cfg);
   throw new Error(`unknown kind: ${kind}`);
 }

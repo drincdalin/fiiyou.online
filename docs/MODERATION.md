@@ -11,6 +11,13 @@
 5. Optional moderator: `insert into public.staff_roles (user_id, role) select id, 'moderator' from auth.users where email = 'mod@example.com';`
 6. Recommended: run `supabase/moderation_retry_cron.sql`: every 10 minutes it sends any mail that is still pending or failed.
 
+## Deleting an account (migration 0057)
+
+Deleting an account (without a ban) now needs a reason and emails it to the person, like a ban does; the address is not blocked. Order matters:
+1. Run `supabase/migrations/0057_delete_user_reason.sql` against the database.
+2. Copy the updated `index.ts` and `templates.ts` into `/srv/fiiyou/supabase/volumes/functions/send-moderation-email/` and recreate the function (step 3 above).
+3. Only then deploy the new front end (the Admin screen calls `admin_delete_user(p_user, p_user_message)`).
+
 ## Mails stay "pending"
 
 `pending` with 0 attempts means the function never got as far as picking the mail up. (If it had tried and the mail server refused, the row would say `failed` and `last_error` would say why.) Check, in this order:

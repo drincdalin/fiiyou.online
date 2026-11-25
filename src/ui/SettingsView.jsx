@@ -5,7 +5,7 @@ import { useImages, Avatar } from './shared.jsx';
 import { ask, tell } from './dialog.jsx';
 import { ErrorState, friendlyError } from './errors.jsx';
 import PushToggle from './PushToggle.jsx';
-import { useInstallState, promptInstall } from './install.js';
+import { useInstallState, promptInstall, installGuideText } from './install.js';
 import { ChangePasswordModal } from './PasswordMeter.jsx';
 import { RowsSkeleton } from './states.jsx';
 
@@ -32,20 +32,16 @@ function Blocked({ notify, go }) {
 
 /** Install fiiyou as an app. Browsers that allow it (Chrome, Edge, Brave, Opera, Vivaldi, Samsung Internet) install with one click.
  *  Safari and a few others do not let a website install itself, so the same button opens a short card with the exact steps. */
-const GUIDE = {
-  ios: { title: 'Add fiiyou to your Home Screen', message: '1. Tap the Share button (the square with an arrow) in Safari.\n2. Scroll down and tap “Add to Home Screen”.\n3. Tap Add. From now on open fiiyou from your Home Screen.\n\nUsing another browser and not seeing it? Open fiiyou in Safari.' },
-  manual: { title: 'Install fiiyou', message: 'This browser does not let a website install itself. Open the browser menu (⋮ or ⋯) and choose “Install fiiyou” or “Add to Home screen”. In Safari on a Mac use File, then “Add to Dock”.\n\nIf you do not see any of these, this browser cannot install websites. Chrome, Edge, Brave and Opera can.' },
-};
 function InstallRow({ notify }) {
   const st = useInstallState(); const [busy, setBusy] = useState(false);
   const install = async () => {
     if (st === 'ready') {
       setBusy(true); const r = await promptInstall(); setBusy(false);
       if (r === 'accepted') notify('Installing fiiyou…');
-      else if (r === 'unavailable') tell(GUIDE.manual);
+      else if (r === 'unavailable') tell(installGuideText('manual'));
       return;   // 'dismissed': they said no, nothing more to say
     }
-    tell(st === 'ios' ? GUIDE.ios : GUIDE.manual);
+    tell(installGuideText(st));
   };
   const text = st === 'installed' ? 'You are using fiiyou as an installed app.' : 'Give fiiyou its own window and an icon on your home screen or desktop. It opens faster and feels like any other app.';
   return (<div className="srow"><span className="sico"><DeviceMobile size={20} weight="bold" aria-hidden="true" /></span><div><b>Install the app</b><small>{text}</small></div>

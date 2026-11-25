@@ -95,21 +95,44 @@ button.mention:focus-visible { text-decoration: underline; }
 
 /* Profile badges + profile likes */
 .pbadges { display: inline-flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px; margin-left: 6px; vertical-align: middle; }
-/* One pill, one height, one icon size for every badge. Flat fill + hairline, no gradient or glow. */
+/* Profile badges: a small medal + a label in a soft tinted capsule. Each kind has ONE hue (--pb); everything else is mixed from it and from the
+   theme's own ink/card colours, so the capsule stays readable on dark and light looks alike. (The blue Verified check is a separate element and is untouched.) */
 .profile-badge {
-  display: inline-flex; align-items: center; gap: .4em;
-  height: 1.5em; padding: 0 .55em;
+  --pb: #9aa0a6; --pb-2: color-mix(in srgb, var(--pb) 70%, #000); --pb-ink: #111;
+  position: relative; overflow: hidden; isolation: isolate;
+  display: inline-flex; align-items: center; gap: .5em;
+  height: 1.9em; padding: 0 .75em 0 .2em; box-sizing: border-box;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--pb-ink) 30%, transparent);
-  background: var(--pb, var(--g3)); color: var(--pb-ink, var(--ink));
-  font-family: inherit; font-size: .6em; font-weight: 800; line-height: 1;
-  letter-spacing: .08em; text-transform: uppercase; white-space: nowrap;
+  border: 1px solid color-mix(in srgb, var(--pb) 55%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pb) 20%, var(--card-bg, var(--g1))), color-mix(in srgb, var(--pb) 9%, var(--card-bg, var(--g1))));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 14%, transparent), 0 1px 2px color-mix(in srgb, #000 28%, transparent);
+  color: color-mix(in srgb, var(--pb) 58%, var(--ink, #fff));
+  font-family: inherit; font-size: .58em; font-weight: 800; line-height: 1; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap;
+  cursor: default; transition: transform var(--dur-1, .15s) var(--ease-out, ease), box-shadow var(--dur-1, .15s) var(--ease-out, ease);
 }
-.profile-badge svg { flex: none; width: .85em; height: .85em; color: currentColor; }
-.profile-badge.beta { --pb: #7cc4ff; --pb-ink: #001522; }
-.profile-badge.og { --pb: #f6c86a; --pb-ink: #241600; }
-.profile-badge.founder { --pb: #c3a6ff; --pb-ink: #17002e; }
-.profile-badge.donor { --pb: #ff9aae; --pb-ink: #2a0710; }
+.profile-badge .pb-ico {
+  flex: none; display: grid; place-items: center; width: 1.5em; height: 1.5em; border-radius: 50%;
+  background: linear-gradient(145deg, var(--pb), var(--pb-2)); color: var(--pb-ink);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 45%, transparent), 0 0 0 1px color-mix(in srgb, #000 18%, transparent);
+  font-size: 1em;
+}
+.profile-badge .pb-ico svg { width: .95em; height: .95em; color: currentColor; }
+.profile-badge .pb-txt { padding-top: .04em; }
+.profile-badge:hover { transform: translateY(-1px); box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 18%, transparent), 0 3px 8px -2px color-mix(in srgb, var(--pb) 45%, transparent); }
+/* one hue per kind */
+.profile-badge.beta { --pb: #4fb3ff; --pb-ink: #00203a; }
+.profile-badge.og { --pb: #f2b53a; --pb-ink: #2b1b00; }
+.profile-badge.founder { --pb: #a98bff; --pb-ink: #1c0a45; }
+.profile-badge.donor { --pb: #ff6f8e; --pb-ink: #3a0615; }
+/* Founder and OG are the rare ones: a slow shine sweeps across the capsule. Off for anyone who asked for less motion. */
+.profile-badge.founder::after, .profile-badge.og::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(105deg, transparent 35%, color-mix(in srgb, #fff 38%, transparent) 50%, transparent 65%);
+  transform: translateX(-120%); animation: pbshine 5.5s ease-in-out 1.2s infinite;
+}
+.profile-badge.og::after { animation-delay: 2.6s; }
+@keyframes pbshine { 0%, 62% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+@media (prefers-reduced-motion: reduce) { .profile-badge { transition: none; } .profile-badge:hover { transform: none; } .profile-badge.founder::after, .profile-badge.og::after { animation: none; display: none; } }
 
 .pstats { display: inline-flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 7px; margin-top: 2px; }
 .pstats .views { margin: 0; }

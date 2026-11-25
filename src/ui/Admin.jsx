@@ -1,25 +1,19 @@
 import { useEffect, useState } from 'react';
 import { admin } from '../index.js';
 import { useImages, Avatar, ago } from './shared.jsx';
-import { DeletePlaceModal, DeleteContentModal } from './ModerationModals.jsx';
+import { DeletePlaceModal, DeleteContentModal, AccountActionModal } from './ModerationModals.jsx';
 import { Flag, UsersThree, HardDrives, ClipboardText, EnvelopeSimple } from '@phosphor-icons/react';
 import { PageLoading } from './states.jsx';
 
 const TAB_ICONS = { reports: Flag, users: UsersThree, emails: EnvelopeSimple, storage: HardDrives, log: ClipboardText };
 
 const mb = (n) => `${(n / 1048576).toFixed(1)} MB`;
-const banNotice = (r) => (r?.notified === false ? 'Account deleted and email banned, but the person could not be emailed. See the Emails tab.' : 'Account deleted and email banned');
 
 function Reports({ go, notify, refresh, role }) {
-  const [status, setStatus] = useState('open'); const [rows, setRows] = useState(null); const [dp, setDp] = useState(null); const [dc, setDc] = useState(null);
+  const [status, setStatus] = useState('open'); const [rows, setRows] = useState(null); const [dp, setDp] = useState(null); const [dc, setDc] = useState(null); const [da, setDa] = useState(null);
   const load = () => admin.reports(status).then(setRows).catch((e) => { notify(e.message, 'err'); setRows([]); }); useEffect(() => { setRows(null); load(); }, [status]);
   const img = useImages((rows || []).flatMap((r) => [r.preview?.image_path, r.preview?.avatar_path]));
   const run = async (fn, msg) => { try { await fn(); notify(msg); await load(); refresh(); } catch (e) { notify(e.message || 'Failed', 'err'); } };
-  const delAccount = (id, name) => { if (prompt(`Type "${name}" to permanently delete this account, its files and everything it owns.`) === name) run(() => admin.deleteUser(id), 'Account deleted'); };
-  const banAccount = async (id, name, reason) => {
-    if (prompt(`Type "${name}" to BAN this email and permanently delete the account, its files and everything it owns.`) !== name) return;
-    try { const r = await admin.banUser(id, reason); notify(banNotice(r)); await load(); refresh(); } catch (e) { notify(e.message || 'Failed', 'err'); }
-  };
   return (<>
     <div className="tabs">{['open', 'reviewed', 'dismissed'].map((s) => <button key={s} className={status === s ? 'on' : ''} onClick={() => setStatus(s)}>{s === 'open' ? 'pending' : s === 'reviewed' ? 'resolved' : s}</button>)}</div>
     {!rows ? <PageLoading /> : !rows.length ? <p className="empty">Nothing here.</p> : rows.map((r) => { const p = r.preview; return (
@@ -34,35 +28,30 @@ function Reports({ go, notify, refresh, role }) {
           {p && <button className="ghost sm" onClick={() => go('profile', p.author)}>Open profile</button>}
           {p && r.target_type === 'place' && <button className="ghost sm danger" onClick={() => setDp({ id: r.target_id, name: p.title, creator: p.author })}>Delete place…</button>}
           {p && r.target_type !== 'profile' && r.target_type !== 'place' && <button className="ghost sm danger" onClick={() => setDc({ type: r.target_type, id: r.target_id, reportId: r.id, author: p.author })}>Delete content…</button>}
-          {p && role === 'admin' && <button className="ghost sm danger" onClick={() => delAccount(p.author_id, p.author)}>Delete account</button>}
-          {p && role === 'admin' && <button className="ghost sm danger" onClick={() => banAccount(p.author_id, p.author, r.reason)}>Ban &amp; delete</button>}
+          {p && role === 'admin' && <button className="ghost sm danger" onClick={() => setDa({ mode: 'delete', id: p.author_id, username: p.author })}>Delete account…</button>}
+          {p && role === 'admin' && <button className="ghost sm danger" onClick={() => setDa({ mode: 'ban', id: p.author_id, username: p.author, internal: r.reason })}>Ban &amp; delete…</button>}
           {status === 'open' && <><button className="primary sm" onClick={() => run(() => admin.setReport(r.id, 'reviewed'), 'Marked reviewed')}>Mark reviewed</button><button className="ghost sm" onClick={() => run(() => admin.setReport(r.id, 'dismissed'), 'Dismissed')}>Dismiss</button></>}
           {status !== 'open' && <button className="ghost sm" onClick={() => run(() => admin.setReport(r.id, 'open'), 'Reopened')}>Reopen</button>}
         </div></article>); })}
     {dp && <DeletePlaceModal place={dp} notify={notify} onClose={() => setDp(null)} onDone={() => { setDp(null); load(); refresh(); }} />}
+    {da && <AccountActionModal target={da} notify={notify} onClose={() => setDa(null)} onDone={() => { setDa(null); load(); refresh(); }} />}
     {dc && <DeleteContentModal target={dc} notify={notify} onClose={() => setDc(null)} onDone={() => { setDc(null); load(); refresh(); }} />}
   </>);
 }
 
 function Users({ go, notify, refresh }) {
-  const [q, setQ] = useState(''); const [rows, setRows] = useState([]);
+  const [q, setQ] = useState(''); const [rows, setRows] = useState([]); const [da, setDa] = useState(null);
   const load = () => admin.searchUsers(q).then(setRows).catch((e) => notify(e.message, 'err')); useEffect(() => { const t = setTimeout(load, 250); return () => clearTimeout(t); }, [q]);
   const img = useImages(rows.map((u) => u.avatar_path));
   const verify = async (u) => { try { await admin.setVerified(u.id, !u.verified); notify(u.verified ? 'Verification removed' : 'Profile verified'); load(); refresh(); } catch (e) { notify(e.message, 'err'); } };
-  const del = async (u) => { if (prompt(`Type "${u.username}" to permanently delete this account, its files and everything it owns.`) !== u.username) return; try { await admin.deleteUser(u.id); notify('Account deleted'); load(); refresh(); } catch (e) { notify(e.message, 'err'); } };
-  const ban = async (u) => {
-    if (prompt(`Type "${u.username}" to BAN this email and permanently delete the account, its files and everything it owns.`) !== u.username) return;
-    const reason = prompt('Internal note (optional, only admins will see it):') || null;
-    const msg = prompt('Message to the person (emailed to them before the account is deleted; leave empty for the default text):') || null;
-    try { const r = await admin.banUser(u.id, reason, msg); notify(banNotice(r)); load(); refresh(); } catch (e) { notify(e.message, 'err'); }
-  };
   return (<><input placeholder="Search username or display name (empty = newest)" value={q} onChange={(e) => setQ(e.target.value)} />
     {rows.map((u) => (<div className="row" key={u.id}><Avatar src={img[u.avatar_path]} size={44} />
       <button className="link" onClick={() => go('profile', u.username)}><span>{u.display_name}{u.verified && <em className="badge vb">Verified</em>}</span><small>@{u.username} · joined {new Date(u.created_at).toLocaleDateString('ro-RO')} · {u.post_count} posts{u.open_reports > 0 ? ` · ${u.open_reports} open reports` : ''}</small></button>
-      <span className="acts"><button className={u.verified ? 'ghost sm' : 'primary sm'} onClick={() => verify(u)}>{u.verified ? 'Unverify' : 'Verify'}</button><button className="ghost sm danger" onClick={() => del(u)}>Delete</button><button className="ghost sm danger" onClick={() => ban(u)}>Ban &amp; delete</button></span></div>))}</>);
+      <span className="acts"><button className={u.verified ? 'ghost sm' : 'primary sm'} onClick={() => verify(u)}>{u.verified ? 'Unverify' : 'Verify'}</button><button className="ghost sm danger" onClick={() => setDa({ mode: 'delete', id: u.id, username: u.username })}>Delete…</button><button className="ghost sm danger" onClick={() => setDa({ mode: 'ban', id: u.id, username: u.username })}>Ban &amp; delete…</button></span></div>))}
+    {da && <AccountActionModal target={da} notify={notify} onClose={() => setDa(null)} onDone={() => { setDa(null); load(); refresh(); }} />}</>);
 }
 
-const MAIL_KINDS = { account_banned: 'Ban notice', post_removed: 'Post removed', comment_removed: 'Comment removed', content_removed: 'Place removed' };
+const MAIL_KINDS = { account_banned: 'Ban notice', account_deleted: 'Account deleted notice', post_removed: 'Post removed', comment_removed: 'Comment removed', content_removed: 'Place removed' };
 const MAIL_STATUS = { pending: 'waiting', sending: 'stuck', failed: 'failed', sent: 'sent' };
 
 function Emails({ notify }) {

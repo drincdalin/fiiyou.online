@@ -73,3 +73,23 @@ begin
   perform t.ok((select count(*) from moderation_outbox where kind = 'account_banned' and to_email = 'm35other@t.t' and payload->>'reason_text' = 'Harassment of other members') = 1, 'ban email queued with the user-facing reason');
   perform t.ok((select count(*) from banned_emails) >= 1, 'email fingerprint stored');
 end $$;
+
+-- 0057: deleting an account needs a reason and emails it (no email block, unlike a ban)
+do $$
+declare admin_u uuid := gen_random_uuid(); victim uuid := gen_random_uuid();
+begin
+  insert into auth.users (id, email, email_confirmed_at, raw_user_meta_data) values
+    (admin_u, 'm57admin@t.t', now(), '{"username":"m57admin","display_name":"A"}'),
+    (victim,  'm57victim@t.t', now(), '{"username":"m57victim","display_name":"V"}');
+  perform t.as_admin();
+  insert into admin_emails (email) values ('m57admin@t.t');
+  perform t.as_user(admin_u);
+  perform t.fails(format($q$select admin_delete_user(%L)$q$, victim), 'deleting an account without a reason is refused', 'reason_required');
+  perform t.fails(format($q$select admin_delete_user(%L, 'x')$q$, victim), 'a too-short reason is refused', 'reason_required');
+  perform t.ok(exists (select 1 from auth.users where id = victim), 'the refused deletion left the account alone');
+  perform admin_delete_user(victim, 'Fake account used to impersonate someone');
+  perform t.as_admin();
+  perform t.ok(not exists (select 1 from auth.users where id = victim), 'account deleted');
+  perform t.ok((select count(*) from moderation_outbox where kind = 'account_deleted' and to_email = 'm57victim@t.t' and payload->>'reason_text' = 'Fake account used to impersonate someone') = 1, 'deletion email queued with the reason');
+  perform t.ok(not exists (select 1 from banned_emails where email_hash = public.email_fingerprint('m57victim@t.t')), 'a deletion does not block the email address');
+end $$;

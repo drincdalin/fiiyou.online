@@ -56,15 +56,46 @@ async function removeUserFiles(id) {
     } catch (e) { if (b !== 'fonts') throw e; }   // fonts: best effort (staff may have no delete right on that bucket); it must never block a ban
   }
 }
-/** Removes every file the person owns first, then the account (everything else cascades). */
-export async function deleteUser(id) {
+/** Reasons for removing an account (a plain deletion or a ban). The chosen reason becomes the sentence in the email the person receives;
+ *  'custom' needs the moderator's own words (5+ characters). Same list for both actions, so they always read the same. */
+export const ACCOUNT_REASONS = [
+  ['guidelines', 'Violates Community Guidelines'],
+  ['spam', 'Spam / Commercial Abuse'],
+  ['explicit', 'Explicit or Inappropriate Content'],
+  ['abuse', 'Abuse / Harassment'],
+  ['impersonation', 'Impersonation / Fake Account'],
+  ['custom', 'Custom Reason'],
+];
+const ACCOUNT_SENTENCES = {
+  guidelines: 'Your account violated our Community Guidelines.',
+  spam: 'Your account was used for spam or commercial abuse.',
+  explicit: 'Your account contained explicit or inappropriate material.',
+  abuse: 'Your account was abusive or harassing towards other members.',
+  impersonation: 'Your account impersonated someone or was not a genuine account.',
+};
+/** The text emailed to the person: the preset sentence plus the optional note, or just the note for a custom reason. Max 500 characters (the database limit). */
+export const accountMessage = (code, note) => {
+  const n = String(note || '').trim();
+  return (code === 'custom' ? n : [ACCOUNT_SENTENCES[code], n].filter(Boolean).join(' ')).slice(0, 500);
+};
+/** Both removals refuse to start without a reason the person can be emailed. Checked BEFORE any file is deleted, so a refused call never leaves a half-deleted account. */
+function needReason(m) {
+  const t = String(m || '').trim();
+  if (t.length < 5) throw new Error('reason_required');
+  if (t.length > 500) throw new Error('reason_too_long');
+  return t;
+}
+/** Removes every file the person owns first, then the account (everything else cascades). A reason is required: the person is emailed it. */
+export async function deleteUser(id, userMessage) {
+  const msg = needReason(userMessage);
   await removeUserFiles(id);
-  await rpc('admin_delete_user', { p_user: id });
+  await rpc('admin_delete_user', { p_user: id, p_user_message: msg });
 }
 /** Same as deleteUser, but the database also remembers the (hashed) email so it can never sign up again. */
 export async function banUser(id, reason, userMessage) {
+  const msg = needReason(userMessage);
   await removeUserFiles(id);
-  return rpc('admin_ban_user', { p_user: id, p_reason: reason || null, p_user_message: userMessage || null });   // p_reason is internal; p_user_message is emailed to the person
+  return rpc('admin_ban_user', { p_user: id, p_reason: reason || null, p_user_message: msg });   // p_reason is internal; p_user_message is emailed to the person
 }
 
 /** Emails queued for members (ban notices, removed posts...). Admin only. Rows: { id, kind, username, status, attempts, last_error, created_at, sent_at }. Needs migration 0036. */
