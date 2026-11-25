@@ -30,6 +30,8 @@ import { SELECTORS, PROPS } from './customCss.js';
 import { PRESETS } from './themes.js';
 import { themeContrast } from '../lib/contrast.js';
 import { stickerModel, withModel, pinTo } from './stickerAnchor.js';
+import { cleanPhoneLayout } from '../lib/phoneLayout.js';
+import { usePhoneViewport } from './phoneView.js';
 import { buildThemeExport, download } from './themeFile.js';
 import ImportModal from './ImportModal.jsx';
 import LocalityPicker from './LocalityPicker.jsx';
@@ -67,6 +69,12 @@ const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const cx = (...a) => a.filter(Boolean).join(' ');
 const groupKeys = (g) => GROUPS.find((x) => x[0] === g)?.[1] || [];
 const isFlow = (c) => c.type !== 'sticker' && c.type !== 'music';
+// Phone order a flow card shows: its phone_layout.order when set, else its desktop position.
+const phoneOrderOf = (cards, c) => {
+  const idx = cards.filter(isFlow).findIndex((x) => x.id === c.id);
+  const o = c.phone_layout?.order;
+  return o != null && Number.isFinite(Number(o)) ? Number(o) : idx;
+};
 const typeMeta = (t) => CARD_TYPES[t] || { label: sentence(t), icon: Cards, empty: {} };
 
 // Blank link rows are allowed while editing; they're cleaned up on save.
@@ -82,7 +90,7 @@ const cleanLinks = (ls) => (ls || [])
 // ═══ 2. STYLES ══════════════════════════════════════════════════════════════
 
 const CSS = `
-.cz,.cz-pill{
+.cz,.cz-pill,.cz-prev{
   --cz-font:var(--ui-font),ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   --cz-bg:var(--g1);--cz-card:var(--g2);--cz-sunk:var(--g0);--cz-hover:var(--hover);
   --cz-ink:var(--ink);--cz-ink2:var(--ink2);--cz-ink3:var(--muted);
@@ -219,6 +227,19 @@ const CSS = `
 .cz-seg-opt:hover span{color:var(--cz-ink);background:var(--cz-card)}
 .cz-seg-opt input:checked + span{background:var(--cz-fill);color:var(--cz-fill-ink)}
 .cz-seg-opt input:focus-visible + span{outline:3px solid var(--cz-accent);outline-offset:2px}
+
+/* device switcher (header) + live phone preview */
+.cz-device{margin:0 12px 6px}
+.cz-device .cz-label{display:none}
+.cz-prev{position:fixed;z-index:99;top:var(--cz-top);right:400px;bottom:0;width:390px;max-width:calc(100% - 400px);
+  background:var(--cz-card);border-right:1px solid var(--cz-line2);overflow:hidden;
+  animation:cz-in .22s cubic-bezier(.2,.7,.2,1) both}
+.cz-prev iframe{display:block;width:390px;max-width:100%;height:100%;border:0;background:var(--cz-bg)}
+@media (min-width:1001px){body.cz-phone .page.editing{margin-right:790px}}
+@media (max-width:640px){
+  .cz-prev{right:auto;left:0;bottom:min(70dvh,660px);width:auto;max-width:none;border-right:0;border-bottom:1px solid var(--cz-line2)}
+  .cz-prev iframe{width:390px;max-width:100%;margin:0 auto}
+}
 .cz-switch{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:14px;border:1px solid var(--cz-line);background:var(--cz-sunk);cursor:pointer;font-weight:600}
 .cz-track{flex:none;position:relative;width:50px;height:28px;border-radius:999px;background:var(--cz-line2);transition:background .18s}
 .cz-track::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--cz-ink);box-shadow:0 2px 0 color-mix(in srgb,var(--shade) 35%,transparent);transition:transform .18s}
@@ -635,23 +656,25 @@ function CardBody({ c, setContent, goTab, friends = [] }) {
   }
 }
 
-function CardItem({ c, first, last, busy, onTitle, onMove, onToggle, onDelete, setContent, goTab, friends }) {
+function CardItem({ c, first, last, busy, onTitle, onMove, onToggle, onDelete, setContent, goTab, friends, phone, phoneOrder }) {
   const { label, icon: Icon } = typeMeta(c.type);
+  const hidden = phone ? !(c.phone_layout?.visible ?? c.visible) : !c.visible;
   return (
-    <li className="cz-item" data-hidden={!c.visible || undefined}>
+    <li className="cz-item" data-hidden={hidden || undefined}>
       <div className="cz-item-top">
         <span className="cz-item-ico"><Icon size={20} weight="fill" aria-hidden="true" /></span>
         <input className="cz-input" value={c.title || ''} maxLength={60} placeholder="Card title" aria-label={`${label} card title`} onChange={(e) => onTitle(e.target.value)} />
       </div>
       <div className="cz-item-bar">
         <span className="cz-item-type">
+          {phone && <span className="cz-badge">#{phoneOrder}</span>}
           {label}
-          {!c.visible && <span className="cz-badge"><EyeSlash size={12} weight="bold" aria-hidden="true" />Hidden</span>}
+          {hidden && <span className="cz-badge"><EyeSlash size={12} weight="bold" aria-hidden="true" />Hidden</span>}
         </span>
         <span className="cz-actions">
           <IconButton icon={ArrowUp} label="Move up" disabled={first} onClick={() => onMove(-1)} />
           <IconButton icon={ArrowDown} label="Move down" disabled={last} onClick={() => onMove(1)} />
-          <IconButton icon={c.visible ? Eye : EyeSlash} label={c.visible ? 'Hide card' : 'Show card'} onClick={onToggle} />
+          <IconButton icon={hidden ? Eye : EyeSlash} label={hidden ? 'Show card' : 'Hide card'} onClick={onToggle} />
           <DangerButton label="Delete card" disabled={busy} onConfirm={onDelete} />
         </span>
       </div>
@@ -948,26 +971,37 @@ function Presets({ ctx }) {
   );
 }
 
-function BackgroundSection({ ctx }) {
-  const { draft, setDraft, setTheme, th, run, busy } = ctx;
-  const bg = draft.theme.bg_image;
-  const dropOld = (old) => { if (old && old !== draft.origBg) media.deleteImage(old).catch(() => {}); };
+function BackgroundSection({ ctx, scope = 'desktop' }) {
+  const phone = scope === 'phone';
+  const { draft, setDraft, setTheme, th, run, busy, phoneTheme, setPhoneTheme, unsetPhoneTheme, phoneThemeOrig } = ctx;
+  const bg = phone ? phoneTheme?.bg_image : draft.theme.bg_image;
+  const dropOld = (old) => {
+    if (!old) return;
+    const orig = phone ? phoneThemeOrig.current?.bg_image : draft.origBg;
+    if (old !== orig) media.deleteImage(old).catch(() => {});
+  };
+  const remove = () => {
+    dropOld(bg);
+    if (phone) unsetPhoneTheme('bg_image');
+    else setDraft((d) => { const t = { ...d.theme }; delete t.bg_image; return { ...d, theme: t }; });
+  };
+  const upload = (file) => run(async () => {
+    const old = bg;
+    const p = await media.uploadImage(file, 'bg');
+    dropOld(old);
+    if (phone) setPhoneTheme({ bg_image: p });
+    else setTheme('bg_image', p);
+  });
   return (
-    <Section title="Background" icon={ImageIcon} defaultOpen={false}>
-      <div className="cz-grid2">{groupKeys('Background').map((k) => <ThemeSelect key={k} k={k} th={th} setTheme={setTheme} />)}</div>
+    <Section title="Background" icon={ImageIcon} defaultOpen={phone}>
+      {!phone && <div className="cz-grid2">{groupKeys('Background').map((k) => <ThemeSelect key={k} k={k} th={th} setTheme={setTheme} />)}</div>}
       <Group label="Background image">
         {bg && (
-          <FileChip icon={ImageSquare} removeLabel="Remove background image"
-            onRemove={() => { dropOld(bg); setDraft((d) => { const t = { ...d.theme }; delete t.bg_image; return { ...d, theme: t }; }); }}>
+          <FileChip icon={ImageSquare} removeLabel="Remove background image" onRemove={remove}>
             Background image added
           </FileChip>
         )}
-        <FilePick disabled={busy} block onFiles={(fs) => run(async () => {
-          const old = draft.theme.bg_image;
-          const p = await media.uploadImage(fs[0], 'bg');
-          dropOld(old);
-          setTheme('bg_image', p);
-        })}>{bg ? 'Replace image' : 'Upload image'}</FilePick>
+        <FilePick disabled={busy} block onFiles={(fs) => upload(fs[0])}>{bg ? 'Replace image' : 'Upload image'}</FilePick>
         <p className="cz-hint">Large images are compressed automatically.</p>
       </Group>
     </Section>
@@ -1036,8 +1070,28 @@ function ThemeFileSection({ ctx }) {
   );
 }
 
+/** Phone theme: only the background image and base text size may differ (the accent is shared). */
+function PhoneThemeTab({ ctx }) {
+  const { phoneTheme, setPhoneTheme, unsetPhoneTheme } = ctx;
+  return (
+    <>
+      <p className="cz-hint">These change how your profile looks on a phone only. Colors, fonts and shape stay the same everywhere.</p>
+      <BackgroundSection ctx={ctx} scope="phone" />
+      <Section title="Text size" icon={TextAa}>
+        <Select label="Base text size" value={phoneTheme?.font_size || ''}
+          onChange={(e) => (e.target.value ? setPhoneTheme({ font_size: e.target.value }) : unsetPhoneTheme('font_size'))}>
+          <option value="">Same as desktop</option>
+          {OPTIONS.font_size.map((o) => <option key={o} value={o}>{o}px</option>)}
+        </Select>
+        <p className="cz-hint">Shrink long text to fit a small screen, or leave it on Same as desktop.</p>
+      </Section>
+    </>
+  );
+}
+
 /** How does it look — easiest controls first, most advanced last. */
 function ThemeTab({ ctx }) {
+  if (ctx.device === 'phone') return <PhoneThemeTab ctx={ctx} />;
   const { draft, setDraft, th, setTheme, r, setRule } = ctx;
   return (
     <>
@@ -1076,19 +1130,27 @@ function ThemeTab({ ctx }) {
 
 /** What's on the page — the cards, and how the page is laid out. */
 function ContentTab({ ctx }) {
-  const { draft, setCard, move, drop, addCard, run, busy, goTab } = ctx;
-  const flow = draft.cards.map((c, i) => ({ c, i })).filter(({ c }) => isFlow(c));
+  const { draft, setCard, move, movePhone, setPhoneLayout, drop, addCard, run, busy, goTab, device } = ctx;
+  const phone = device === 'phone';
+  const base = draft.cards.map((c, i) => ({ c, i })).filter(({ c }) => isFlow(c));
+  const flow = phone
+    ? [...base].sort((a, b) => phoneOrderOf(draft.cards, a.c) - phoneOrderOf(draft.cards, b.c))
+    : base;
   return (
     <>
-      <Section title="Cards" icon={Cards} meta={flow.length} hint="Edit, reorder or hide the sections on your page.">
+      <Section title="Cards" icon={Cards} meta={flow.length}
+        hint={phone ? 'Order and visibility here change the phone layout only. The desktop page is not touched.' : 'Edit, reorder or hide the sections on your page.'}>
         {flow.length === 0 && <Empty icon={Cards}>No cards yet. Add one below.</Empty>}
         {flow.length > 0 && (
           <ul className="cz-list">
             {flow.map(({ c, i }, n) => (
               <CardItem key={c.id} c={c} busy={busy} first={n === 0} last={n === flow.length - 1} goTab={goTab} friends={ctx.fl}
+                phone={phone} phoneOrder={phone ? n + 1 : undefined}
                 onTitle={(title) => setCard(c.id, { title })}
-                onMove={(dir) => move(i, dir)}
-                onToggle={() => setCard(c.id, { visible: !c.visible })}
+                onMove={(dir) => (phone ? movePhone(c.id, dir) : move(i, dir))}
+                onToggle={() => (phone
+                  ? setPhoneLayout(c.id, { visible: !(c.phone_layout?.visible ?? c.visible) })
+                  : setCard(c.id, { visible: !c.visible }))}
                 onDelete={() => drop(c.id)}
                 setContent={(content) => setCard(c.id, { content })} />
             ))}
@@ -1105,17 +1167,22 @@ function ContentTab({ ctx }) {
         </div>
       </Section>
 
-      <Section title="Page layout" icon={Layout}>
-        <div className="cz-grid2">{groupKeys('Layout').map((k) => <ThemeSelect key={k} k={k} th={ctx.th} setTheme={ctx.setTheme} />)}</div>
-      </Section>
+      {!phone && (
+        <Section title="Page layout" icon={Layout}>
+          <div className="cz-grid2">{groupKeys('Layout').map((k) => <ThemeSelect key={k} k={k} th={ctx.th} setTheme={ctx.setTheme} />)}</div>
+        </Section>
+      )}
     </>
   );
 }
 
 function StickersSection({ ctx }) {
-  const { stickers, s, sel, setSel, setCard, drop, topZ, img, run, busy, addSticker, th, draft } = ctx;
+  const { stickers, s, sel, setSel, setCard, drop, topZ, img, run, busy, addSticker, th, draft, device, narrow, setPhoneLayout } = ctx;
+  const phone = device === 'phone';
   const anchors = [['avatar', 'Avatar'], ['nameplate', 'Name box'], ['player', 'Music player'], ['actions', 'Buttons (Message / Report)'], ['frame', 'Page (outside the border)'], ...draft.cards.filter((x) => x.visible && isFlow(x)).map((x) => [x.id, x.title || x.type])];
+  const flowCards = draft.cards.filter((x) => x.visible && isFlow(x)).map((x) => [x.id, x.title || x.type]);
   const m = s ? stickerModel(s, th) : null;
+  const pl = s ? (s.phone_layout || {}) : {};
   return (
     // key re-opens this section whenever a sticker gets selected on the page
     <Section key={sel ? 'sel' : 'idle'} title="Stickers" icon={Sticker} meta={stickers.length || undefined}>
@@ -1123,7 +1190,11 @@ function StickersSection({ ctx }) {
       {stickers.length === 0 && <Empty icon={Sticker}>Stickers are small images you can place anywhere on your profile.</Empty>}
       {stickers.length > 0 && (
         <>
-          <p className="cz-hint">Drag a sticker to move it, drag its corner dot to resize. It gets pinned to the card or avatar highlighted while you drag, so it keeps its spot on phones and laptops.</p>
+          {phone
+            ? <p className="cz-hint">{narrow
+              ? 'Set where a sticker hangs, its edge and its size on a phone with these controls.'
+              : 'Drag a sticker in the preview to set its phone position. These controls set its card, edge and size.'}</p>
+            : <p className="cz-hint">Drag a sticker to move it, drag its corner dot to resize. It gets pinned to the card or avatar highlighted while you drag, so it keeps its spot on phones and laptops.</p>}
           <div className="cz-thumbs">
             {stickers.map((c, n) => (
               <button key={c.id} type="button" className="cz-thumb" aria-pressed={c.id === sel} aria-label={`Select sticker ${n + 1}`} onClick={() => setSel(c.id)}>
@@ -1133,7 +1204,22 @@ function StickersSection({ ctx }) {
           </div>
         </>
       )}
-      {s ? (
+      {s ? (phone ? (
+        <div className="cz-item">
+          <Select label="Pinned to" value={pl.pin?.card && flowCards.some(([id]) => id === pl.pin.card) ? pl.pin.card : ''}
+            onChange={(e) => setPhoneLayout(s.id, { pin: { card: e.target.value || null, v: pl.pin?.v === 'b' ? 'b' : 't' } })}>
+            <option value="">Top of the page</option>
+            {flowCards.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+          </Select>
+          <Select label="Edge" value={pl.pin?.v === 'b' ? 'b' : 't'}
+            onChange={(e) => setPhoneLayout(s.id, { pin: { card: pl.pin?.card ?? null, v: e.target.value } })}>
+            <option value="t">Top of card</option>
+            <option value="b">Bottom of card</option>
+          </Select>
+          <Range label="Size" display={`${(pl.scale ?? 1).toFixed(1)}×`} min={0.2} max={5} step={0.1} value={Number(pl.scale ?? 1)}
+            onChange={(n) => setPhoneLayout(s.id, { scale: n })} />
+        </div>
+      ) : (
         <div className="cz-item">
           <Select label="Pinned to" value={m.card && anchors.some(([id]) => id === m.card) ? m.card : ''} onChange={(e) => { const at = e.target.value && pinTo(s, e.target.value, th); if (at) setCard(s.id, withModel(s, th, at)); }}>
             {!(m.card && anchors.some(([id]) => id === m.card)) && <option value="">Top of the cards</option>}
@@ -1149,7 +1235,7 @@ function StickersSection({ ctx }) {
             <DangerButton label="Delete sticker" disabled={busy} onConfirm={() => run(async () => { await cardsApi.deleteCard(s); drop(s.id); setSel(null); })} />
           </div>
         </div>
-      ) : stickers.length > 0 && <p className="cz-hint">Select a sticker to edit it.</p>}
+      )) : stickers.length > 0 && <p className="cz-hint">Select a sticker to edit it.</p>}
     </Section>
   );
 }
@@ -1181,6 +1267,12 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
   const [fl, setFl] = useState([]);
   const [locs, setLocs] = useState([]);
   const [asking, setAsking] = useState(false);   // "Discard your changes?" prompt
+  const narrow = usePhoneViewport();                                // a phone screen edits the phone layout directly: no device switch, no preview
+  const [device, setDevice] = useState(() => (narrow ? 'phone' : 'desktop'));   // 'desktop' | 'phone'
+  const [phoneTheme, setPhoneThemeState] = useState(null); // working phone_theme (null while loading)
+  const phoneThemeOrig = useRef(null);                     // saved phone_theme, for cleanup + dirty
+  const prevRef = useRef(null);                            // the phone preview iframe
+  const prevTimers = useRef([]);                           // pending "send the draft again" timers for a preview that is still booting
   const bodyRef = useRef(null);
   const startRef = useRef(null);
   if (startRef.current === null) startRef.current = JSON.stringify(draft);
@@ -1189,12 +1281,40 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
 
   const busy = job !== null;
   const saving = job === 'save';
-  const dirty = useMemo(() => JSON.stringify(draft) !== startRef.current, [draft]);
+  const phoneDirty = phoneTheme != null && JSON.stringify(phoneTheme) !== JSON.stringify(phoneThemeOrig.current);
+  const dirty = useMemo(() => JSON.stringify(draft) !== startRef.current || phoneDirty, [draft, phoneDirty]);
 
   useEffect(() => { friends.listFriends().then(setFl).catch(() => {}); }, []);
   useEffect(() => { discover.listLocalities().then(setLocs).catch(() => {}); }, []);
   useEffect(() => { if (sel) setTab('Media'); }, [sel]);                      // selecting a sticker on the page jumps to its controls
   useEffect(() => { bodyRef.current?.scrollTo({ top: 0 }); }, [tab]);        // every tab starts at the top
+  useEffect(() => {   // the draft only carries the desktop theme; load the saved phone_theme once
+    profiles.getMyProfile().then((p) => {
+      const pt = p?.phone_theme && typeof p.phone_theme === 'object' && !Array.isArray(p.phone_theme) ? p.phone_theme : {};
+      phoneThemeOrig.current = pt;
+      setPhoneThemeState(pt);
+    }).catch(() => { phoneThemeOrig.current = {}; setPhoneThemeState({}); });
+  }, []);
+  useEffect(() => {   // reserve room beside the sheet for the preview while in phone mode
+    document.body.classList.toggle('cz-phone', device === 'phone' && !collapsed);
+    return () => document.body.classList.remove('cz-phone');
+  }, [device, collapsed]);
+  useEffect(() => { if (narrow) setDevice('phone'); }, [narrow]);   // a phone screen has only the phone layout to edit
+  useEffect(() => {   // the phone preview reports a finished sticker drag: write its phone position into the draft (nothing else)
+    const onMessage = (event) => {
+      if (event.origin !== window.location.origin || event.source !== prevRef.current?.contentWindow) return;
+      const data = event.data;
+      if (!data || typeof data !== 'object' || data.type !== 'fiiyou:phone-sticker' || typeof data.id !== 'string') return;
+      setDraft((d) => {
+        const card = d.cards.find((c) => c.id === data.id);
+        if (!card || card.type !== 'sticker') return d;
+        const layout = cleanPhoneLayout(card, data.phone_layout);   // the preview is not the trust boundary: clamp it like a saved value
+        return { ...d, cards: d.cards.map((c) => (c.id === card.id ? { ...c, phone_layout: { ...(c.phone_layout || {}), ...layout } } : c)) };
+      });
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [setDraft]);
 
   // ── derived ────────────────────────────────────────────────────────────
   const th = { ...THEME_DEFAULTS, ...draft.theme };
@@ -1202,6 +1322,20 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
   const stickers = draft.cards.filter((c) => c.type === 'sticker');
   const s = stickers.find((c) => c.id === sel);
   const topZ = Math.max(0, ...stickers.map((c) => c.z));
+  const phonePayload = useMemo(() => ({
+    type: 'fiiyou:phone-draft',
+    cards: draft.cards.map((c) => ({ id: c.id, phone_layout: c.phone_layout || {} })),
+    phone_theme: phoneTheme || {},
+  }), [draft, phoneTheme]);
+  const phonePayloadRef = useRef(phonePayload);
+  phonePayloadRef.current = phonePayload;   // the preview may finish loading after a later edit: send the latest draft, not the one it mounted with
+  const postPhone = () => prevRef.current?.contentWindow?.postMessage(phonePayloadRef.current, window.location.origin);
+  useEffect(() => {   // debounced live preview: post the phone draft to the preview iframe
+    if (device !== 'phone' || collapsed) return undefined;
+    const t = setTimeout(postPhone, 120);
+    return () => clearTimeout(t);
+  }, [device, collapsed, phonePayload]);
+  useEffect(() => () => prevTimers.current.forEach(clearTimeout), []);
 
   // ── draft updaters ─────────────────────────────────────────────────────
   const setTheme = (k, v) => setDraft((d) => ({ ...d, theme: { ...d.theme, [k]: v } }));
@@ -1226,6 +1360,19 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
   const setRule = (i, patch) => setDraft((d) => ({ ...d, css: d.css.map((x, j) => (j === i ? { ...x, ...patch } : x)) }));
   const setProp = (i, k, v) => setDraft((d) => ({ ...d, css: d.css.map((x, j) => (j === i ? { ...x, p: { ...x.p, [k]: v } } : x)) }));
   const dropProp = (i, k) => setDraft((d) => ({ ...d, css: d.css.map((x, j) => { if (j !== i) return x; const p = { ...x.p }; delete p[k]; return { ...x, p }; }) }));
+  // Phone-only draft updates: never touch the desktop fields (x/y/w/h/z/rotation/visible/order).
+  const setPhoneTheme = (patch) => setPhoneThemeState((pt) => ({ ...(pt || {}), ...patch }));
+  const unsetPhoneTheme = (key) => setPhoneThemeState((pt) => { const n = { ...(pt || {}) }; delete n[key]; return n; });
+  const setPhoneLayout = (id, patch) => setDraft((d) => ({ ...d, cards: d.cards.map((c) => (c.id === id ? { ...c, phone_layout: { ...(c.phone_layout || {}), ...patch } } : c)) }));
+  const movePhone = (id, dir) => setDraft((d) => {
+    const sorted = d.cards.filter(isFlow).sort((a, b) => phoneOrderOf(d.cards, a) - phoneOrderOf(d.cards, b));
+    const i = sorted.findIndex((c) => c.id === id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= sorted.length) return d;
+    [sorted[i], sorted[j]] = [sorted[j], sorted[i]];
+    const orders = new Map(sorted.map((c, k) => [c.id, k]));
+    return { ...d, cards: d.cards.map((c) => (orders.has(c.id) ? { ...c, phone_layout: { ...(c.phone_layout || {}), order: orders.get(c.id) } } : c)) };
+  });
 
   // ── async actions ──────────────────────────────────────────────────────
   const run = async (fn, kind = 'work') => {
@@ -1241,6 +1388,7 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
     if (f && f !== draft.origFont) media.deleteFont(f).catch(() => {});
     const o = draft.origMusic || {}, n = draft.fields.music || {};
     if (n.cover && n.cover !== o.cover) media.deleteImage(n.cover).catch(() => {});
+    if (phoneTheme?.bg_image && phoneTheme.bg_image !== phoneThemeOrig.current?.bg_image) media.deleteImage(phoneTheme.bg_image).catch(() => {});
     setAsking(false);
     onClose();
   };
@@ -1248,20 +1396,23 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
 
   const save = () => run(async () => {
     await profiles.updateMyProfile({ ...draft.fields, theme: draft.theme, custom_css: draft.css });
+    if (phoneTheme) await profiles.updateMyPhoneTheme(phoneTheme);
     await friends.setTopFriends(draft.top);
     if (draft.origBg && draft.origBg !== draft.theme.bg_image) media.deleteImage(draft.origBg).catch(() => {});
     if (draft.origFont && draft.origFont !== draft.theme.font_file) media.deleteFont(draft.origFont).catch(() => {});
+    if (phoneThemeOrig.current?.bg_image && phoneThemeOrig.current.bg_image !== phoneTheme?.bg_image) media.deleteImage(phoneThemeOrig.current.bg_image).catch(() => {});
     { // files replaced or removed while editing are deleted now
       const o = draft.origMusic || {}, n = draft.fields.music || {};
       if (o.cover && o.cover !== n.cover) media.deleteImage(o.cover).catch(() => {});
     }
     const flow = draft.cards.filter((c) => c.type !== 'sticker');
     const removed = originalRef.current.cards.filter((o) => !draft.cards.some((c) => c.id === o.id));
+    const madeIds = new Map();   // new-<id> -> the id createCard just assigned (needed to save a new card's phone layout)
     const res = await Promise.allSettled([
       ...draft.cards.map((c) => (c.type === 'sticker'
         ? cardsApi.updateCard(c.id, { x: c.x, y: c.y, w: c.w, h: c.h, z: c.z, rotation: c.rotation, visible: c.visible, content: c.content })
         : c._new || String(c.id).startsWith('new-')
-          ? cardsApi.createCard({ type: c.type, title: c.title, content: c.type === 'links' ? { links: cleanLinks(c.content.links) } : c.content, visible: c.visible, x: c.x, y: flow.indexOf(c) * 10, w: c.w, h: c.h, z: c.z, rotation: c.rotation, style: c.style || {} })
+          ? cardsApi.createCard({ type: c.type, title: c.title, content: c.type === 'links' ? { links: cleanLinks(c.content.links) } : c.content, visible: c.visible, x: c.x, y: flow.indexOf(c) * 10, w: c.w, h: c.h, z: c.z, rotation: c.rotation, style: c.style || {} }).then((made) => { madeIds.set(c.id, made.id); return made; })
           : cardsApi.updateCard(c.id, {
             y: flow.indexOf(c) * 10,
             title: c.title,
@@ -1272,6 +1423,11 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
     ]);
     const bad = res.filter((x) => x.status === 'rejected');
     if (bad.length) throw new Error(`${bad.length === 1 ? 'One card or sticker' : `${bad.length} cards or stickers`} could not be saved. ${friendlyError(bad[0].reason)}`);
+    const phoneRes = await Promise.allSettled(
+      draft.cards.map((c) => cardsApi.updateCardPhoneLayout(madeIds.get(c.id) || c.id, c.phone_layout || {}))
+    );
+    const phoneBad = phoneRes.filter((x) => x.status === 'rejected');
+    if (phoneBad.length) throw new Error(`${phoneBad.length === 1 ? 'One phone layout' : `${phoneBad.length} phone layouts`} could not be saved. ${friendlyError(phoneBad[0].reason)}`);
     await reload(); notify('Saved'); onClose();
   }, 'save');
 
@@ -1302,6 +1458,7 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
     draft, setDraft, th, r, stickers, s, sel, setSel, topZ, photos, img, fl, locs, busy,
     setTheme, setField, setMusic, setCard, drop, move, moveTop, setRule, setProp, dropProp,
     run, reload, notify, addCard, addSticker, movePhoto, goTab: setTab, onClose,
+    device, narrow, phoneTheme, setPhoneTheme, unsetPhoneTheme, phoneThemeOrig, setPhoneLayout, movePhone,
   };
 
   // ── tabs: arrow keys move between them ─────────────────────────────────
@@ -1347,6 +1504,12 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
           <IconButton icon={X} label="Close" disabled={saving} onClick={requestCancel} />
         </header>
 
+        {!narrow && (
+          <div className="cz-device">
+            <Segmented label="Device" value={device} options={['desktop', 'phone']} onChange={setDevice} />
+          </div>
+        )}
+
         <div className="cz-tabs" role="tablist" aria-label="Customizer sections" style={{ '--i': TABS.findIndex((t) => t.id === tab) }} onKeyDown={onTabKey}>
           {TABS.map(({ id, label, icon: Icon }) => (
             <button key={id} type="button" role="tab" id={`cz-tab-${id}`} className="cz-tab" aria-selected={tab === id} aria-controls="cz-panel" tabIndex={tab === id ? 0 : -1} onClick={() => setTab(id)}>
@@ -1386,6 +1549,15 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
           )}
         </footer>
       </aside>
+      {device === 'phone' && !narrow && (
+        <aside className="cz-prev" aria-label="Phone preview">
+          <iframe ref={prevRef} title="Phone preview" src={`${window.location.origin}${window.location.pathname.replace(/\/edit\/?$/, '')}?view=phone&edit=1`}
+            onLoad={() => {   // the frame boots after load, so its listener may not exist yet: send the draft again a few times
+              prevTimers.current.forEach(clearTimeout);
+              prevTimers.current = [0, 150, 500, 1000, 2000].map((ms) => setTimeout(postPhone, ms));
+            }} />
+        </aside>
+      )}
     </>
   );
 }
