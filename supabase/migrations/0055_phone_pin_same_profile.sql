@@ -7,7 +7,7 @@
 -- belong to the same profile, or the write is rejected. Existing rows are untouched.
 -- See docs/PHONE_PROFILE.md and tests/99_phone_pin_profile.sql.
 
-create function public.enforce_phone_pin_same_profile() returns trigger
+create or replace function public.enforce_phone_pin_same_profile() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare c text;
 begin
@@ -23,6 +23,7 @@ begin
   return new;
 end $$;
 
+drop trigger if exists profile_cards_phone_pin_same_profile on public.profile_cards;
 create trigger profile_cards_phone_pin_same_profile
   before insert or update on public.profile_cards
   for each row execute function public.enforce_phone_pin_same_profile();
