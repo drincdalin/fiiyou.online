@@ -78,8 +78,11 @@ i { display: block; width: 100%; height: 100%; background: var(--g3); }
 .frame[data-layout=single] { grid-template-columns: 1fr; } .frame[data-layout=single] .divider { display: none; } .frame[data-layout=single] .side { grid-template-columns: var(--sidebar) 1fr; }
 .divider { background: var(--border); } .side { display: grid; gap: var(--step); align-content: start; min-width: 0; }
 .avatar { aspect-ratio: 5/6; border: var(--bw) var(--bs) var(--accent); border-radius: var(--r2); overflow: hidden; background: var(--card); } .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.nameplate { background: var(--card-bg); border: var(--bw) var(--bs) var(--border); border-radius: var(--r2); padding: calc(var(--step) * 1.2) var(--step); text-align: center; }
-.nameplate h1 { margin: 0; font: 800 1.5em/1.1 var(--name-font); text-transform: var(--ncase); overflow-wrap: anywhere; } .nameplate small { opacity: .65; color: inherit; }
+.nameplate { background: var(--card-bg); border: var(--bw) var(--bs) var(--border); border-radius: var(--r2); padding: calc(var(--step) * 1.2) var(--step); text-align: center; container-type: inline-size; }
+.nameplate h1 { margin: 0; font: 800 1.5em/1.1 var(--name-font); font-size: min(1.5em, max(0.8em, 11cqi)); max-width: 100%; min-width: 0; text-transform: var(--ncase); overflow-wrap: anywhere; } .nameplate small { opacity: .65; color: inherit; }
+/* The name plate is a size container (see .nameplate above): the heading shrinks with the box, so a long single-token
+   name stays on one line inside the border at any sidebar width (11cqi fits about 15 characters), and multi-word names
+   still wrap at their spaces. A name longer than that wraps inside the box instead of running past it. */
 .headline { margin: 0; opacity: .75; font-size: 0.85em; text-align: center; } .actions { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
 .cards { display: grid; gap: var(--gap); align-content: start; min-width: 0; }
 .card { background: var(--card-bg); border: var(--bw) var(--bs) var(--border); border-radius: var(--r2); padding: calc(var(--step) * 2); min-height: 100px; backdrop-filter: blur(var(--blur)); }

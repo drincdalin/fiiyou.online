@@ -98,6 +98,12 @@
 .empty small { display: block; margin-top: 4px; }
 .sview { display: grid; gap: 14px; }
 
+/* narrow phones: the row wraps so the button sits under the text, and the text keeps the full row width (icon stays on the left) */
+@media (max-width: 480px) {
+  .srow { flex-wrap: wrap; gap: var(--s-3); }
+  .srow > div { flex: 1 1 calc(100% - var(--s-10) - var(--s-3)); }
+}
+
 /* ---- buttons: one size and one look wherever they sit next to each other ---- */
 .snaptop { width: 100%; color: inherit; cursor: pointer; text-align: left; }
 .snaptop:hover b { text-decoration: underline; }
