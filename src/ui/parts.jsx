@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { House, User, MapPin, ChatCircle, ShieldCheck, Heart, X, CaretLeft, CaretRight, Flag, PencilSimple, Trash, PaperPlaneRight, ImageSquare, CalendarBlank, ShareNetwork, DotsThree, Clock, ImageBroken, UsersThree, Link as LinkIcon, ArrowSquareOut, SlidersHorizontal, Flask, Sparkle, CrownSimple, HandHeart } from '@phosphor-icons/react';
+import { House, User, MapPin, ChatCircle, ShieldCheck, Heart, X, CaretLeft, CaretRight, Flag, PencilSimple, Trash, PaperPlaneRight, ImageSquare, CalendarBlank, ShareNetwork, DotsThree, Clock, ImageBroken, UsersThree, Link as LinkIcon, ArrowSquareOut, SlidersHorizontal } from '@phosphor-icons/react';
 import PostShareModal from './PostShare.jsx';
 import { posts, safety } from '../index.js';
 import { friendlyError } from './errors.jsx';
@@ -19,21 +19,33 @@ export const spamMessage = (er) => {
   return null;
 };
 
-/** Small profile badges assigned from the control room. */
-export const BADGE_META = {
-  beta: ['BETA', 'Beta tester', Flask],
-  og: ['OG', 'OG: one of the first 100 members', Sparkle],
-  founder: ['FOUNDER', 'Founding member', CrownSimple],
-  donor: ['DONOR', 'Supporter', HandHeart],
+/** Profile badges (assigned from the control room). Drawn as tiny pixel-art tags: the icons are 7-pixel grids rendered with crisp edges, so they match the page's pixel type. */
+const PIXEL_ICONS = {
+  og: ['...#...', '...#...', '#######', '.#####.', '..###..', '.##.##.', '.#...#.'],      // star
+  beta: ['..###..', '...#...', '...#...', '..###..', '.#.#.#.', '#######', '.#####.'],    // flask
+  founder: ['#..#..#', '##.#.##', '#######', '#######', '#######', '.......', '.......'], // crown
+  donor: ['.##.##.', '#######', '#######', '#######', '.#####.', '..###..', '...#...'],   // heart
 };
-// OG first, then founder: the rarest badges lead the row
+export const BADGE_META = {
+  beta: ['BETA', 'Beta tester'],
+  og: ['OG', 'OG: one of the first 100 members'],
+  founder: ['FOUNDER', 'Founding member'],
+  donor: ['DONOR', 'Supporter'],
+};
+// the rarest badges lead the row
 const BADGE_ORDER = ['og', 'founder', 'donor', 'beta'];
+function PixelIcon({ kind }) {
+  const rows = PIXEL_ICONS[kind];
+  return <svg className="pb-px" viewBox="0 0 7 7" aria-hidden="true" focusable="false" shapeRendering="crispEdges">
+    {rows.flatMap((row, y) => [...row].map((c, x) => (c === '#' ? <rect key={`${x}-${y}`} x={x} y={y} width="1" height="1" fill="currentColor" /> : null)))}
+  </svg>;
+}
 export function ProfileBadges({ badges = [] }) {
   const list = BADGE_ORDER.filter((k) => (badges || []).includes(k));
   if (!list.length) return null;
   return <span className="pbadges">{list.map((k) => {
-    const [label, title, Icon] = BADGE_META[k];
-    return <span key={k} className={`profile-badge ${k}`} role="img" title={title} aria-label={title}><span className="pb-ico" aria-hidden="true"><Icon size="1em" weight="fill" /></span><span className="pb-txt" aria-hidden="true">{label}</span></span>;
+    const [label, title] = BADGE_META[k];
+    return <span key={k} className={`profile-badge ${k}`} role="img" title={title} aria-label={title}><PixelIcon kind={k} /><span className="pb-txt" aria-hidden="true">{label}</span></span>;
   })}</span>;
 }
 

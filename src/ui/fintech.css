@@ -190,7 +190,7 @@
 .post:not(.page *):hover { box-shadow: var(--app-shadow) !important; }
 
 /* badge icons get a crisp optical alignment inside the pill */
-.profile-badge svg { transform: translateY(.02em); }
+
 
 /* the GIF reply keeps the comment column width on phones */
 .cmgif { max-width: 100% !important; }

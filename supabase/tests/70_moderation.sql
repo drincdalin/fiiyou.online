@@ -86,7 +86,9 @@ begin
   perform t.as_user(admin_u);
   perform t.fails(format($q$select admin_delete_user(%L)$q$, victim), 'deleting an account without a reason is refused', 'reason_required');
   perform t.fails(format($q$select admin_delete_user(%L, 'x')$q$, victim), 'a too-short reason is refused', 'reason_required');
+  perform t.as_admin();   -- auth.users is not readable by the signed-in role, so look from the admin (superuser) side
   perform t.ok(exists (select 1 from auth.users where id = victim), 'the refused deletion left the account alone');
+  perform t.as_user(admin_u);
   perform admin_delete_user(victim, 'Fake account used to impersonate someone');
   perform t.as_admin();
   perform t.ok(not exists (select 1 from auth.users where id = victim), 'account deleted');
