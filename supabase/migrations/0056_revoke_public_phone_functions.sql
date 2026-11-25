@@ -9,8 +9,12 @@ revoke all on function public.is_valid_phone_layout(text, jsonb) from public, an
 revoke all on function public.is_valid_phone_theme(jsonb) from public, anon;
 revoke all on function public.enforce_phone_pin_same_profile() from public, anon, authenticated;
 
-grant execute on function public.is_valid_phone_layout(text, jsonb) to authenticated, service_role;
-grant execute on function public.is_valid_phone_theme(jsonb) to authenticated, service_role;
+grant execute on function public.is_valid_phone_layout(text, jsonb) to authenticated;
+grant execute on function public.is_valid_phone_theme(jsonb) to authenticated;
+
+-- service_role is not part of stock Postgres; guard the grant so the
+-- migration is runnable there, as run.sh's role creation is.
+do $$ begin if exists (select 1 from pg_roles where rolname='service_role') then grant execute on function public.is_valid_phone_layout(text, jsonb) to service_role; grant execute on function public.is_valid_phone_theme(jsonb) to service_role; end if; end $$;
 
 -- ---- rollback (run only to undo) ----
 -- grant execute on function public.is_valid_phone_layout(text, jsonb) to public;

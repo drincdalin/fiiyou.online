@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 DB=vtest
 # roles are cluster-wide: create them first so a fresh Postgres works too
-psql -q -c "do \$\$ begin if not exists (select 1 from pg_roles where rolname='anon') then create role anon nologin; end if; if not exists (select 1 from pg_roles where rolname='authenticated') then create role authenticated nologin; end if; end \$\$"
+psql -q -c "do \$\$ begin if not exists (select 1 from pg_roles where rolname='anon') then create role anon nologin; end if; if not exists (select 1 from pg_roles where rolname='authenticated') then create role authenticated nologin; end if; if not exists (select 1 from pg_roles where rolname='service_role') then create role service_role nologin; end if; end \$\$"
 psql -q -c "drop database if exists $DB" -c "create database $DB"
 psql -q -d $DB -c "grant usage on schema public to anon, authenticated" -c "alter default privileges in schema public grant all on tables to authenticated"
 for f in tests/00_mock_supabase.sql migrations/0001_schema.sql migrations/0002_functions.sql \
