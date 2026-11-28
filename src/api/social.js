@@ -1,11 +1,18 @@
 import { supabase, unwrap } from '../lib/client.js';
 import { uploadImage, deleteImage } from './media.js';
+import { MAX_PHOTOS } from '../lib/photoLimit.js';
 const uid = async () => (await supabase.auth.getUser()).data.user.id;
 
 // ---------- photos (gallery) ----------
 export const listPhotos = async (profileId) => unwrap(await supabase.rpc('photos_of', { p_profile: profileId }));
 export async function addPhoto(file) {
-  const owner_id = await uid(); const path = await uploadImage(file, 'photo');
+  const owner_id = await uid();
+  // Ask before uploading: a stale screen (or a second device) must not spend an upload on a photo that cannot be stored.
+  // The database trigger limit_photos() is the real rule and still answers 'photo_limit' if two uploads race.
+  const { count, error: countError } = await supabase.from('photos').select('id', { count: 'exact', head: true }).eq('owner_id', owner_id);
+  if (countError) throw countError;
+  if ((count ?? 0) >= MAX_PHOTOS) throw new Error('photo_limit');
+  const path = await uploadImage(file, 'photo');
   const { data } = await supabase.from('photos').select('position').eq('owner_id', owner_id).order('position', { ascending: false }).limit(1);
   const r = await supabase.from('photos').insert({ owner_id, path, position: (data?.[0]?.position ?? 0) + 1 }).select().single();
   if (r.error) deleteImage(path).catch(() => {});

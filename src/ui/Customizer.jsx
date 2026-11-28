@@ -30,6 +30,7 @@ import { SELECTORS, PROPS } from './customCss.js';
 import { PRESETS } from './themes.js';
 import { themeContrast } from '../lib/contrast.js';
 import { stickerModel, withModel, pinTo } from './stickerAnchor.js';
+import { MAX_PHOTOS, fitPhotos, photoLimitNote, addedPhotosMessage } from '../lib/photoLimit.js';
 import { cleanPhoneLayout } from '../lib/phoneLayout.js';
 import { usePhoneViewport } from './phoneView.js';
 import { buildThemeExport, download } from './themeFile.js';
@@ -1177,7 +1178,7 @@ function ContentTab({ ctx }) {
 }
 
 function StickersSection({ ctx }) {
-  const { stickers, s, sel, setSel, setCard, drop, topZ, img, run, busy, addSticker, th, draft, device, narrow, setPhoneLayout } = ctx;
+  const { stickers, s, sel, setSel, setCard, topZ, img, busy, addSticker, deleteSticker, th, draft, device, narrow, setPhoneLayout } = ctx;
   const phone = device === 'phone';
   const anchors = [['avatar', 'Avatar'], ['nameplate', 'Name box'], ['player', 'Music player'], ['actions', 'Buttons (Message / Report)'], ['frame', 'Page (outside the border)'], ...draft.cards.filter((x) => x.visible && isFlow(x)).map((x) => [x.id, x.title || x.type])];
   const flowCards = draft.cards.filter((x) => x.visible && isFlow(x)).map((x) => [x.id, x.title || x.type]);
@@ -1218,6 +1219,10 @@ function StickersSection({ ctx }) {
           </Select>
           <Range label="Size" display={`${(pl.scale ?? 1).toFixed(1)}×`} min={0.2} max={5} step={0.1} value={Number(pl.scale ?? 1)}
             onChange={(n) => setPhoneLayout(s.id, { scale: n })} />
+          <div className="cz-item-bar">
+            <span className="cz-hint">Deleting removes the sticker from every layout.</span>
+            <DangerButton label="Delete sticker" disabled={busy} onConfirm={() => deleteSticker(s)} />
+          </div>
         </div>
       ) : (
         <div className="cz-item">
@@ -1232,7 +1237,7 @@ function StickersSection({ ctx }) {
               <button type="button" className="cz-btn cz-btn--sm" onClick={() => setCard(s.id, { z: topZ + 1 })}><ArrowLineUp size={14} weight="bold" aria-hidden="true" />Front</button>
               <button type="button" className="cz-btn cz-btn--sm" onClick={() => setCard(s.id, { z: 0 })}><ArrowLineDown size={14} weight="bold" aria-hidden="true" />Back</button>
             </span>
-            <DangerButton label="Delete sticker" disabled={busy} onConfirm={() => run(async () => { await cardsApi.deleteCard(s); drop(s.id); setSel(null); })} />
+            <DangerButton label="Delete sticker" disabled={busy} onConfirm={() => deleteSticker(s)} />
           </div>
         </div>
       )) : stickers.length > 0 && <p className="cz-hint">Select a sticker to edit it.</p>}
@@ -1242,12 +1247,15 @@ function StickersSection({ ctx }) {
 
 /** Stickers (decoration on the page) and the photo gallery. */
 function MediaTab({ ctx }) {
-  const { photos, run, reload, notify, busy } = ctx;
+  const { photos, addPhotos, busy } = ctx;
+  const note = photoLimitNote(photos.length);   // '' while there is room; otherwise says why "Add photos" is off
+  const full = note !== '';
   return (
     <>
       <StickersSection ctx={ctx} />
-      <Section title="Photos" icon={Images} meta={photos.length || undefined} hint="Drag to reorder, or use the arrows. Captions appear in the pop-up. Changes here save immediately.">
-        <FilePick multiple disabled={busy} block onFiles={(fs) => run(async () => { for (const f of fs) await social.addPhoto(f); await reload(); notify('Photos added'); })}>Add photos</FilePick>
+      <Section title="Photos" icon={Images} meta={photos.length ? `${photos.length}/${MAX_PHOTOS}` : undefined} hint={`Up to ${MAX_PHOTOS} photos. Drag to reorder, or use the arrows. Captions appear in the pop-up. Changes here save immediately.`}>
+        <FilePick multiple disabled={busy || full} block onFiles={addPhotos}>{full ? `Photo limit reached (${MAX_PHOTOS})` : 'Add photos'}</FilePick>
+        {full && <p className="cz-hint" role="status">{note}</p>}
         {photos.length === 0 ? <Empty icon={Images}>No photos yet. Large photos are compressed automatically.</Empty> : <PhotoGrid ctx={ctx} />}
       </Section>
     </>
@@ -1447,6 +1455,31 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
     setDraft((d) => ({ ...d, cards: [...d.cards, c] }));
     setSel(c.id);
   });
+  // Deleting a sticker happens at once, in the database and in storage (a sticker is created at once too, see addSticker), after the two-step
+  // confirmation of DangerButton. Three things keep the screen honest afterwards:
+  //  1. drop() removes it from the editor draft, so the page and the phone preview stop drawing it,
+  //  2. it is also removed from the list of cards "as they were", so Save does not try to delete it a second time,
+  //  3. reload() refreshes the saved profile the page shows once the editor is closed. Without it, Cancel brought back a sticker that is already gone.
+  const deleteSticker = (card) => run(async () => {
+    await cardsApi.deleteCard(card);
+    originalRef.current = { ...originalRef.current, cards: originalRef.current.cards.filter((o) => o.id !== card.id) };
+    drop(card.id);
+    if (sel === card.id) setSel(null);
+    await reload();
+    notify('Sticker deleted');
+  });
+  // More files than free slots: the first ones that fit are added, the rest are left out and the person is told. If one upload fails halfway,
+  // the ones that already went through are still shown (reload runs in `finally`), and the error explains what stopped.
+  const addPhotos = (files) => {
+    const { take } = fitPhotos(files, photos.length);
+    if (!take.length) { setErr(friendlyError(new Error('photo_limit'))); return; }
+    run(async () => {
+      let added = 0;
+      try { for (const f of take) { await social.addPhoto(f); added += 1; } }
+      finally { if (added) await reload(); }
+      notify(addedPhotosMessage(added, files.length));
+    });
+  };
   const movePhoto = (i, to) => {
     if (to < 0 || to >= photos.length) return;
     const ids = photos.map((p) => p.id); const [moved] = ids.splice(i, 1); ids.splice(to, 0, moved);
@@ -1457,7 +1490,7 @@ export default function Customizer({ draft, setDraft, onClose, reload, sel, setS
   const ctx = {
     draft, setDraft, th, r, stickers, s, sel, setSel, topZ, photos, img, fl, locs, busy,
     setTheme, setField, setMusic, setCard, drop, move, moveTop, setRule, setProp, dropProp,
-    run, reload, notify, addCard, addSticker, movePhoto, goTab: setTab, onClose,
+    run, reload, notify, addCard, addSticker, deleteSticker, addPhotos, movePhoto, goTab: setTab, onClose,
     device, narrow, phoneTheme, setPhoneTheme, unsetPhoneTheme, phoneThemeOrig, setPhoneLayout, movePhone,
   };
 

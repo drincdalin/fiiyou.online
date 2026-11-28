@@ -8,7 +8,7 @@ const GENERIC = 'Something went wrong on our side. Please try again in a moment.
 const CODES = {
   rate_limit: 'You are doing that a little too fast. Wait a moment and try again.',
   card_limit: 'You have reached the limit of cards and stickers on your profile. Remove one to add another.',
-  photo_limit: 'You have reached the limit of photos. Delete one to add another.',
+  photo_limit: 'You can have up to 15 photos. Delete one to add another.',
   too_many_pins: 'You have pinned too many messages in this chat. Unpin one first.',
   too_many_scheduled: 'You have too many scheduled posts. Delete or publish one first.',
   banned: 'This account cannot be used.',
